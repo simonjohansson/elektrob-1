@@ -93,3 +93,24 @@ void dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *ou
     o->prev = prev;
     o->sub_prev = sprev;
 }
+
+void dsp_mix_add(int32_t *acc, const int32_t *src, int32_t gain, int n)
+{
+    int i;
+    if (!gain)
+        return;
+    for (i = 0; i < n; i++)
+        acc[i] += (src[i] * gain) >> 15;        /* |src| < 2^16 and gain <= 2^15 */
+}
+
+void dsp_mix_out(struct dsp_hpf *h, const int32_t *acc, int32_t gain, int32_t *out, int n)
+{
+    int32_t lp = h->lp, x, y, i;
+    for (i = 0; i < n; i++) {
+        x = acc[i] >> 2;                        /* a quarter: < 2^16 for five sources */
+        lp += (((x << 8) - lp) * 47) >> 15;     /* 2 pi 11 / 48000 = 47 / 32768 */
+        y = (x - (lp >> 8)) * gain;             /* Q15 x Q14 */
+        out[i] = y > 0x1fffffff ? 0x7fffffff : y < -0x20000000 ? (int32_t)0x80000000 : y << 2;
+    }
+    h->lp = lp;
+}

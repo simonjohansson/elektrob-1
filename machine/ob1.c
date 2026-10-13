@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /* ob1: the Oberheim OB-1's oscillator section as an SRC machine on core 3.0. For now one VCO (machine/dsp.c)
- * at the trig's note and TUNE, its wave type and WAVE on knob C; the track's filter, envelope, level, LFOs
- * and sends work on it as on a sample.
+ * at the trig's note and TUNE, its wave type and WAVE on knob C, its FUND and OCT mix on knob F; the
+ * track's filter, envelope, level, LFOs and sends work on it as on a sample.
  *
  * It names no firmware address: the locations are core 3.0's exports (fw_*), and its page is drawn by the
  * machine-pages mod from the description below. So its mod.json's 1.54 port is empty.
@@ -14,11 +14,17 @@
 #define OB1_ID      120
 #define K_TUNE      0                   /* the SRC page's knobs, A-H: SLICE's parameters */
 #define K_WAV1      2                   /* BR's: its range, 0-127, and its knob as they are */
+#define K_MIX1      5                   /* LEN's slot, its range 0-8: the nine settings of VCO1 FUND x OCT */
 #define K_LEV       7
+#define ID_BR       134                 /* BR's parameter id (SLICE's knob C): a plain knob, for a slot whose own turns oddly */
 
 /* ---- the sound (ev_render_voices: the render, interrupt level) ----------------------------------- */
 
 static struct dsp_osc vco1[8];             /* free-running, as the OB-1's VCOs: never reset */
+static struct dsp_hpf hpf[8];
+
+/* A mixer setting, 0-2 (off, low, high), as its gain. */
+static const int32_t mix_gain[3] = {0, DSP_MIX_LOW, DSP_MIX_HIGH};
 
 /* WAV1 0-63: saw type, triangle (0) to saw (63), as g -1 to +1, Q15. */
 static int32_t wave_g(int32_t w)
@@ -40,7 +46,7 @@ void ob1_render(int32_t *blocks)
     int t;
     for (t = 0; t < 8; t++) {
         const volatile int16_t *p = &fw_voice_params[53 * t];
-        int32_t pitch, w, lev, gain, i, x[32], sub[32];
+        int32_t pitch, w, mix, lev, gain, i, x[32], sub[32], acc[32];
         uint32_t inc;
         if (fw_render_machine[t] != OB1_ID)
             continue;
@@ -49,6 +55,8 @@ void ob1_render(int32_t *blocks)
         pitch = pitch < 0 ? 0 : pitch > (87 << 16) ? 87 << 16 : pitch;
         inc = (23410327u >> 13) * (fw_pitch_tab[pitch / 384] >> 16);   /* 261.63 Hz at 48 kHz, times it */
         w = (p[K_WAV1] >> 8) & 0x7f;
+        mix = (p[K_MIX1] >> 8) & 0xf;
+        mix = mix > 8 ? 8 : mix;
         lev = (p[K_LEV] >> 8) & 0x7f;
         gain = lev * lev;                                              /* LEV's law, as a sample's: Q14 */
         if (w < 64)
@@ -56,7 +64,10 @@ void ob1_render(int32_t *blocks)
         else
             dsp_pulse_type(&vco1[t], inc, wave_width(w), x, sub, 32);
         for (i = 0; i < 32; i++)
-            blocks[32 * t + i] = (x[i] * gain) << 2;                   /* Q15 x Q14 -> Q31 */
+            acc[i] = 0;
+        dsp_mix_add(acc, x, mix_gain[mix / 3], 32);                    /* FUND */
+        dsp_mix_add(acc, sub, mix_gain[mix % 3], 32);                  /* OCT */
+        dsp_mix_out(&hpf[t], acc, gain, &blocks[32 * t], 32);
     }
 }
 
@@ -77,15 +88,55 @@ static int32_t wave_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
     return 1;
 }
 
+/* MIX1's text: FUND and OCT as - (off), L (low) or H (high), "H/-"; the pop-up spells it out. */
+static int32_t mix_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
+{
+    static const char lvl[3] = {'-', 'L', 'H'};
+    static const char *const word[3] = {"OFF", "LO", "HI"};
+    int32_t v = value >> 8, n = 0;
+    const char *w;
+    (void)machine;
+    v = v < 0 ? 0 : v > 8 ? 8 : v;
+    if (!ctx) {
+        buf[0] = lvl[v / 3];
+        buf[1] = '/';
+        buf[2] = lvl[v % 3];
+        buf[3] = 0;
+        return 1;
+    }
+    for (w = "FUND "; *w; )
+        buf[n++] = *w++;
+    for (w = word[v / 3]; *w; )
+        buf[n++] = *w++;
+    for (w = " OCT "; *w; )
+        buf[n++] = *w++;
+    for (w = word[v % 3]; *w; )
+        buf[n++] = *w++;
+    buf[n] = 0;
+    return 1;
+}
+
+/* A track turns to OB-1: MIX1 to FUND high, OCT off. CM_DEFAULT alone does not reach it on a switch (the
+ * slot keeps LEN's stock default, 0: all off, silent), so it is set here: in the sound, which is what is
+ * saved and shown, and in the engine (fw_set_param alone leaves the sound as it was). */
+static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
+{
+    (void)from;
+    *(uint16_t *)(sound + FW_SOUND_PARAM(K_MIX1)) = 6 << 8;
+    fw_set_param(6 << 8, track, 17 + K_MIX1);
+}
+
 static const struct cm_ui ob1_page = {
     .abi = cm_ui_v3,
     .page_from = 3,                                     /* SLICE's page, as every added machine gets */
+    .on_switch = ob1_switch,
     .knob = {
         [1] = { .flags = CM_HIDDEN },                   /* PLAY, SAMP, SLICE, LEN and GRID: a sample's */
         [K_WAV1] = { .name = "WAV1", .lname = "VCO1 wave", .fmt = wave_text },
         [3] = { .flags = CM_HIDDEN },
         [4] = { .flags = CM_HIDDEN },
-        [5] = { .flags = CM_HIDDEN },
+        [K_MIX1] = { .name = "MIX1", .lname = "VCO1 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT,
+                     .min = 0, .max = 8 << 8, .def = 6 << 8, .fmt = mix_text },   /* FUND high, OCT off */
         [6] = { .flags = CM_HIDDEN },
     },
 };

@@ -220,6 +220,39 @@ static void test_sub_follows_resets(void)
     assert(abs(flips - (int)(48000.0 * step(1000) / 4294967296.0)) <= 1);
 }
 
+/* The mixer's gains: low is 47/100 of high, -6.6 dB. */
+static void test_mix_gains(void)
+{
+    int32_t src[4] = {32767, -32768, 16384, 0}, acc[4] = {0}, i;
+    dsp_mix_add(acc, src, DSP_MIX_HIGH, 4);
+    for (i = 0; i < 4; i++)
+        assert(acc[i] == src[i]);
+    dsp_mix_add(acc, src, 0, 4);
+    assert(acc[0] == 32767);
+    assert(fabs(20 * log10((double)DSP_MIX_LOW / DSP_MIX_HIGH) + 6.56) < 0.05);
+}
+
+/* The output: a quarter of the sum at unity gain, DC gone within a second, and clipped, never wrapped. */
+static void test_mix_out(void)
+{
+    struct dsp_hpf h = {0};
+    int32_t acc[RATE], out[RATE], i;
+    double tail = 0;
+    for (i = 0; i < RATE; i++)
+        acc[i] = 10000 + ((i / 24) & 1 ? 20000 : -20000);   /* 1 kHz square riding on DC */
+    dsp_mix_out(&h, acc, 1 << 14, out, RATE);
+    for (i = RATE - 4800; i < RATE; i++)
+        tail += out[i];
+    assert(fabs(tail / 4800 / 2147483648.0) < 0.001);           /* the DC is gone */
+    /* the square's edge at a quarter, less the 11 Hz high-pass's droop over 24 samples (3.4 %) */
+    assert(abs((out[RATE - 1] - out[RATE - 25]) / 65536 - 2 * 5000) < 400);
+    for (i = 0; i < RATE; i++)
+        acc[i] = (i & 1) ? 6 * 65535 : -6 * 65535;           /* far too loud */
+    dsp_mix_out(&h, acc, 1 << 14, out, 64);
+    for (i = 0; i < 64; i++)
+        assert((i & 1) ? out[i] > 0 : out[i] < 0);
+}
+
 /* The band-limiting, at 1.9 kHz. The 2-point polyBLEP is weak just above Nyquist (the 13th harmonic,
  * 24.7 kHz, folds to 23.3 kHz at -31 dB), so the check is on the aliases that land below 10 kHz. */
 static void test_saw_type_aliasing(void)
@@ -258,6 +291,8 @@ int main(void)
     test_pulse_type_narrow();
     test_sub_octave();
     test_sub_follows_resets();
+    test_mix_gains();
+    test_mix_out();
     puts("dsp: all tests passed");
     return 0;
 }
