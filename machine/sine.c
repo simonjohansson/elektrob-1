@@ -10,6 +10,7 @@
  * Machine 120: ids 120-127 are for examples and experiments; a mod you share takes one of its own
  * (docs/ADAPTING.md, "SRC machines"). */
 #include "digitakt-mk1/core3.h"
+#include "dsp.h"
 
 #define SINE_ID     120
 #define K_TUNE      0                   /* the SRC page's knobs, A-H: SLICE's parameters */
@@ -20,28 +21,9 @@
 
 static uint32_t phase[8];
 
-/* sin(2 pi ph / 2^32), Q15: a parabola, then its square nudged in (within 0.1 %). */
-static int32_t sine(uint32_t ph)
-{
-    int32_t x = (int32_t)ph >> 16, a = x < 0 ? -x : x, y, z;
-    y = (x * (32768 - a)) >> 13;
-    z = y < 0 ? -y : y;
-    y += (7373 * (((y * z) >> 15) - y)) >> 15;
-    return y > 32767 ? 32767 : y < -32767 ? -32767 : y;
-}
-
-/* A sine, folded back into range after a gain of 1 + shape / 16. */
-static int32_t fold(int32_t y, int32_t shape)
-{
-    int32_t v = y + ((y * shape) >> 4);
-    while (v > 32767 || v < -32767)
-        v = v > 0 ? 65534 - v : -65534 - v;
-    return v;
-}
-
 void sine_render(int32_t *blocks)
 {
-    int t, i;
+    int t;
     for (t = 0; t < 8; t++) {
         const volatile int16_t *p = &fw_voice_params[53 * t];
         int32_t pitch, shape, lev, gain;
@@ -57,11 +39,7 @@ void sine_render(int32_t *blocks)
         shape = (p[K_SHAPE] >> 8) & 0x7f;
         lev = (p[K_LEV] >> 8) & 0x7f;
         gain = lev * lev;                                              /* LEV's law, as a sample's: Q14 */
-        for (i = 0; i < 32; i++) {
-            int32_t v = fold(sine(phase[t]), shape);
-            blocks[32 * t + i] = (v * gain) << 2;                       /* Q15 x Q14 -> Q31 */
-            phase[t] += inc;
-        }
+        dsp_render(&phase[t], inc, shape, gain, &blocks[32 * t], 32);
     }
 }
 

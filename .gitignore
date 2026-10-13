@@ -1,4 +1,4 @@
-firmware/
+/firmware
 out/
 .digiemu/
 .DS_Store

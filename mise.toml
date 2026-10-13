@@ -33,6 +33,32 @@ description = "Build the machine's .elemod"
 depends = ["build:deps"]
 run = "python -m elekloader.sdk.build machine --out out"
 
+[tasks.test]
+description = "Build the machine's DSP for the host and run its tests"
+run = [
+  "mkdir -p out",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror -Imachine machine/dsp.c tests/test_dsp.c -lm -o out/test_dsp",
+  "out/test_dsp",
+]
+
+[tasks.render]
+description = "Render the machine's DSP to out/render-FREQ-SHAPE.wav"
+usage = '''
+arg "<freq>" help="Frequency in Hz"
+arg "[shape]" help="SHAPE, 0-127" default="0"
+arg "[seconds]" default="2"
+'''
+run = [
+  "mkdir -p out",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror -Imachine machine/dsp.c tools/render.c -o out/render",
+  "out/render ${usage_freq} ${usage_shape} ${usage_seconds} out/render-${usage_freq}-${usage_shape}.wav",
+]
+
+[tasks.analyze]
+description = "Print f0, harmonic levels and the aliasing floor of a WAV"
+usage = 'arg "<file>"'
+run = "uv run -q --with numpy python tools/analyze.py ${usage_file}"
+
 [tasks.firmware]
 description = "Patch the stock OS with core, machine-pages and the machine"
 depends = ["build"]

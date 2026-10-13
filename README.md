@@ -17,6 +17,9 @@ mise run setup
 
 | task | does |
 |---|---|
+| `mise run test` | builds the DSP (`machine/dsp.c`) for the host and runs `tests/` |
+| `mise run render 440 [shape] [seconds]` | renders the DSP to `out/render-440-0.wav` |
+| `mise run analyze FILE.wav` | prints f0, harmonic levels and the aliasing floor |
 | `mise run build` | builds core, machine-pages and the machine into `out/` |
 | `mise run firmware` | patches the stock OS into `out/Digitakt_custom.syx` (version `SINE`) |
 | `mise run emu` | adds that build to digiemu and opens its panel |
