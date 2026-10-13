@@ -44,10 +44,11 @@ and counts its instructions per 32-sample block, 8 voices:
 The stock render alone takes about 84,000 instructions a block, 80 % of it
 (Digi Mono's measurement on a unit), so the last column is on top of that:
 
-- Every track set to OB-1 costs this, playing or not. Silent voices are not
-  skipped yet.
-- 8 tracks of the default sound about fit; 8 worst-case tracks would
-  overload the unit. Plan on 2-4 heavy OB-1 tracks, as Digi Mono does.
+- Only sounding voices cost this: a voice whose AMP envelope is at 0, with no
+  trig starting, is not rendered. The envelope's level runs about as the
+  cube of the output, so a long release keeps a voice going for seconds.
+- 8 sounding voices of the default sound about fit; 8 sounding worst-case
+  voices would overload the unit.
 - Not measured: the stock render's own savings on tracks it does not play
   from a sample, and the per-voice pitch and knob code in `machine/ob1.c`
   (a few dozen instructions).

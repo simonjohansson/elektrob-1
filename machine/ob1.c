@@ -71,6 +71,15 @@ static void shape(struct dsp_shape *sh, int32_t w)
         dsp_shape_pulse(sh, wave_width(w));
 }
 
+/* A voice the AMP envelope has silenced and no trig starts: inaudible after the AMP page, so it is not
+ * rendered. Its VCOs then stand still, which a free-running VCO's phase hides. The envelope's level is 0
+ * only then: the output goes about as its cube root (measured in digiemu), so a release still sounds at
+ * -32 dB with a level of 2^15, and at -45 dB with 390. */
+static int silent(int t)
+{
+    return !(fw_voice_start & (1u << t)) && fw_amp_env[3 * t + 1] == 0;
+}
+
 void ob1_render(int32_t *blocks)
 {
     int t;
@@ -81,6 +90,11 @@ void ob1_render(int32_t *blocks)
         struct dsp_shape sh1, sh2;
         if (fw_render_machine[t] != OB1_ID)
             continue;
+        if (silent(t)) {
+            for (i = 0; i < 32; i++)
+                blocks[32 * t + i] = 0;
+            continue;
+        }
         /* the note and TUNE as the playback takes a sample's: the pitch table at 1 for note 60, TUNE 0 */
         pitch = ((int32_t)p[K_TUNE] - 0x4000) * 256 + fw_voice_note[t] + (3 << 16);
         inc1 = pitch_inc(pitch);
