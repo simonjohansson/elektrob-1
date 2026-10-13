@@ -20,6 +20,8 @@ mise run setup
 | `mise run test` | builds the DSP (`machine/dsp.c`, `machine/voice.c`) for the host and runs `tests/` |
 | `mise run render OUT.wav [key=value...]` | renders the machine's voice: `note=57 seconds=4`, the knobs `wav1 wav2 frq2 mix1 mix2 mod nois`, `sweep=KNOB:FROM:TO` |
 | `mise run analyze FILE.wav` | prints f0, harmonic levels and the aliasing floor |
+| `mise run protocol` | renders the machine's side of the comparison protocol (#15, T1-T8) into `out/ours/` |
+| `mise run compare DIR` | measures captures named as in the protocol against `out/ours/`, test by test |
 | `mise run bench` | counts the DSP's ColdFire instructions a block for 8 voices, in Unicorn |
 | `mise run build` | builds core, machine-pages and the machine into `out/` |
 | `mise run firmware` | patches the stock OS into `out/Digitakt_custom.syx` (version `$FW_VERSION`, `OB-1`) |
