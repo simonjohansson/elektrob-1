@@ -60,6 +60,15 @@ description = "Print f0, harmonic levels and the aliasing floor of a WAV"
 usage = 'arg "<file>"'
 run = "uv run -q --with numpy python tools/analyze.py ${usage_file}"
 
+[tasks.bench]
+description = "Count the DSP's ColdFire instructions a block for 8 voices, in Unicorn"
+run = [
+  "mkdir -p out",
+  "m68k-elf-gcc -mcpu=54455 -O2 -ffreestanding -fno-builtin -nostdlib -fomit-frame-pointer -Imachine -Wl,-Ttext=0x10000 -Wl,-e,bench machine/dsp.c tools/bench.c -o out/bench.elf",
+  "m68k-elf-objcopy -O binary out/bench.elf out/bench.bin",
+  "uv run -q --with unicorn==2.1.4 --with capstone python tools/bench.py out/bench.bin out/bench.elf",
+]
+
 [tasks.firmware]
 description = "Patch the stock OS with core, machine-pages and the OB-1 machine"
 depends = ["build"]
