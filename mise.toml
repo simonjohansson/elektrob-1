@@ -46,7 +46,7 @@ run = [
 description = "Render the machine's DSP to out/render-FREQ-WAVE.wav"
 usage = '''
 arg "<freq>" help="Frequency in Hz"
-arg "[wave]" help="WAVE, 0-63: saw type, triangle to saw" default="63"
+arg "[wave]" help="WAV1: 0-63 saw type (triangle to saw), 64-127 pulse type (10 % pulse to square)" default="63"
 arg "[seconds]" default="2"
 '''
 run = [

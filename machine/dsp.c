@@ -53,3 +53,23 @@ void dsp_saw_type(struct dsp_osc *o, uint32_t inc, int32_t g, int32_t *out, int 
     }
     o->prev = prev;
 }
+
+void dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *out, int n)
+{
+    int32_t prev = o->prev, i, t, y;
+    int32_t dc = (int32_t)(width >> 16) - 32768;    /* the mean, 2 width - 1 */
+    if (inc > DSP_INC_MAX)
+        inc = DSP_INC_MAX;
+    dsp_vco_set(&o->vco, inc);
+    for (i = 0; i < n; i++) {
+        int32_t reset = dsp_vco_step(&o->vco);
+        y = (o->vco.phase < width ? 32767 : -32768) - dc;
+        if (reset >= 0)                             /* up at the reset */
+            dsp_blep(&prev, &y, reset, 65536, 0);
+        if ((t = dsp_vco_crossed(&o->vco, width)) >= 0)
+            dsp_blep(&prev, &y, t, -65536, 0);       /* down at the width */
+        out[i] = prev;
+        prev = y;
+    }
+    o->prev = prev;
+}

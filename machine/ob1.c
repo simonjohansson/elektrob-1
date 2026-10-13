@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* ob1: the Oberheim OB-1's oscillator section as an SRC machine on core 3.0. For now one VCO in saw type
- * (machine/dsp.c) at the trig's note and TUNE, its WAVE on knob C; the track's filter, envelope, level,
- * LFOs and sends work on it as on a sample.
+/* ob1: the Oberheim OB-1's oscillator section as an SRC machine on core 3.0. For now one VCO (machine/dsp.c)
+ * at the trig's note and TUNE, its wave type and WAVE on knob C; the track's filter, envelope, level, LFOs
+ * and sends work on it as on a sample.
  *
  * It names no firmware address: the locations are core 3.0's exports (fw_*), and its page is drawn by the
  * machine-pages mod from the description below. So its mod.json's 1.54 port is empty.
@@ -20,11 +20,19 @@
 
 static struct dsp_osc vco1[8];             /* free-running, as the OB-1's VCOs: never reset */
 
-/* WAV1 0-63: saw type, triangle (0) to saw (63), as g -1 to +1, Q15. 64-127 is the pulse type (#5);
- * until then it plays the saw. */
+/* WAV1 0-63: saw type, triangle (0) to saw (63), as g -1 to +1, Q15. */
 static int32_t wave_g(int32_t w)
 {
-    return w < 64 ? -32768 + (w << 16) / 63 : 32768;
+    return -32768 + (w << 16) / 63;
+}
+
+/* WAV1 64-127: pulse type, from the narrowest pulse (64) to the square (127), as the OB-1's WAVE pot
+ * turned clockwise ends on the square (trimmed to 50 %). shortcut: the narrowest width is a guess, 10 %;
+ * set it from a real OB-1's sweep (#15). */
+#define PW_MIN  429496730u                         /* 10 % of 2^32 */
+static uint32_t wave_width(int32_t w)
+{
+    return PW_MIN + (uint32_t)(w - 64) * ((0x80000000u - PW_MIN) / 63);
 }
 
 void ob1_render(int32_t *blocks)
@@ -43,7 +51,10 @@ void ob1_render(int32_t *blocks)
         w = (p[K_WAV1] >> 8) & 0x7f;
         lev = (p[K_LEV] >> 8) & 0x7f;
         gain = lev * lev;                                              /* LEV's law, as a sample's: Q14 */
-        dsp_saw_type(&vco1[t], inc, wave_g(w), x, 32);
+        if (w < 64)
+            dsp_saw_type(&vco1[t], inc, wave_g(w), x, 32);
+        else
+            dsp_pulse_type(&vco1[t], inc, wave_width(w), x, 32);
         for (i = 0; i < 32; i++)
             blocks[32 * t + i] = (x[i] * gain) << 2;                   /* Q15 x Q14 -> Q31 */
     }

@@ -18,7 +18,7 @@ mise run setup
 | task | does |
 |---|---|
 | `mise run test` | builds the DSP (`machine/dsp.c`) for the host and runs `tests/` |
-| `mise run render 440 [wave] [seconds]` | renders the DSP to `out/render-440-63.wav` (wave 0-63: triangle to saw) |
+| `mise run render 440 [wave] [seconds]` | renders the DSP to `out/render-440-63.wav` (wave as WAV1: 0-63 triangle to saw, 64-127 pulse to square) |
 | `mise run analyze FILE.wav` | prints f0, harmonic levels and the aliasing floor |
 | `mise run build` | builds core, machine-pages and the machine into `out/` |
 | `mise run firmware` | patches the stock OS into `out/Digitakt_custom.syx` (version `$FW_VERSION`, `OB-1`) |

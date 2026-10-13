@@ -61,4 +61,9 @@ struct dsp_osc {
  * (1 - g) / 4, is taken off, as the mixer's AC coupling would. n samples into out, one sample late. */
 void dsp_saw_type(struct dsp_osc *o, uint32_t inc, int32_t g, int32_t *out, int n);
 
+/* Pulse type (the OB-1's WAVE in "Pulse Type", U11 comparing the ramp with a threshold): +1 while the
+ * ramp is below `width` (a fraction of the cycle, 2^31 the square), -1 after. Its mean is taken off. n
+ * samples into out, one sample late. */
+void dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *out, int n);
+
 #endif

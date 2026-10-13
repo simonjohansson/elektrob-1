@@ -141,6 +141,43 @@ static void test_saw_type_half(void)
     assert(fabs(render(0, x)) < 0.005);
 }
 
+/* N samples of pulse type `width` after a second to settle; the mean too. */
+static double render_pulse(uint32_t width, int32_t *x)
+{
+    struct dsp_osc o = {{0}, 0};
+    int32_t settle[RATE];
+    double mean = 0;
+    int i;
+    dsp_pulse_type(&o, step(F0), width, settle, RATE);
+    dsp_pulse_type(&o, step(F0), width, x, N);
+    for (i = 0; i < N; i++)
+        mean += x[i];
+    return mean / N / 32768;
+}
+
+/* The square: odd harmonics at 1/h (less the droop), no even ones, no DC. */
+static void test_pulse_type_square(void)
+{
+    int32_t x[N];
+    assert(fabs(render_pulse(1u << 31, x)) < 0.005);
+    spectrum(x);
+    assert(fabs(harmonic(3) - db(droop(3) / 3)) < 0.3);
+    assert(fabs(harmonic(5) - db(droop(5) / 5)) < 0.3);
+    assert(harmonic(2) < -60 && harmonic(4) < -60);
+}
+
+/* A 10 % pulse: harmonic h at sin(pi h d) / h against the first, and no DC. */
+static void test_pulse_type_narrow(void)
+{
+    int32_t x[N];
+    double d = 0.1;
+    int h;
+    assert(fabs(render_pulse((uint32_t)(d * 4294967296.0), x)) < 0.005);
+    spectrum(x);
+    for (h = 2; h <= 6; h++)
+        assert(fabs(harmonic(h) - db(droop(h) * sin(M_PI * h * d) / h / sin(M_PI * d))) < 0.5);
+}
+
 /* The band-limiting, at 1.9 kHz. The 2-point polyBLEP is weak just above Nyquist (the 13th harmonic,
  * 24.7 kHz, folds to 23.3 kHz at -31 dB), so the check is on the aliases that land below 10 kHz. */
 static void test_saw_type_aliasing(void)
@@ -175,6 +212,8 @@ int main(void)
     test_saw_type_triangle();
     test_saw_type_half();
     test_saw_type_aliasing();
+    test_pulse_type_square();
+    test_pulse_type_narrow();
     puts("dsp: all tests passed");
     return 0;
 }
