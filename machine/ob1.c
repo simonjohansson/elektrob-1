@@ -32,6 +32,7 @@ static uint32_t noise[8] = {1, 2, 3, 4, 5, 6, 7, 8};   /* each voice its own: ne
 /* A mixer setting, 0-2 (off, low, high), as its gain. */
 static const int32_t mix_gain[3] = {0, DSP_MIX_LOW, DSP_MIX_HIGH};
 static const int32_t noise_gain[3] = {0, DSP_MIX_NOISE_LOW, DSP_MIX_NOISE_HIGH};
+static const int32_t zero[32];                 /* a source not rendered */
 
 /* WAV1 and WAV2 0-63: saw type, triangle (0) to saw (63), as g -1 to +1, Q15. */
 static int32_t wave_g(int32_t w)
@@ -85,7 +86,8 @@ void ob1_render(int32_t *blocks)
     int t;
     for (t = 0; t < 8; t++) {
         const volatile int16_t *p = &fw_voice_params[53 * t];
-        int32_t pitch, mix1, mix2, mod, nois, i, acc[32], f1[32], s1[32], f2[32], s2[32];
+        int32_t pitch, mix1, mix2, mod, i, f1[32], s1[32], f2[32], s2[32], gain[4];
+        const int32_t *src[4];
         uint32_t inc1, inc2;
         struct dsp_shape sh1, sh2;
         if (fw_render_machine[t] != OB1_ID)
@@ -116,21 +118,15 @@ void ob1_render(int32_t *blocks)
             if (mix2)
                 dsp_osc_block(&vco2[t], inc2, &sh2, f2, s2, 32);
         }
-        for (i = 0; i < 32; i++)
-            acc[i] = 0;
-        if (mix1) {
-            dsp_mix_add(acc, f1, mix_gain[mix1 / 3], 32);              /* FUND */
-            dsp_mix_add(acc, s1, mix_gain[mix1 % 3], 32);              /* OCT */
-        }
-        if (mix2) {
-            dsp_mix_add(acc, f2, mix_gain[mix2 / 3], 32);
-            dsp_mix_add(acc, s2, mix_gain[mix2 % 3], 32);
-        }
-        if ((nois = knob(p, K_NOIS, 2))) {
-            dsp_noise(&noise[t], f1, 32);
-            dsp_mix_add(acc, f1, noise_gain[nois], 32);
-        }
-        dsp_mix_out(&hpf[t], acc, 1 << 14, &blocks[32 * t], 32);      /* no LEV: the AMP page's VOL */
+        src[0] = mix1 ? f1 : zero;                                     /* FUND and OCT, each VCO */
+        src[1] = mix1 ? s1 : zero;
+        src[2] = mix2 ? f2 : zero;
+        src[3] = mix2 ? s2 : zero;
+        gain[0] = mix_gain[mix1 / 3];
+        gain[1] = mix_gain[mix1 % 3];
+        gain[2] = mix_gain[mix2 / 3];
+        gain[3] = mix_gain[mix2 % 3];
+        dsp_voice_out(&hpf[t], src, gain, &noise[t], noise_gain[knob(p, K_NOIS, 2)], &blocks[32 * t], 32);
     }
 }
 

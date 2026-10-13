@@ -16,8 +16,10 @@ static int32_t out[8 * 32];
 void bench(int nblocks, int voices, int setting)
 {
     struct dsp_shape pulse, saw;
-    int32_t acc[32], f1[32], s1[32], f2[32], s2[32];
-    int b, t, i;
+    static const int32_t zero[32];
+    int32_t f1[32], s1[32], f2[32], s2[32], gain[4];
+    const int32_t *src[4];
+    int b, t;
     dsp_shape_pulse(&pulse, 0x30000000u);
     dsp_shape_saw(&saw, 0);
     for (b = 0; b < nblocks; b++)
@@ -25,8 +27,6 @@ void bench(int nblocks, int voices, int setting)
             uint32_t inc1 = 23410327u + 977u * t, inc2 = 35115490u - 1013u * t;   /* about C4 and G4 */
             if (!noise[t])
                 noise[t] = t + 1;
-            for (i = 0; i < 32; i++)
-                acc[i] = 0;
             if (setting == 0)
                 dsp_pair(&o1[t], &o2[t], inc1, inc2, &pulse, &saw, DSP_SYNC | DSP_XMOD, f1, s1, f2, s2, 32);
             else {
@@ -34,16 +34,12 @@ void bench(int nblocks, int voices, int setting)
                 if (setting == 2)
                     dsp_osc_block(&o2[t], inc2, &saw, f2, s2, 32);
             }
-            dsp_mix_add(acc, f1, DSP_MIX_HIGH, 32);
-            if (setting != 1) {
-                dsp_mix_add(acc, s1, DSP_MIX_HIGH, 32);
-                dsp_mix_add(acc, f2, DSP_MIX_HIGH, 32);
-                dsp_mix_add(acc, s2, DSP_MIX_HIGH, 32);
-            }
-            if (setting == 0) {
-                dsp_noise(&noise[t], f1, 32);
-                dsp_mix_add(acc, f1, DSP_MIX_NOISE_HIGH, 32);
-            }
-            dsp_mix_out(&hpf[t], acc, 1 << 14, &out[32 * t], 32);
+            src[0] = f1;
+            src[1] = setting == 1 ? zero : s1;
+            src[2] = setting == 1 ? zero : f2;
+            src[3] = setting == 1 ? zero : s2;
+            gain[0] = DSP_MIX_HIGH;
+            gain[1] = gain[2] = gain[3] = setting == 1 ? 0 : DSP_MIX_HIGH;
+            dsp_voice_out(&hpf[t], src, gain, &noise[t], setting == 0 ? DSP_MIX_NOISE_HIGH : 0, &out[32 * t], 32);
         }
 }

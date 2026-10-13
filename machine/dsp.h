@@ -103,25 +103,25 @@ int32_t dsp_xmod_factor(int32_t x);
  * The OB-1 mixes VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each switched off, low or high (U13-U15, 4016s
  * into 47K for high and 100K for low; noise 100K and 220K), each AC-coupled at about 11 Hz (47K, 0.1 uF,
  * 100K). Gains against an oscillator at high: */
-#define DSP_MIX_HIGH        32768           /* 47K */
-#define DSP_MIX_LOW         15420           /* 100K: 47 / 100 */
-#define DSP_MIX_NOISE_HIGH  15420           /* 100K */
-#define DSP_MIX_NOISE_LOW   7010            /* 220K: 47 / 220 */
+#define DSP_MIX_HIGH        4096            /* 47K, Q12 */
+#define DSP_MIX_LOW         1925            /* 100K: 47 / 100 */
+#define DSP_MIX_NOISE_HIGH  1925            /* 100K */
+#define DSP_MIX_NOISE_LOW   875             /* 220K: 47 / 220 */
 
 /* The noise source (on the OB-1 a transistor junction's noise, from the performance board): white, from a
  * 32-bit xorshift whose state must not be 0. n samples, -32768 to 32767. */
 void dsp_noise(uint32_t *state, int32_t *out, int n);
 
-/* acc[i] += src[i] * gain (Q15). A gain of 0 skips the source. */
-void dsp_mix_add(int32_t *acc, const int32_t *src, int32_t gain, int n);
-
 struct dsp_hpf {
     int32_t lp;             /* the low-pass the high-pass takes off, Q8 */
 };
 
-/* The mixed sum out: the 11 Hz high-pass (one for the voice, where the OB-1 has one a source: it only
- * differs at DC), then a quarter, so two oscillators and their subs at high fit; beyond that it clips at
- * full scale, Q31. A single oscillator at high peaks at -12 dB. gain is Q14 (the track's level). */
-void dsp_mix_out(struct dsp_hpf *h, const int32_t *acc, int32_t gain, int32_t *out, int n);
+/* A voice's output, in one pass: src[0-3] (VCO1, VCO1 OCT, VCO2, VCO2 OCT) at gain[0-3] (Q12: a source at
+ * gain 0 may point at anything readable), and noise from *noise at noise_gain (0: none), summed; the 11 Hz
+ * high-pass (one for the voice, where the OB-1 has one a source: it only differs at DC); a quarter, so two
+ * oscillators and their subs at high fit, and beyond that clipped at full scale, Q31. A single oscillator
+ * at high peaks at -12 dB. */
+void dsp_voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t gain[4], uint32_t *noise,
+                   int32_t noise_gain, int32_t *out, int n);
 
 #endif

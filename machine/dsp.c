@@ -1,6 +1,10 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "dsp.h"
 
+/* The per-sample helpers are inlined, and the loops compiled once per waveshape (`pulse` a constant), so the
+ * hot loop has no calls and no branch on the shape. */
+#define HOT static inline __attribute__((always_inline))
+
 void dsp_vco_set(struct dsp_vco *v, uint32_t inc)
 {
     uint32_t i = inc, k = 0;
@@ -17,7 +21,7 @@ void dsp_vco_set(struct dsp_vco *v, uint32_t inc)
  * jump:  before (x + 1)^2 / 2, after -(1 - x)^2 / 2;  slope: before (x + 1)^3 / 6, after (1 - x)^3 / 6.
  * The previous sample is 1 - t before the event (x + 1 = t), the current one t after. |h| <= 65536 and
  * |m| <= 32768 (DSP_INC_MAX) keep every product inside 32 bits. */
-void dsp_blep(int32_t *prev, int32_t *cur, int32_t t, int32_t h, int32_t m)
+HOT void blep(int32_t *prev, int32_t *cur, int32_t t, int32_t h, int32_t m)
 {
     int32_t a = t >> 1, b = 32768 - a;          /* t and 1 - t, Q15 */
     int32_t a2 = (a * a) >> 15, b2 = (b * b) >> 15;
@@ -28,6 +32,11 @@ void dsp_blep(int32_t *prev, int32_t *cur, int32_t t, int32_t h, int32_t m)
         *prev += (((m * a3) >> 15) * 10923) >> 16;     /* / 6 */
         *cur += (((m * b3) >> 15) * 10923) >> 16;
     }
+}
+
+void dsp_blep(int32_t *prev, int32_t *cur, int32_t t, int32_t h, int32_t m)
+{
+    blep(prev, cur, t, h, m);
 }
 
 void dsp_shape_saw(struct dsp_shape *sh, int32_t g)
@@ -49,86 +58,86 @@ void dsp_shape_pulse(struct dsp_shape *sh, uint32_t width)
 }
 
 /* The shape's value at a phase, its mean taken off. */
-static inline int32_t value(const struct dsp_shape *sh, uint32_t ph)
+HOT int32_t value(const struct dsp_shape *sh, int pulse, uint32_t ph)
 {
     int32_t s;
-    if (sh->pulse)
+    if (pulse)
         return (ph < sh->width ? 32767 : -32768) - sh->dc;
     s = dsp_saw(ph);
     return (s > 0 ? s : (sh->g * s) >> 15) - sh->dc;
 }
 
 /* Its slope a sample at a phase, the ramp rising ds a sample (Q15). */
-static inline int32_t slope(const struct dsp_shape *sh, uint32_t ph, int32_t ds)
+HOT int32_t slope(const struct dsp_shape *sh, int pulse, uint32_t ph, int32_t ds)
 {
-    if (sh->pulse)
+    if (pulse)
         return 0;
     return ph >= 0x80000000u ? ds : (sh->g * ds) >> 15;
 }
 
 /* Its jump and change of slope at the reset (0) and at mid. */
-static inline void at_reset(const struct dsp_shape *sh, int32_t ds, int32_t *h, int32_t *m)
+HOT void at_reset(const struct dsp_shape *sh, int pulse, int32_t ds, int32_t *h, int32_t *m)
 {
-    *h = sh->pulse ? 65536 : -(32768 + sh->g);  /* up; or from 1 to -g */
-    *m = sh->pulse ? 0 : -(((32768 - sh->g) * ds) >> 15);
+    *h = pulse ? 65536 : -(32768 + sh->g);  /* up; or from 1 to -g */
+    *m = pulse ? 0 : -(((32768 - sh->g) * ds) >> 15);
 }
-static inline void at_mid(const struct dsp_shape *sh, int32_t ds, int32_t *h, int32_t *m)
+HOT void at_mid(const struct dsp_shape *sh, int pulse, int32_t ds, int32_t *h, int32_t *m)
 {
-    *h = sh->pulse ? -65536 : 0;                /* down; or the saw type's kink */
-    *m = sh->pulse ? 0 : ((32768 - sh->g) * ds) >> 15;
+    *h = pulse ? -65536 : 0;                /* down; or the saw type's kink */
+    *m = pulse ? 0 : ((32768 - sh->g) * ds) >> 15;
 }
 
 /* The sub-octave's flip-flop toggles t into the sample: its jump's polyBLEP, onto ys, its sample. */
-static inline void toggle(struct dsp_osc *o, int32_t *sprev, int32_t *ys, int32_t t)
+HOT void toggle(struct dsp_osc *o, int32_t *sprev, int32_t *ys, int32_t t)
 {
     int32_t was = o->sub;
     o->sub = was > 0 ? -32768 : 32767;
     *ys += o->sub - was;
-    dsp_blep(sprev, ys, t, o->sub - was, 0);
+    blep(sprev, ys, t, o->sub - was, 0);
 }
 
 /* One sample of one oscillator: its ramp advanced by o->vco.inc, or reset `sync` (Q16) before the sample's
  * end if sync >= 0. Writes its waveshape's and sub-octave's samples, one late, and returns where its ramp
  * reset in the sample, or -1. */
-static inline int32_t tick(struct dsp_osc *o, const struct dsp_shape *sh, int32_t sync, int32_t *out,
-                           int32_t *sub)
+HOT int32_t tick(struct dsp_osc *o, const struct dsp_shape *sh, int pulse, int32_t sync, int32_t *out,
+                int32_t *sub)
 {
     struct dsp_vco *v = &o->vco;
     uint32_t old = v->phase, at, np, d;
     int32_t ds = (int32_t)(v->inc >> 16), y, ys = o->sub, h, m, reset = -1, t;
     v->phase = old + v->inc;
     if (sync < 0) {
-        y = value(sh, v->phase);
+        y = value(sh, pulse, v->phase);
         if ((reset = dsp_vco_crossed(v, 0)) >= 0) {
-            at_reset(sh, ds, &h, &m);
-            dsp_blep(&o->prev, &y, reset, h, m);
+            at_reset(sh, pulse, ds, &h, &m);
+            blep(&o->prev, &y, reset, h, m);
             toggle(o, &o->sub_prev, &ys, reset);
         }
         if ((t = dsp_vco_crossed(v, sh->mid)) >= 0) {
-            at_mid(sh, ds, &h, &m);
-            dsp_blep(&o->prev, &y, t, h, m);
+            at_mid(sh, pulse, ds, &h, &m);
+            blep(&o->prev, &y, t, h, m);
         }
     } else {
         np = (v->inc >> 16) * (uint32_t)sync;  /* the ramp since the sync, about sync x inc */
         at = v->phase - np;                     /* where it was when the sync came */
-        y = value(sh, np);
+        y = value(sh, pulse, np);
         /* its own reset and mid, if it passed them earlier in the sample, before the sync: t is the sync's
          * plus how long before it, (at - point) / inc */
         if ((d = at) < at - old) {
             reset = sync + (int32_t)((((d >> v->shift) * v->rinc) >> 14));
             if (reset < 65536) {
-                at_reset(sh, ds, &h, &m);
-                dsp_blep(&o->prev, &y, reset, h, m);
+                at_reset(sh, pulse, ds, &h, &m);
+                blep(&o->prev, &y, reset, h, m);
                 toggle(o, &o->sub_prev, &ys, reset);
             }
         }
         if ((d = at - sh->mid) < at - old && (t = sync + (int32_t)(((d >> v->shift) * v->rinc) >> 14)) < 65536) {
-            at_mid(sh, ds, &h, &m);
-            dsp_blep(&o->prev, &y, t, h, m);
+            at_mid(sh, pulse, ds, &h, &m);
+            blep(&o->prev, &y, t, h, m);
         }
         /* the sync: from where it was to the start of the ramp. shortcut: an edge the restarted ramp passes
          * in the same sample (a very narrow pulse near 12 kHz) is not band-limited. */
-        dsp_blep(&o->prev, &y, sync, value(sh, 0) - value(sh, at), slope(sh, 0, ds) - slope(sh, at, ds));
+        blep(&o->prev, &y, sync, value(sh, pulse, 0) - value(sh, pulse, at), slope(sh, pulse, 0, ds) - slope(sh, pulse, at, ds));
         toggle(o, &o->sub_prev, &ys, sync);
         v->phase = np;
         reset = sync;
@@ -143,10 +152,19 @@ static inline int32_t tick(struct dsp_osc *o, const struct dsp_shape *sh, int32_
 void dsp_osc_block(struct dsp_osc *o, uint32_t inc, const struct dsp_shape *sh, int32_t *out, int32_t *sub,
                    int n)
 {
+    struct dsp_osc a;                           /* a local copy: out and sub cannot alias it, so it stays in
+                                                   registers through the loop */
+    struct dsp_shape h = *sh;
     int i;
     dsp_vco_set(&o->vco, inc > DSP_INC_MAX ? DSP_INC_MAX : inc);
-    for (i = 0; i < n; i++)
-        tick(o, sh, -1, &out[i], &sub[i]);
+    a = *o;
+    if (h.pulse)
+        for (i = 0; i < n; i++)
+            tick(&a, &h, 1, -1, &out[i], &sub[i]);
+    else
+        for (i = 0; i < n; i++)
+            tick(&a, &h, 0, -1, &out[i], &sub[i]);
+    *o = a;
 }
 
 void dsp_saw_type(struct dsp_osc *o, uint32_t inc, int32_t g, int32_t *out, int32_t *sub, int n)
@@ -182,58 +200,97 @@ int32_t dsp_xmod_factor(int32_t x)
     return exp2_tab[k] + (((exp2_tab[k + 1] - exp2_tab[k]) * (int32_t)f) >> 10);
 }
 
+/* dsp_pair's loop, compiled once for each pair of waveshapes. */
+HOT void pair(struct dsp_osc *o1, struct dsp_osc *o2, const struct dsp_shape *sh1, const struct dsp_shape *sh2,
+              int p1, int p2, int mod, int32_t *f1, int32_t *s1, int32_t *f2, int32_t *s2, int n)
+{
+    struct dsp_osc a = *o1, b = *o2;            /* local copies, as in dsp_osc_block */
+    struct dsp_shape h1 = *sh1, h2 = *sh2;
+    uint32_t base = a.vco.inc >> 14, rbase = a.vco.rinc;
+    int32_t reset;
+    int i;
+    for (i = 0; i < n; i++) {
+        if (mod & DSP_XMOD) {                   /* VCO1's step and its reciprocal, times 2^x and 2^-x */
+            int32_t x = dsp_saw(b.vco.phase);
+            uint32_t inc = base * (uint32_t)dsp_xmod_factor(x);
+            a.vco.inc = inc > DSP_INC_MAX ? DSP_INC_MAX : inc;
+            a.vco.rinc = (rbase * (uint32_t)dsp_xmod_factor(-1 - x)) >> 14;
+        }
+        reset = tick(&a, &h1, p1, -1, &f1[i], &s1[i]);
+        tick(&b, &h2, p2, (mod & DSP_SYNC) ? reset : -1, &f2[i], &s2[i]);
+    }
+    a.vco.inc = base << 14;                     /* the block's own step back, for the next block's start */
+    a.vco.rinc = rbase;
+    *o1 = a;
+    *o2 = b;
+}
+
 void dsp_pair(struct dsp_osc *o1, struct dsp_osc *o2, uint32_t inc1, uint32_t inc2, const struct dsp_shape *sh1,
               const struct dsp_shape *sh2, int mod, int32_t *f1, int32_t *s1, int32_t *f2, int32_t *s2, int n)
 {
-    uint32_t base, rbase;
-    int32_t reset;
-    int i;
     dsp_vco_set(&o1->vco, inc1 > DSP_INC_MAX ? DSP_INC_MAX : inc1);
     dsp_vco_set(&o2->vco, inc2 > DSP_INC_MAX ? DSP_INC_MAX : inc2);
-    base = o1->vco.inc >> 14;
-    rbase = o1->vco.rinc;
-    for (i = 0; i < n; i++) {
-        if (mod & DSP_XMOD) {                   /* VCO1's step and its reciprocal, times 2^x and 2^-x */
-            int32_t x = dsp_saw(o2->vco.phase);
-            uint32_t inc = base * (uint32_t)dsp_xmod_factor(x);
-            o1->vco.inc = inc > DSP_INC_MAX ? DSP_INC_MAX : inc;
-            o1->vco.rinc = (rbase * (uint32_t)dsp_xmod_factor(-1 - x)) >> 14;
-        }
-        reset = tick(o1, sh1, -1, &f1[i], &s1[i]);
-        tick(o2, sh2, (mod & DSP_SYNC) ? reset : -1, &f2[i], &s2[i]);
-    }
+    if (sh1->pulse && sh2->pulse)
+        pair(o1, o2, sh1, sh2, 1, 1, mod, f1, s1, f2, s2, n);
+    else if (sh1->pulse)
+        pair(o1, o2, sh1, sh2, 1, 0, mod, f1, s1, f2, s2, n);
+    else if (sh2->pulse)
+        pair(o1, o2, sh1, sh2, 0, 1, mod, f1, s1, f2, s2, n);
+    else
+        pair(o1, o2, sh1, sh2, 0, 0, mod, f1, s1, f2, s2, n);
+}
+
+HOT uint32_t noise_next(uint32_t x)
+{
+    x ^= x << 13;
+    x ^= x >> 17;
+    return x ^ (x << 5);
 }
 
 void dsp_noise(uint32_t *state, int32_t *out, int n)
 {
     uint32_t x = *state;
     int i;
-    for (i = 0; i < n; i++) {
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        out[i] = (int32_t)x >> 16;
-    }
+    for (i = 0; i < n; i++)
+        out[i] = (int32_t)(x = noise_next(x)) >> 16;
     *state = x;
 }
 
-void dsp_mix_add(int32_t *acc, const int32_t *src, int32_t gain, int n)
+/* dsp_voice_out's loop, compiled with and without the noise, and for VCO1's two sources alone (four: false)
+ * or all four: fewer live values, fewer spilled to the stack. */
+HOT void voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t gain[4], uint32_t *noise,
+                   int32_t ng, int32_t *out, int n, int with_noise, int four)
 {
-    int i;
-    if (!gain)
-        return;
-    for (i = 0; i < n; i++)
-        acc[i] += (src[i] * gain) >> 15;        /* |src| < 2^16 and gain <= 2^15 */
-}
-
-void dsp_mix_out(struct dsp_hpf *h, const int32_t *acc, int32_t gain, int32_t *out, int n)
-{
-    int32_t lp = h->lp, x, y, i;
+    const int32_t *a = src[0], *b = src[1], *c = src[2], *d = src[3];
+    int32_t ga = gain[0], gb = gain[1], gc = gain[2], gd = gain[3], lp = h->lp, x, i;
+    uint32_t z = *noise;
     for (i = 0; i < n; i++) {
-        x = acc[i] >> 2;                        /* a quarter: < 2^16 for five sources */
-        lp += (((x << 8) - lp) * 47) >> 15;     /* 2 pi 11 / 48000 = 47 / 32768 */
-        y = (x - (lp >> 8)) * gain;             /* Q15 x Q14 */
-        out[i] = y > 0x1fffffff ? 0x7fffffff : y < -0x20000000 ? (int32_t)0x80000000 : y << 2;
+        x = a[i] * ga + b[i] * gb;                              /* |src| < 2^16, gain <= 2^12: < 2^30 */
+        if (four)
+            x += c[i] * gc + d[i] * gd;
+        if (with_noise) {
+            z = noise_next(z);
+            x += ((int32_t)z >> 16) * ng;
+        }
+        x >>= 14;                               /* Q12 to Q15, and a quarter */
+        lp += (((x << 8) - lp) * 47) >> 15;     /* the low-pass the high-pass takes off: 2 pi 11 / 48000 */
+        x -= lp >> 8;
+        out[i] = x > 32767 ? 0x7fffffff : x < -32768 ? (int32_t)0x80000000 : x << 16;
     }
     h->lp = lp;
+    *noise = z;
+}
+
+void dsp_voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t gain[4], uint32_t *noise,
+                   int32_t noise_gain, int32_t *out, int n)
+{
+    int four = gain[2] || gain[3];
+    if (noise_gain && four)
+        voice_out(h, src, gain, noise, noise_gain, out, n, 1, 1);
+    else if (noise_gain)
+        voice_out(h, src, gain, noise, noise_gain, out, n, 1, 0);
+    else if (four)
+        voice_out(h, src, gain, noise, 0, out, n, 0, 1);
+    else
+        voice_out(h, src, gain, noise, 0, out, n, 0, 0);
 }

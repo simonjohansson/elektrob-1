@@ -302,32 +302,36 @@ static void test_noise(void)
 /* The mixer's gains: low is 47/100 of high, -6.6 dB. */
 static void test_mix_gains(void)
 {
-    int32_t src[4] = {32767, -32768, 16384, 0}, acc[4] = {0}, i;
-    dsp_mix_add(acc, src, DSP_MIX_HIGH, 4);
-    for (i = 0; i < 4; i++)
-        assert(acc[i] == src[i]);
-    dsp_mix_add(acc, src, 0, 4);
-    assert(acc[0] == 32767);
     assert(fabs(20 * log10((double)DSP_MIX_LOW / DSP_MIX_HIGH) + 6.56) < 0.05);
+    assert(fabs(20 * log10((double)DSP_MIX_NOISE_LOW / DSP_MIX_HIGH) + 13.4) < 0.05);
 }
 
-/* The output: a quarter of the sum at unity gain, DC gone within a second, and clipped, never wrapped. */
+/* The output: a quarter of a source at high, DC gone within a second, a source at gain 0 left out, and
+ * clipped, never wrapped. */
 static void test_mix_out(void)
 {
+    static int32_t acc[RATE], out[RATE], junk[RATE];
     struct dsp_hpf h = {0};
-    int32_t acc[RATE], out[RATE], i;
+    uint32_t noise = 1;
+    const int32_t *src[4] = {acc, junk, junk, junk};
+    int32_t high[4] = {DSP_MIX_HIGH, 0, 0, 0}, i;
     double tail = 0;
-    for (i = 0; i < RATE; i++)
+    for (i = 0; i < RATE; i++) {
         acc[i] = 10000 + ((i / 24) & 1 ? 20000 : -20000);   /* 1 kHz square riding on DC */
-    dsp_mix_out(&h, acc, 1 << 14, out, RATE);
+        junk[i] = 65535;
+    }
+    dsp_voice_out(&h, src, high, &noise, 0, out, RATE);
     for (i = RATE - 4800; i < RATE; i++)
         tail += out[i];
     assert(fabs(tail / 4800 / 2147483648.0) < 0.001);           /* the DC is gone */
     /* the square's edge at a quarter, less the 11 Hz high-pass's droop over 24 samples (3.4 %) */
     assert(abs((out[RATE - 1] - out[RATE - 25]) / 65536 - 2 * 5000) < 400);
     for (i = 0; i < RATE; i++)
-        acc[i] = (i & 1) ? 6 * 65535 : -6 * 65535;           /* far too loud */
-    dsp_mix_out(&h, acc, 1 << 14, out, 64);
+        acc[i] = junk[i] = (i & 1) ? 65535 : -65535;          /* four sources at their loudest: too loud */
+    for (i = 0; i < 4; i++)
+        high[i] = DSP_MIX_HIGH;
+    src[1] = src[2] = src[3] = junk;
+    dsp_voice_out(&h, src, high, &noise, DSP_MIX_NOISE_HIGH, out, 64);
     for (i = 0; i < 64; i++)
         assert((i & 1) ? out[i] > 0 : out[i] < 0);
 }

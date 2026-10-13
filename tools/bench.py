@@ -17,6 +17,8 @@ image = open(sys.argv[1], 'rb').read()
 syms = {l.split()[2]: int(l.split()[0], 16) for l in subprocess.check_output(
     ['m68k-elf-nm', sys.argv[2]], text=True).splitlines() if len(l.split()) == 3}
 cs = Cs(CS_ARCH_M68K, CS_MODE_BIG_ENDIAN | CS_MODE_M68K_040)
+funcs = [(n, a) for n, a in syms.items() if BASE <= a < BASE + len(image) and not n.startswith('_')]
+where = {}
 
 
 def run(blocks, voices, setting):
@@ -32,6 +34,10 @@ def run(blocks, voices, setting):
 
     def hook(u, addr, size, _):
         count['all'] += 1
+        fn = where.get(addr)
+        if fn is None:
+            fn = where[addr] = max((a, n) for n, a in funcs if a <= addr)[1]
+        count['fn:' + fn] = count.get('fn:' + fn, 0) + 1
         kind = seen.get(addr)
         if kind is None:
             ins = next(cs.disasm(bytes(u.mem_read(addr, size)), addr), None)
@@ -49,7 +55,10 @@ print('%-44s %9s %9s %6s %6s %s' % ('setting', 'instr/blk', 'per voice', 'muls',
 for setting, name in ((1, 'default: one saw'), (2, 'both VCOs and subs'), (0, 'worst: + SYNC, XMOD, noise')):
     warm = run(WARM, 8, setting)
     full = run(WARM + BLOCKS, 8, setting)
-    per = {k: (full[k] - warm[k]) / BLOCKS for k in full}
+    per = {k: (full[k] - warm.get(k, 0)) / BLOCKS for k in full}
     share = per['all'] / (STOCK / STOCK_LOAD)
     print('%-44s %9.0f %9.0f %6.0f %6.0f %+.0f %% of a block (stock alone: %.0f %%)' % (
         name, per['all'], per['all'] / 8, per['mul'], per['div'], 100 * share, 100 * STOCK_LOAD))
+    if '-v' in sys.argv:
+        for k, v in sorted(((k, v) for k, v in per.items() if k.startswith('fn:')), key=lambda kv: -kv[1]):
+            print('    %-28s %8.0f a block' % (k[3:], v))
