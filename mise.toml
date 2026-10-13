@@ -59,6 +59,14 @@ description = "Print f0, harmonic levels and the aliasing floor of a WAV"
 usage = 'arg "<file>"'
 run = "uv run -q --with numpy --with soundfile python tools/analyze.py ${usage_file}"
 
+[tasks.knobs]
+description = "Print the SRC page's knob graphics as text (machine/knobs.c)"
+run = [
+  "mkdir -p out",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror -Imachine machine/dsp.c machine/voice.c machine/knobs.c tools/knobs.c -o out/knobs",
+  "out/knobs",
+]
+
 [tasks.protocol]
 description = "Render the machine's side of #15's protocol (T1-T8) into out/ours"
 run = [

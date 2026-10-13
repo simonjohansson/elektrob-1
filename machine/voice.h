@@ -19,6 +19,9 @@ struct ob1_voice {
     uint32_t noise;             /* the noise's state: never 0 */
 };
 
+/* WAV1/WAV2's value (0-127) as a waveshape. */
+void ob1_shape(struct dsp_shape *sh, int32_t w);
+
 /* A voice at rest; seed (not 0) sets its noise apart from other voices'. */
 void ob1_voice_init(struct ob1_voice *v, uint32_t seed);
 

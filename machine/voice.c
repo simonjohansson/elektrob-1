@@ -21,8 +21,7 @@ static uint32_t wave_width(int32_t w)
     return PW_MIN + (uint32_t)(w - 64) * ((0x80000000u - PW_MIN) / 63);
 }
 
-/* WAV1/WAV2's value as a waveshape. */
-static void shape(struct dsp_shape *sh, int32_t w)
+void ob1_shape(struct dsp_shape *sh, int32_t w)
 {
     if (w < 64)
         dsp_shape_saw(sh, wave_g(w));
@@ -53,8 +52,8 @@ void ob1_voice_render(struct ob1_voice *v, const struct ob1_knobs *k, uint32_t i
     int32_t mix1 = k->mix1, mix2 = k->mix2, mod = k->mod;
     const int32_t *src[4];
     struct dsp_shape sh1, sh2;
-    shape(&sh1, k->wav1);
-    shape(&sh2, k->wav2);
+    ob1_shape(&sh1, k->wav1);
+    ob1_shape(&sh2, k->wav2);
     if (!(mod & DSP_XMOD) || !mix1)
         mod &= ~DSP_XMOD;                                          /* moves only VCO1 */
     if (!mix2)

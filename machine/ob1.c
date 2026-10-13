@@ -11,6 +11,7 @@
  * (docs/ADAPTING.md, "SRC machines"). */
 #include "digitakt-mk1/core3.h"
 #include "voice.h"
+#include "knobs.h"
 
 #define OB1_ID      120
 #define K_TUNE      0                   /* the SRC page's knobs, A-H: SLICE's parameters */
@@ -170,6 +171,70 @@ static int32_t mix_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
     return 1;
 }
 
+/* ---- the knob graphics (#18): machine/knobs.c's rows, drawn into the box x + 1 to x + 17, y to y + 16
+ * (y = 0 the screen's bottom row), its top row first ---------------------------------------------------- */
+typedef void (*rect_fn)(void *bmp, int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t colour);
+#define FILLRECT ((rect_fn)fw_fillrect)
+
+static int32_t draw_rows(void *bmp, int32_t x, int32_t y, const uint32_t *rows)
+{
+    int32_t r, c, c0;
+    FILLRECT(bmp, x + 1, y, x + KNOB_PX, y + KNOB_PX - 1, 0);
+    for (r = 0; r < KNOB_PX; r++)
+        for (c = 0; c < KNOB_PX; ) {                       /* each run of lit pixels: one rectangle */
+            if (!(rows[r] >> (KNOB_PX - 1 - c) & 1)) {
+                c++;
+                continue;
+            }
+            for (c0 = c; c < KNOB_PX && rows[r] >> (KNOB_PX - 1 - c) & 1; c++)
+                ;
+            FILLRECT(bmp, x + 1 + c0, y + KNOB_PX - 1 - r, x + c, y + KNOB_PX - 1 - r, 1);
+        }
+    return 1;
+}
+
+static int32_t draw_wave(void *bmp, int32_t x, int32_t y, int32_t value, int32_t flag)
+{
+    uint32_t rows[KNOB_PX];
+    int32_t v = value >> 8;
+    (void)flag;
+    knob_wave(v < 0 ? 0 : v > 127 ? 127 : v, rows);
+    return draw_rows(bmp, x, y, rows);
+}
+
+static int32_t draw_frq(void *bmp, int32_t x, int32_t y, int32_t value, int32_t flag)
+{
+    uint32_t rows[KNOB_PX];
+    int32_t v = value >> 8;
+    (void)flag;
+    knob_frq(v < 0 ? 0 : v > 63 ? 63 : v, rows);
+    return draw_rows(bmp, x, y, rows);
+}
+
+static int32_t draw_mod(void *bmp, int32_t x, int32_t y, int32_t value, int32_t flag)
+{
+    uint32_t rows[KNOB_PX];
+    (void)flag;
+    knob_mod(value >> 8, rows);
+    return draw_rows(bmp, x, y, rows);
+}
+
+static int32_t draw_mix(void *bmp, int32_t x, int32_t y, int32_t value, int32_t flag)
+{
+    uint32_t rows[KNOB_PX];
+    (void)flag;
+    knob_mix(value >> 8, rows);
+    return draw_rows(bmp, x, y, rows);
+}
+
+static int32_t draw_noise(void *bmp, int32_t x, int32_t y, int32_t value, int32_t flag)
+{
+    uint32_t rows[KNOB_PX];
+    (void)flag;
+    knob_noise(value >> 8, rows);
+    return draw_rows(bmp, x, y, rows);
+}
+
 /* A knob's value set in the sound, which is what is saved and shown, and in the engine (fw_set_param alone
  * leaves the sound as it was). */
 static void set(uint8_t *sound, int32_t track, int k, int32_t v)
@@ -194,24 +259,25 @@ static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
 }
 
 static const struct cm_ui ob1_page = {
-    .abi = cm_ui_v3,
+    .abi = cm_ui_v31,                                   /* machine-pages 1.1: knobs that draw */
     .page_from = 3,                                     /* SLICE's page, as every added machine gets */
     .on_switch = ob1_switch,
     .knob = {
         /* the slots whose own UI records turn oddly (PLAY, SAMP, LEN, GRID) borrow BR's */
-        [K_FRQ2] = { .name = "FRQ2", .lname = "VCO2 freq", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT,
-                     .min = 0, .max = 63 << 8, .def = 32 << 8, .fmt = frq_text },
-        [K_WAV1] = { .name = "WAV1", .lname = "VCO1 wave", .fmt = wave_text },
+        [K_FRQ2] = { .name = "FRQ2", .lname = "VCO2 freq", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
+                     .min = 0, .max = 63 << 8, .def = 32 << 8, .fmt = frq_text, .draw = draw_frq },
+        [K_WAV1] = { .name = "WAV1", .lname = "VCO1 wave", .flags = CM_DRAW, .fmt = wave_text, .draw = draw_wave },
         [K_WAV2] = { .name = "WAV2", .lname = "VCO2 wave", .look = ID_BR, .flags = CM_NOT_SAMPLE | CM_RANGE |
-                     CM_DEFAULT, .min = 0, .max = 127 << 8, .def = 63 << 8, .fmt = wave_text },
-        [K_MOD] = { .name = "MOD", .lname = "Sync/cross mod", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT,
-                    .min = 0, .max = 3 << 8, .def = 0, .fmt = mod_text },
-        [K_MIX1] = { .name = "MIX1", .lname = "VCO1 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT,
-                     .min = 0, .max = 8 << 8, .def = 6 << 8, .fmt = mix_text },   /* FUND high, OCT off */
-        [K_MIX2] = { .name = "MIX2", .lname = "VCO2 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT,
-                     .min = 0, .max = 8 << 8, .def = 0, .fmt = mix_text },        /* off */
-        [K_NOIS] = { .name = "NOIS", .lname = "Noise", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT,
-                     .min = 0, .max = 2 << 8, .def = 0, .fmt = noise_text },
+                     CM_DEFAULT | CM_DRAW, .min = 0, .max = 127 << 8, .def = 63 << 8, .fmt = wave_text,
+                     .draw = draw_wave },
+        [K_MOD] = { .name = "MOD", .lname = "Sync/cross mod", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
+                    .min = 0, .max = 3 << 8, .def = 0, .fmt = mod_text, .draw = draw_mod },
+        [K_MIX1] = { .name = "MIX1", .lname = "VCO1 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
+                     .min = 0, .max = 8 << 8, .def = 6 << 8, .fmt = mix_text, .draw = draw_mix },  /* H/- */
+        [K_MIX2] = { .name = "MIX2", .lname = "VCO2 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
+                     .min = 0, .max = 8 << 8, .def = 0, .fmt = mix_text, .draw = draw_mix },       /* off */
+        [K_NOIS] = { .name = "NOIS", .lname = "Noise", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
+                     .min = 0, .max = 2 << 8, .def = 0, .fmt = noise_text, .draw = draw_noise },
     },
 };
 
