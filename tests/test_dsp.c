@@ -280,6 +280,25 @@ static void test_xmod_pitch(void)
     assert(fabs(flips / 1082.0 - 1) < 0.015);
 }
 
+/* Noise: no DC, the RMS of a uniform spread (1 / sqrt 3), and white: neighbouring samples uncorrelated. */
+static void test_noise(void)
+{
+    static int32_t x[RATE];
+    uint32_t state = 1;
+    double mean = 0, power = 0, corr = 0;
+    int i;
+    dsp_noise(&state, x, RATE);
+    for (i = 0; i < RATE; i++) {
+        mean += x[i] / 32768.0;
+        power += pow(x[i] / 32768.0, 2);
+        if (i)
+            corr += (x[i] / 32768.0) * (x[i - 1] / 32768.0);
+    }
+    assert(fabs(mean / RATE) < 0.01);
+    assert(fabs(sqrt(power / RATE) - 1 / sqrt(3)) < 0.01);
+    assert(fabs(corr / power) < 0.02);
+}
+
 /* The mixer's gains: low is 47/100 of high, -6.6 dB. */
 static void test_mix_gains(void)
 {
@@ -355,6 +374,7 @@ int main(void)
     test_sync_clocks_sub();
     test_xmod_factor();
     test_xmod_pitch();
+    test_noise();
     test_mix_gains();
     test_mix_out();
     puts("dsp: all tests passed");

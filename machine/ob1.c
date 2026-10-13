@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /* ob1: the Oberheim OB-1's oscillator section as an SRC machine on core 3.0: two VCOs (machine/dsp.c), VCO1 at
  * the trig's note and TUNE, VCO2 FRQ2 semitones from it, each with its wave type and WAVE and its FUND and
- * OCT mix, VCO2 synced to VCO1 and VCO1 cross-modulated by VCO2 on MOD; the track's filter, envelope, level,
- * LFOs and sends work on it as on a sample.
+ * OCT mix, VCO2 synced to VCO1 and VCO1 cross-modulated by VCO2 on MOD, and noise; the track's filter,
+ * envelope, level, LFOs and sends work on it as on a sample.
  *
  * It names no firmware address: the locations are core 3.0's exports (fw_*), and its page is drawn by the
  * machine-pages mod from the description below. So its mod.json's 1.54 port is empty.
@@ -20,16 +20,18 @@
 #define K_MOD       4                   /* SLICE's slot, 0-3: OFF, SYNC, XMOD, BOTH */
 #define K_MIX1      5                   /* LEN's slot, 0-8: the nine settings of VCO1 FUND x OCT */
 #define K_MIX2      6                   /* GRID's slot, 0-8: VCO2's */
-#define K_LEV       7
+#define K_NOIS      7                   /* LEV's slot, 0-2: NOISE off, low, high */
 #define ID_BR       134                 /* BR's parameter id (SLICE's knob C): a plain knob, for a slot whose own turns oddly */
 
 /* ---- the sound (ev_render_voices: the render, interrupt level) ----------------------------------- */
 
 static struct dsp_osc vco1[8], vco2[8];    /* free-running, as the OB-1's VCOs: never reset */
 static struct dsp_hpf hpf[8];
+static uint32_t noise[8] = {1, 2, 3, 4, 5, 6, 7, 8};   /* each voice its own: never 0 */
 
 /* A mixer setting, 0-2 (off, low, high), as its gain. */
 static const int32_t mix_gain[3] = {0, DSP_MIX_LOW, DSP_MIX_HIGH};
+static const int32_t noise_gain[3] = {0, DSP_MIX_NOISE_LOW, DSP_MIX_NOISE_HIGH};
 
 /* WAV1 and WAV2 0-63: saw type, triangle (0) to saw (63), as g -1 to +1, Q15. */
 static int32_t wave_g(int32_t w)
@@ -74,7 +76,7 @@ void ob1_render(int32_t *blocks)
     int t;
     for (t = 0; t < 8; t++) {
         const volatile int16_t *p = &fw_voice_params[53 * t];
-        int32_t pitch, lev, mix1, mix2, mod, i, acc[32], f1[32], s1[32], f2[32], s2[32];
+        int32_t pitch, mix1, mix2, mod, nois, i, acc[32], f1[32], s1[32], f2[32], s2[32];
         uint32_t inc1, inc2;
         struct dsp_shape sh1, sh2;
         if (fw_render_machine[t] != OB1_ID)
@@ -110,8 +112,11 @@ void ob1_render(int32_t *blocks)
             dsp_mix_add(acc, f2, mix_gain[mix2 / 3], 32);
             dsp_mix_add(acc, s2, mix_gain[mix2 % 3], 32);
         }
-        lev = knob(p, K_LEV, 127);
-        dsp_mix_out(&hpf[t], acc, lev * lev, &blocks[32 * t], 32);    /* LEV's law, as a sample's: Q14 */
+        if ((nois = knob(p, K_NOIS, 2))) {
+            dsp_noise(&noise[t], f1, 32);
+            dsp_mix_add(acc, f1, noise_gain[nois], 32);
+        }
+        dsp_mix_out(&hpf[t], acc, 1 << 14, &blocks[32 * t], 32);      /* no LEV: the AMP page's VOL */
     }
 }
 
@@ -143,6 +148,20 @@ static int32_t frq_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
     if (v >= 10)
         buf[n++] = (char)('0' + v / 10);
     buf[n++] = (char)('0' + v % 10);
+    buf[n] = 0;
+    return 1;
+}
+
+/* NOISE's text. */
+static int32_t noise_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
+{
+    static const char *const word[3] = {"OFF", "LO", "HI"};
+    int32_t v = value >> 8, n = 0;
+    const char *w;
+    (void)ctx;
+    (void)machine;
+    for (w = word[v < 0 ? 0 : v > 2 ? 2 : v]; *w; )
+        buf[n++] = *w++;
     buf[n] = 0;
     return 1;
 }
@@ -197,7 +216,8 @@ static void set(uint8_t *sound, int32_t track, int k, int32_t v)
     fw_set_param(v << 8, track, 17 + k);
 }
 
-/* A track turns to OB-1: both VCOs saws in unison, VCO1's FUND high, VCO2 off, no sync or cross mod. CM_DEFAULT alone does not
+/* A track turns to OB-1: both VCOs saws in unison, VCO1's FUND high, VCO2 and noise off, no sync or
+ * cross mod. CM_DEFAULT alone does not
  * reach the slots on a switch (they keep SLICE's stock defaults: MIX1 0, all off, silent). */
 static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
 {
@@ -208,6 +228,7 @@ static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
     set(sound, track, K_MIX1, 6);
     set(sound, track, K_MIX2, 0);
     set(sound, track, K_MOD, 0);
+    set(sound, track, K_NOIS, 0);
 }
 
 static const struct cm_ui ob1_page = {
@@ -227,6 +248,8 @@ static const struct cm_ui ob1_page = {
                      .min = 0, .max = 8 << 8, .def = 6 << 8, .fmt = mix_text },   /* FUND high, OCT off */
         [K_MIX2] = { .name = "MIX2", .lname = "VCO2 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT,
                      .min = 0, .max = 8 << 8, .def = 0, .fmt = mix_text },        /* off */
+        [K_NOIS] = { .name = "NOIS", .lname = "Noise", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT,
+                     .min = 0, .max = 2 << 8, .def = 0, .fmt = noise_text },
     },
 };
 

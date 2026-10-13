@@ -204,6 +204,19 @@ void dsp_pair(struct dsp_osc *o1, struct dsp_osc *o2, uint32_t inc1, uint32_t in
     }
 }
 
+void dsp_noise(uint32_t *state, int32_t *out, int n)
+{
+    uint32_t x = *state;
+    int i;
+    for (i = 0; i < n; i++) {
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        out[i] = (int32_t)x >> 16;
+    }
+    *state = x;
+}
+
 void dsp_mix_add(int32_t *acc, const int32_t *src, int32_t gain, int n)
 {
     int i;

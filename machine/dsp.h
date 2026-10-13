@@ -108,6 +108,10 @@ int32_t dsp_xmod_factor(int32_t x);
 #define DSP_MIX_NOISE_HIGH  15420           /* 100K */
 #define DSP_MIX_NOISE_LOW   7010            /* 220K: 47 / 220 */
 
+/* The noise source (on the OB-1 a transistor junction's noise, from the performance board): white, from a
+ * 32-bit xorshift whose state must not be 0. n samples, -32768 to 32767. */
+void dsp_noise(uint32_t *state, int32_t *out, int n);
+
 /* acc[i] += src[i] * gain (Q15). A gain of 0 skips the source. */
 void dsp_mix_add(int32_t *acc, const int32_t *src, int32_t gain, int n);
 
