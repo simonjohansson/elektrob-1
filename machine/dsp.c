@@ -1,35 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "dsp.h"
 
-/* A parabola, then its square nudged in (within 0.1 %). */
-int32_t dsp_sine(uint32_t ph)
-{
-    int32_t x = (int32_t)ph >> 16, a = x < 0 ? -x : x, y, z;
-    y = (x * (32768 - a)) >> 13;
-    z = y < 0 ? -y : y;
-    y += (7373 * (((y * z) >> 15) - y)) >> 15;
-    return y > 32767 ? 32767 : y < -32767 ? -32767 : y;
-}
-
-int32_t dsp_fold(int32_t y, int32_t shape)
-{
-    int32_t v = y + ((y * shape) >> 4);
-    while (v > 32767 || v < -32767)
-        v = v > 0 ? 65534 - v : -65534 - v;
-    return v;
-}
-
-void dsp_render(uint32_t *phase, uint32_t inc, int32_t shape, int32_t gain, int32_t *out, int n)
-{
-    uint32_t ph = *phase;
-    int i;
-    for (i = 0; i < n; i++) {
-        out[i] = (dsp_fold(dsp_sine(ph), shape) * gain) << 2;      /* Q15 x Q14 -> Q31 */
-        ph += inc;
-    }
-    *phase = ph;
-}
-
 void dsp_vco_set(struct dsp_vco *v, uint32_t inc)
 {
     uint32_t i = inc, k = 0;
@@ -40,4 +11,45 @@ void dsp_vco_set(struct dsp_vco *v, uint32_t inc)
     v->inc = inc;
     v->shift = k;
     v->rinc = i ? (1u << 30) / i : 0;
+}
+
+/* The residuals of a kernel two samples wide, x the time from the event in samples:
+ * jump:  before (x + 1)^2 / 2, after -(1 - x)^2 / 2;  slope: before (x + 1)^3 / 6, after (1 - x)^3 / 6.
+ * The previous sample is 1 - t before the event (x + 1 = t), the current one t after. |h| <= 65536 and
+ * |m| <= 32768 (DSP_INC_MAX) keep every product inside 32 bits. */
+void dsp_blep(int32_t *prev, int32_t *cur, int32_t t, int32_t h, int32_t m)
+{
+    int32_t a = t >> 1, b = 32768 - a;          /* t and 1 - t, Q15 */
+    int32_t a2 = (a * a) >> 15, b2 = (b * b) >> 15;
+    *prev += (h * a2) >> 16;
+    *cur -= (h * b2) >> 16;
+    if (m) {
+        int32_t a3 = (a2 * a) >> 15, b3 = (b2 * b) >> 15;
+        *prev += (((m * a3) >> 15) * 10923) >> 16;     /* / 6 */
+        *cur += (((m * b3) >> 15) * 10923) >> 16;
+    }
+}
+
+void dsp_saw_type(struct dsp_osc *o, uint32_t inc, int32_t g, int32_t *out, int n)
+{
+    int32_t prev = o->prev, i, t, y, s;
+    int32_t dc = (32768 - g) >> 2;              /* the mean, (1 - g) / 4 */
+    int32_t ds, kink;
+    if (inc > DSP_INC_MAX)
+        inc = DSP_INC_MAX;
+    dsp_vco_set(&o->vco, inc);
+    ds = (int32_t)(inc >> 16);                  /* the ramp's rise a sample */
+    kink = ((32768 - g) * ds) >> 15;            /* the slope's change where s = 0: (1 - g) ds */
+    for (i = 0; i < n; i++) {
+        int32_t reset = dsp_vco_step(&o->vco);
+        s = dsp_saw(o->vco.phase);
+        y = (s > 0 ? s : (g * s) >> 15) - dc;
+        if (reset >= 0)                         /* from 1 to -g, and the slope from ds to g ds */
+            dsp_blep(&prev, &y, reset, -(32768 + g), -kink);
+        if ((t = dsp_vco_crossed(&o->vco, 0x80000000u)) >= 0)
+            dsp_blep(&prev, &y, t, 0, kink);
+        out[i] = prev;
+        prev = y;
+    }
+    o->prev = prev;
 }

@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* ob1: the Oberheim OB-1's oscillator section as an SRC machine on core 3.0. For now it still plays the
- * sine example's folded sine (machine/dsp.c) at the trig's note and TUNE; the track's filter, envelope,
- * level, LFOs and sends work on it as on a sample.
+/* ob1: the Oberheim OB-1's oscillator section as an SRC machine on core 3.0. For now one VCO in saw type
+ * (machine/dsp.c) at the trig's note and TUNE, its WAVE on knob C; the track's filter, envelope, level,
+ * LFOs and sends work on it as on a sample.
  *
  * It names no firmware address: the locations are core 3.0's exports (fw_*), and its page is drawn by the
  * machine-pages mod from the description below. So its mod.json's 1.54 port is empty.
@@ -13,19 +13,26 @@
 
 #define OB1_ID      120
 #define K_TUNE      0                   /* the SRC page's knobs, A-H: SLICE's parameters */
-#define K_SHAPE     2                   /* BR's: its range, 0-127, and its knob as they are */
+#define K_WAV1      2                   /* BR's: its range, 0-127, and its knob as they are */
 #define K_LEV       7
 
 /* ---- the sound (ev_render_voices: the render, interrupt level) ----------------------------------- */
 
-static uint32_t phase[8];                  /* free-running, as the OB-1's VCOs: never reset */
+static struct dsp_osc vco1[8];             /* free-running, as the OB-1's VCOs: never reset */
+
+/* WAV1 0-63: saw type, triangle (0) to saw (63), as g -1 to +1, Q15. 64-127 is the pulse type (#5);
+ * until then it plays the saw. */
+static int32_t wave_g(int32_t w)
+{
+    return w < 64 ? -32768 + (w << 16) / 63 : 32768;
+}
 
 void ob1_render(int32_t *blocks)
 {
     int t;
     for (t = 0; t < 8; t++) {
         const volatile int16_t *p = &fw_voice_params[53 * t];
-        int32_t pitch, shape, lev, gain;
+        int32_t pitch, w, lev, gain, i, x[32];
         uint32_t inc;
         if (fw_render_machine[t] != OB1_ID)
             continue;
@@ -33,32 +40,29 @@ void ob1_render(int32_t *blocks)
         pitch = ((int32_t)p[K_TUNE] - 0x4000) * 256 + fw_voice_note[t] + (3 << 16);
         pitch = pitch < 0 ? 0 : pitch > (87 << 16) ? 87 << 16 : pitch;
         inc = (23410327u >> 13) * (fw_pitch_tab[pitch / 384] >> 16);   /* 261.63 Hz at 48 kHz, times it */
-        shape = (p[K_SHAPE] >> 8) & 0x7f;
+        w = (p[K_WAV1] >> 8) & 0x7f;
         lev = (p[K_LEV] >> 8) & 0x7f;
         gain = lev * lev;                                              /* LEV's law, as a sample's: Q14 */
-        dsp_render(&phase[t], inc, shape, gain, &blocks[32 * t], 32);
+        dsp_saw_type(&vco1[t], inc, wave_g(w), x, 32);
+        for (i = 0; i < 32; i++)
+            blocks[32 * t + i] = (x[i] * gain) << 2;                   /* Q15 x Q14 -> Q31 */
     }
 }
 
 /* ---- the page (machine-pages draws it) --------------------------------------------------------- */
 
-static int32_t shape_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
+/* WAV1's text: S0-S63 for the saw type, P0-P63 for the pulse type. */
+static int32_t wave_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
 {
-    int32_t v = (value >> 8) & 0x7f, n = 0;
-    char d[3];
+    int32_t v = (value >> 8) & 0x7f, n = 1;
     (void)ctx;
     (void)machine;
-    if (!v) {
-        buf[0] = 'S'; buf[1] = 'I'; buf[2] = 'N'; buf[3] = 0;          /* 0: a plain sine */
-        return 1;
-    }
-    do {
-        d[n++] = (char)('0' + v % 10);
-        v /= 10;
-    } while (v);
-    for (v = 0; n; v++)
-        buf[v] = d[--n];
-    buf[v] = 0;
+    buf[0] = v < 64 ? 'S' : 'P';
+    v &= 63;
+    if (v >= 10)
+        buf[n++] = (char)('0' + v / 10);
+    buf[n++] = (char)('0' + v % 10);
+    buf[n] = 0;
     return 1;
 }
 
@@ -67,7 +71,7 @@ static const struct cm_ui ob1_page = {
     .page_from = 3,                                     /* SLICE's page, as every added machine gets */
     .knob = {
         [1] = { .flags = CM_HIDDEN },                   /* PLAY, SAMP, SLICE, LEN and GRID: a sample's */
-        [K_SHAPE] = { .name = "SHAP", .lname = "Shape", .fmt = shape_text },
+        [K_WAV1] = { .name = "WAV1", .lname = "VCO1 wave", .fmt = wave_text },
         [3] = { .flags = CM_HIDDEN },
         [4] = { .flags = CM_HIDDEN },
         [5] = { .flags = CM_HIDDEN },

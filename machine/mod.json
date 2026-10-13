@@ -4,7 +4,7 @@
  "title": "OB-1",
  "category": "Machines",
  "license": "GPL-2.0-or-later",
- "description": "OB-1, an SRC machine after the Oberheim OB-1's oscillator section. Work in progress: it plays a folded sine at the trig's note and TUNE (SHAPE folds it). Machine id 120, from the experiments range.",
+ "description": "OB-1, an SRC machine after the Oberheim OB-1's oscillator section. Work in progress: one VCO in saw type, triangle to saw on WAV1. Machine id 120, from the experiments range.",
  "device": "digitakt-mk1",
  "os": "1.53",
  "sources": ["ob1.c", "dsp.c"],

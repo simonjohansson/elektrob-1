@@ -43,16 +43,16 @@ run = [
 ]
 
 [tasks.render]
-description = "Render the machine's DSP to out/render-FREQ-SHAPE.wav"
+description = "Render the machine's DSP to out/render-FREQ-WAVE.wav"
 usage = '''
 arg "<freq>" help="Frequency in Hz"
-arg "[shape]" help="SHAPE, 0-127" default="0"
+arg "[wave]" help="WAVE, 0-63: saw type, triangle to saw" default="63"
 arg "[seconds]" default="2"
 '''
 run = [
   "mkdir -p out",
   "cc -std=c99 -O2 -Wall -Wextra -Werror -Imachine machine/dsp.c tools/render.c -o out/render",
-  "out/render ${usage_freq} ${usage_shape} ${usage_seconds} out/render-${usage_freq}-${usage_shape}.wav",
+  "out/render ${usage_freq} ${usage_wave} ${usage_seconds} out/render-${usage_freq}-${usage_wave}.wav",
 ]
 
 [tasks.analyze]
