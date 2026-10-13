@@ -21,7 +21,7 @@ mise run setup
 | `mise run render 440 [shape] [seconds]` | renders the DSP to `out/render-440-0.wav` |
 | `mise run analyze FILE.wav` | prints f0, harmonic levels and the aliasing floor |
 | `mise run build` | builds core, machine-pages and the machine into `out/` |
-| `mise run firmware` | patches the stock OS into `out/Digitakt_custom.syx` (version `SINE`) |
+| `mise run firmware` | patches the stock OS into `out/Digitakt_custom.syx` (version `$FW_VERSION`, `OB-1`) |
 | `mise run emu` | adds that build to digiemu and opens its panel |
 
 In the emulator: FUNC+SRC (shift-click FUNC to latch) opens the machine menu.

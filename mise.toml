@@ -12,6 +12,7 @@ PYTHONPATH = "{{config_root}}/vendor/elekloader"
 ELEKLOADER_STOCK = "{{config_root}}/firmware/Digitakt_OS1.53.syx"
 ELEKLOADER_CROSS = "m68k-elf-"
 DIGIEMU_HOME = "{{config_root}}/.digiemu"
+FW_VERSION = "OB-1"                     # the OS version the unit shows: 4 characters
 
 [tasks.setup]
 description = "Fetch submodules, the m68k toolchain and the emulator's dependencies"
@@ -60,18 +61,20 @@ usage = 'arg "<file>"'
 run = "uv run -q --with numpy python tools/analyze.py ${usage_file}"
 
 [tasks.firmware]
-description = "Patch the stock OS with core, machine-pages and the machine"
+description = "Patch the stock OS with core, machine-pages and the OB-1 machine"
 depends = ["build"]
-run = "python -m elekloader.patch --stock $ELEKLOADER_STOCK --mod out/core-*.elemod --mod out/machine-pages-*.elemod --mod out/sine-machine-*.elemod --out out/Digitakt_custom.syx --version SINE"
+run = "python -m elekloader.patch --stock $ELEKLOADER_STOCK --mod out/core-*.elemod --mod out/machine-pages-*.elemod --mod out/ob1-*.elemod --out out/Digitakt_custom.syx --version $FW_VERSION"
 
 [tasks.emu]
 description = "Add the custom firmware to digiemu and open its panel"
 depends = ["firmware"]
 dir = "vendor/digiemu"
 run = '''
-fw=$DIGIEMU_HOME/firmware/dt1-sine-$(shasum -a 256 {{config_root}}/out/Digitakt_custom.syx | cut -c1-8)
-# digiemu keeps each build (~530 MB) in its own folder: drop the older ones
-for d in $DIGIEMU_HOME/firmware/dt1-sine-*; do [ "$d" = "$fw" ] || rm -rf "$d"; done
+# digiemu names a build's folder dt1-<version, lower-cased, other characters as '-'>-<sha256[:8]>
+v=$(printf %s "$FW_VERSION" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9.' '-')
+fw=$DIGIEMU_HOME/firmware/dt1-$v-$(shasum -a 256 {{config_root}}/out/Digitakt_custom.syx | cut -c1-8)
+# it keeps each build (~530 MB) in its own folder: drop the older ones
+for d in $DIGIEMU_HOME/firmware/dt1-$v-*; do [ "$d" = "$fw" ] || rm -rf "$d"; done
 [ -d "$fw" ] || uv run python -m emu.portable --add {{config_root}}/out/Digitakt_custom.syx --yes
 # what the launcher's Play button runs
 uv run python -m emu.portable --worker panel "$fw"
