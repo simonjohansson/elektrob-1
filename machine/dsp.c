@@ -29,3 +29,15 @@ void dsp_render(uint32_t *phase, uint32_t inc, int32_t shape, int32_t gain, int3
     }
     *phase = ph;
 }
+
+void dsp_vco_set(struct dsp_vco *v, uint32_t inc)
+{
+    uint32_t i = inc, k = 0;
+    while (i >= 1u << 16) {                     /* at most 16 shifts, once a block */
+        i >>= 1;
+        k++;
+    }
+    v->inc = inc;
+    v->shift = k;
+    v->rinc = i ? (1u << 30) / i : 0;
+}

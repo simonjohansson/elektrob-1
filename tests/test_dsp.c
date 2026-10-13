@@ -65,12 +65,61 @@ static void test_render_scales_and_advances(void)
     assert(phase == (1u << 30) + 32000);
 }
 
+/* A ~1 kHz ramp resets once every 2^32 of phase, and every reset's position matches the exact one. */
+static void test_vco_resets(void)
+{
+    struct dsp_vco v = {0};
+    uint32_t inc = (uint32_t)(1000.0 / 48000 * 4294967296.0);
+    int i, resets = 0;
+    dsp_vco_set(&v, inc);
+    for (i = 0; i < 48000; i++) {
+        int32_t t = dsp_vco_step(&v);
+        if (t >= 0) {
+            double exact = (double)v.phase / inc * 65536;
+            assert(fabs(t - exact) < 65536 / 1024.0);  /* within 1/1024 of a sample */
+            resets++;
+        }
+    }
+    assert(resets == (int)(48000.0 * inc / 4294967296.0));   /* 999: the step is rounded down */
+}
+
+/* The reset's position stays accurate from 1 Hz to 20 kHz, at any phase. */
+static void test_vco_reset_position(void)
+{
+    double f;
+    uint32_t seed = 1;
+    for (f = 1; f < 20000; f *= 1.37) {
+        struct dsp_vco v = {0};
+        uint32_t inc = (uint32_t)(f / 48000 * 4294967296.0);
+        int i;
+        dsp_vco_set(&v, inc);
+        for (i = 0; i < 1000; i++) {
+            int32_t t;
+            seed = seed * 1664525u + 1013904223u;
+            v.phase = (uint32_t)0 - 1 - seed % inc;    /* the next step resets */
+            t = dsp_vco_step(&v);
+            assert(t >= 0);
+            assert(fabs(t - (double)v.phase / inc * 65536) < 65536 / 1024.0);
+        }
+    }
+}
+
+static void test_saw(void)
+{
+    assert(dsp_saw(0) == -32768);
+    assert(dsp_saw(1u << 31) == 0);
+    assert(dsp_saw(0xffffffffu) == 32767);
+}
+
 int main(void)
 {
     test_sine_points();
     test_sine_is_clean();
     test_fold_stays_in_range();
     test_render_scales_and_advances();
+    test_vco_resets();
+    test_vco_reset_position();
+    test_saw();
     puts("dsp: all tests passed");
     return 0;
 }
