@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* ob1: the Oberheim OB-1's oscillator section as an SRC machine on core 3.0. For now one VCO (machine/dsp.c)
- * at the trig's note and TUNE, its wave type and WAVE on knob C, its FUND and OCT mix on knob F; the
- * track's filter, envelope, level, LFOs and sends work on it as on a sample.
+/* ob1: the Oberheim OB-1's oscillator section as an SRC machine on core 3.0: two VCOs (machine/dsp.c), VCO1 at
+ * the trig's note and TUNE, VCO2 FRQ2 semitones from it, each with its wave type and WAVE and its FUND and
+ * OCT mix; the track's filter, envelope, level, LFOs and sends work on it as on a sample.
  *
  * It names no firmware address: the locations are core 3.0's exports (fw_*), and its page is drawn by the
  * machine-pages mod from the description below. So its mod.json's 1.54 port is empty.
@@ -13,26 +13,29 @@
 
 #define OB1_ID      120
 #define K_TUNE      0                   /* the SRC page's knobs, A-H: SLICE's parameters */
+#define K_FRQ2      1                   /* PLAY's slot, 0-63: VCO2, -32 to +31 semitones from VCO1 */
 #define K_WAV1      2                   /* BR's: its range, 0-127, and its knob as they are */
-#define K_MIX1      5                   /* LEN's slot, its range 0-8: the nine settings of VCO1 FUND x OCT */
+#define K_WAV2      3                   /* SAMP's slot, 0-127, not opening the sample list */
+#define K_MIX1      5                   /* LEN's slot, 0-8: the nine settings of VCO1 FUND x OCT */
+#define K_MIX2      6                   /* GRID's slot, 0-8: VCO2's */
 #define K_LEV       7
 #define ID_BR       134                 /* BR's parameter id (SLICE's knob C): a plain knob, for a slot whose own turns oddly */
 
 /* ---- the sound (ev_render_voices: the render, interrupt level) ----------------------------------- */
 
-static struct dsp_osc vco1[8];             /* free-running, as the OB-1's VCOs: never reset */
+static struct dsp_osc vco1[8], vco2[8];    /* free-running, as the OB-1's VCOs: never reset */
 static struct dsp_hpf hpf[8];
 
 /* A mixer setting, 0-2 (off, low, high), as its gain. */
 static const int32_t mix_gain[3] = {0, DSP_MIX_LOW, DSP_MIX_HIGH};
 
-/* WAV1 0-63: saw type, triangle (0) to saw (63), as g -1 to +1, Q15. */
+/* WAV1 and WAV2 0-63: saw type, triangle (0) to saw (63), as g -1 to +1, Q15. */
 static int32_t wave_g(int32_t w)
 {
     return -32768 + (w << 16) / 63;
 }
 
-/* WAV1 64-127: pulse type, from the narrowest pulse (64) to the square (127), as the OB-1's WAVE pot
+/* WAV1 and WAV2 64-127: pulse type, from the narrowest pulse (64) to the square (127), as the OB-1's WAVE pot
  * turned clockwise ends on the square (trimmed to 50 %). shortcut: the narrowest width is a guess, 10 %;
  * set it from a real OB-1's sweep (#15). */
 #define PW_MIN  429496730u                         /* 10 % of 2^32 */
@@ -41,39 +44,57 @@ static uint32_t wave_width(int32_t w)
     return PW_MIN + (uint32_t)(w - 64) * ((0x80000000u - PW_MIN) / 63);
 }
 
+/* A pitch (semitones << 16, the pitch table at 1 for 3 << 16) as a VCO's step. */
+static uint32_t pitch_inc(int32_t pitch)
+{
+    pitch = pitch < 0 ? 0 : pitch > (87 << 16) ? 87 << 16 : pitch;
+    return (23410327u >> 13) * (fw_pitch_tab[pitch / 384] >> 16);  /* 261.63 Hz at 48 kHz, times it */
+}
+
+/* A knob's value, 8.8, as 0-max. */
+static int32_t knob(const volatile int16_t *p, int k, int32_t max)
+{
+    int32_t v = p[k] >> 8;
+    return v < 0 ? 0 : v > max ? max : v;
+}
+
+/* One VCO a block, its FUND and OCT added into acc at a MIX setting (0-8). Skipped when both are off. */
+static void vco(struct dsp_osc *o, uint32_t inc, int32_t w, int32_t mix, int32_t *acc)
+{
+    int32_t x[32], sub[32];
+    if (!mix)
+        return;
+    if (w < 64)
+        dsp_saw_type(o, inc, wave_g(w), x, sub, 32);
+    else
+        dsp_pulse_type(o, inc, wave_width(w), x, sub, 32);
+    dsp_mix_add(acc, x, mix_gain[mix / 3], 32);                    /* FUND */
+    dsp_mix_add(acc, sub, mix_gain[mix % 3], 32);                  /* OCT */
+}
+
 void ob1_render(int32_t *blocks)
 {
     int t;
     for (t = 0; t < 8; t++) {
         const volatile int16_t *p = &fw_voice_params[53 * t];
-        int32_t pitch, w, mix, lev, gain, i, x[32], sub[32], acc[32];
-        uint32_t inc;
+        int32_t pitch, lev, i, acc[32];
         if (fw_render_machine[t] != OB1_ID)
             continue;
         /* the note and TUNE as the playback takes a sample's: the pitch table at 1 for note 60, TUNE 0 */
         pitch = ((int32_t)p[K_TUNE] - 0x4000) * 256 + fw_voice_note[t] + (3 << 16);
-        pitch = pitch < 0 ? 0 : pitch > (87 << 16) ? 87 << 16 : pitch;
-        inc = (23410327u >> 13) * (fw_pitch_tab[pitch / 384] >> 16);   /* 261.63 Hz at 48 kHz, times it */
-        w = (p[K_WAV1] >> 8) & 0x7f;
-        mix = (p[K_MIX1] >> 8) & 0xf;
-        mix = mix > 8 ? 8 : mix;
-        lev = (p[K_LEV] >> 8) & 0x7f;
-        gain = lev * lev;                                              /* LEV's law, as a sample's: Q14 */
-        if (w < 64)
-            dsp_saw_type(&vco1[t], inc, wave_g(w), x, sub, 32);
-        else
-            dsp_pulse_type(&vco1[t], inc, wave_width(w), x, sub, 32);
         for (i = 0; i < 32; i++)
             acc[i] = 0;
-        dsp_mix_add(acc, x, mix_gain[mix / 3], 32);                    /* FUND */
-        dsp_mix_add(acc, sub, mix_gain[mix % 3], 32);                  /* OCT */
-        dsp_mix_out(&hpf[t], acc, gain, &blocks[32 * t], 32);
+        vco(&vco1[t], pitch_inc(pitch), knob(p, K_WAV1, 127), knob(p, K_MIX1, 8), acc);
+        vco(&vco2[t], pitch_inc(pitch + ((knob(p, K_FRQ2, 63) - 32) << 16)), knob(p, K_WAV2, 127),
+            knob(p, K_MIX2, 8), acc);
+        lev = knob(p, K_LEV, 127);
+        dsp_mix_out(&hpf[t], acc, lev * lev, &blocks[32 * t], 32);    /* LEV's law, as a sample's: Q14 */
     }
 }
 
 /* ---- the page (machine-pages draws it) --------------------------------------------------------- */
 
-/* WAV1's text: S0-S63 for the saw type, P0-P63 for the pulse type. */
+/* WAV1's and WAV2's text: S0-S63 for the saw type, P0-P63 for the pulse type. */
 static int32_t wave_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
 {
     int32_t v = (value >> 8) & 0x7f, n = 1;
@@ -88,7 +109,22 @@ static int32_t wave_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
     return 1;
 }
 
-/* MIX1's text: FUND and OCT as - (off), L (low) or H (high), "H/-"; the pop-up spells it out. */
+/* FRQ2's text: semitones from VCO1, "+7", "-12". */
+static int32_t frq_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
+{
+    int32_t v = (value >> 8) - 32, n = 1;
+    (void)ctx;
+    (void)machine;
+    buf[0] = v < 0 ? '-' : '+';
+    v = v < 0 ? -v : v;
+    if (v >= 10)
+        buf[n++] = (char)('0' + v / 10);
+    buf[n++] = (char)('0' + v % 10);
+    buf[n] = 0;
+    return 1;
+}
+
+/* MIX1's and MIX2's text: FUND and OCT as - (off), L (low) or H (high), "H/-"; the pop-up spells it out. */
 static int32_t mix_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
 {
     static const char lvl[3] = {'-', 'L', 'H'};
@@ -116,14 +152,24 @@ static int32_t mix_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
     return 1;
 }
 
-/* A track turns to OB-1: MIX1 to FUND high, OCT off. CM_DEFAULT alone does not reach it on a switch (the
- * slot keeps LEN's stock default, 0: all off, silent), so it is set here: in the sound, which is what is
- * saved and shown, and in the engine (fw_set_param alone leaves the sound as it was). */
+/* A knob's value set in the sound, which is what is saved and shown, and in the engine (fw_set_param alone
+ * leaves the sound as it was). */
+static void set(uint8_t *sound, int32_t track, int k, int32_t v)
+{
+    *(uint16_t *)(sound + FW_SOUND_PARAM(k)) = (uint16_t)(v << 8);
+    fw_set_param(v << 8, track, 17 + k);
+}
+
+/* A track turns to OB-1: both VCOs saws in unison, VCO1's FUND high, VCO2 off. CM_DEFAULT alone does not
+ * reach the slots on a switch (they keep SLICE's stock defaults: MIX1 0, all off, silent). */
 static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
 {
     (void)from;
-    *(uint16_t *)(sound + FW_SOUND_PARAM(K_MIX1)) = 6 << 8;
-    fw_set_param(6 << 8, track, 17 + K_MIX1);
+    set(sound, track, K_FRQ2, 32);
+    set(sound, track, K_WAV1, 63);
+    set(sound, track, K_WAV2, 63);
+    set(sound, track, K_MIX1, 6);
+    set(sound, track, K_MIX2, 0);
 }
 
 static const struct cm_ui ob1_page = {
@@ -131,13 +177,17 @@ static const struct cm_ui ob1_page = {
     .page_from = 3,                                     /* SLICE's page, as every added machine gets */
     .on_switch = ob1_switch,
     .knob = {
-        [1] = { .flags = CM_HIDDEN },                   /* PLAY, SAMP, SLICE, LEN and GRID: a sample's */
+        /* the slots whose own UI records turn oddly (PLAY, SAMP, LEN, GRID) borrow BR's */
+        [K_FRQ2] = { .name = "FRQ2", .lname = "VCO2 freq", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT,
+                     .min = 0, .max = 63 << 8, .def = 32 << 8, .fmt = frq_text },
         [K_WAV1] = { .name = "WAV1", .lname = "VCO1 wave", .fmt = wave_text },
-        [3] = { .flags = CM_HIDDEN },
-        [4] = { .flags = CM_HIDDEN },
+        [K_WAV2] = { .name = "WAV2", .lname = "VCO2 wave", .look = ID_BR, .flags = CM_NOT_SAMPLE | CM_RANGE |
+                     CM_DEFAULT, .min = 0, .max = 127 << 8, .def = 63 << 8, .fmt = wave_text },
+        [4] = { .flags = CM_HIDDEN },                   /* SLICE: MOD, sync and cross mod (#7, #8) */
         [K_MIX1] = { .name = "MIX1", .lname = "VCO1 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT,
                      .min = 0, .max = 8 << 8, .def = 6 << 8, .fmt = mix_text },   /* FUND high, OCT off */
-        [6] = { .flags = CM_HIDDEN },
+        [K_MIX2] = { .name = "MIX2", .lname = "VCO2 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT,
+                     .min = 0, .max = 8 << 8, .def = 0, .fmt = mix_text },        /* off */
     },
 };
 
