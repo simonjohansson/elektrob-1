@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "dsp.h"
 
 #define RATE 48000
@@ -47,14 +48,16 @@ static double alias_floor(int hz)
 static uint32_t step(double f) { return (uint32_t)(f / RATE * 4294967296.0); }
 
 /* N samples of saw type g after a second to settle; the mean too. */
+static int32_t sub[RATE];       /* the sub-octave the renders also make */
+
 static double render(int32_t g, int32_t *x)
 {
-    struct dsp_osc o = {{0}, 0};
+    struct dsp_osc o = {{0}, 0, 32767, 32767};
     int32_t settle[RATE];
     double mean = 0;
     int i;
-    dsp_saw_type(&o, step(F0), g, settle, RATE);
-    dsp_saw_type(&o, step(F0), g, x, N);
+    dsp_saw_type(&o, step(F0), g, settle, sub, RATE);
+    dsp_saw_type(&o, step(F0), g, x, sub, N);
     for (i = 0; i < N; i++)
         mean += x[i];
     return mean / N / 32768;
@@ -144,12 +147,12 @@ static void test_saw_type_half(void)
 /* N samples of pulse type `width` after a second to settle; the mean too. */
 static double render_pulse(uint32_t width, int32_t *x)
 {
-    struct dsp_osc o = {{0}, 0};
+    struct dsp_osc o = {{0}, 0, 32767, 32767};
     int32_t settle[RATE];
     double mean = 0;
     int i;
-    dsp_pulse_type(&o, step(F0), width, settle, RATE);
-    dsp_pulse_type(&o, step(F0), width, x, N);
+    dsp_pulse_type(&o, step(F0), width, settle, sub, RATE);
+    dsp_pulse_type(&o, step(F0), width, x, sub, N);
     for (i = 0; i < N; i++)
         mean += x[i];
     return mean / N / 32768;
@@ -176,6 +179,45 @@ static void test_pulse_type_narrow(void)
     spectrum(x);
     for (h = 2; h <= 6; h++)
         assert(fabs(harmonic(h) - db(droop(h) * sin(M_PI * h * d) / h / sin(M_PI * d))) < 0.5);
+}
+
+/* The sub-octave: a square at F0 / 2 (950 Hz, 95 bins, whole cycles in N), odd harmonics at 1/h less the
+ * droop, no even ones and no DC; the same from either waveshape. */
+static void test_sub_octave(void)
+{
+    int32_t x[N], s1[N];
+    double mean = 0, x0;
+    int i, k;
+    render(32768, x);
+    for (i = 0; i < N; i++) {
+        s1[i] = sub[i];
+        mean += sub[i];
+    }
+    assert(fabs(mean / N / 32768) < 0.005);
+    spectrum(s1);
+    x0 = M_PI * (F0 / 2) / RATE;
+    for (k = 3; k <= 7; k += 2) {
+        double d = pow(sin(k * x0) / (k * x0), 2) / pow(sin(x0) / x0, 2);
+        assert(fabs(db(mag[k * F0 / 20]) - db(d / k)) < 0.3);
+    }
+    for (k = 2; k <= 6; k += 2)
+        assert(db(mag[k * F0 / 20]) < -60);
+    render_pulse(1u << 30, x);
+    for (i = 0; i < N; i++)
+        assert(abs(sub[i] - s1[i]) < 2);             /* same resets, same sub */
+}
+
+/* The flip-flop toggles once a reset: as many toggles as resets, each one at a reset. */
+static void test_sub_follows_resets(void)
+{
+    struct dsp_osc o = {{0}, 0, 32767, 32767};
+    int32_t x[RATE];
+    int i, flips = 0;
+    dsp_saw_type(&o, step(1000), 32768, x, sub, RATE);
+    for (i = 1; i < RATE; i++)
+        if ((sub[i] > 0) != (sub[i - 1] > 0))
+            flips++;
+    assert(abs(flips - (int)(48000.0 * step(1000) / 4294967296.0)) <= 1);
 }
 
 /* The band-limiting, at 1.9 kHz. The 2-point polyBLEP is weak just above Nyquist (the 13th harmonic,
@@ -214,6 +256,8 @@ int main(void)
     test_saw_type_aliasing();
     test_pulse_type_square();
     test_pulse_type_narrow();
+    test_sub_octave();
+    test_sub_follows_resets();
     puts("dsp: all tests passed");
     return 0;
 }

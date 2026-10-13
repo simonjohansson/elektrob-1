@@ -40,7 +40,7 @@ void ob1_render(int32_t *blocks)
     int t;
     for (t = 0; t < 8; t++) {
         const volatile int16_t *p = &fw_voice_params[53 * t];
-        int32_t pitch, w, lev, gain, i, x[32];
+        int32_t pitch, w, lev, gain, i, x[32], sub[32];
         uint32_t inc;
         if (fw_render_machine[t] != OB1_ID)
             continue;
@@ -52,9 +52,9 @@ void ob1_render(int32_t *blocks)
         lev = (p[K_LEV] >> 8) & 0x7f;
         gain = lev * lev;                                              /* LEV's law, as a sample's: Q14 */
         if (w < 64)
-            dsp_saw_type(&vco1[t], inc, wave_g(w), x, 32);
+            dsp_saw_type(&vco1[t], inc, wave_g(w), x, sub, 32);
         else
-            dsp_pulse_type(&vco1[t], inc, wave_width(w), x, 32);
+            dsp_pulse_type(&vco1[t], inc, wave_width(w), x, sub, 32);
         for (i = 0; i < 32; i++)
             blocks[32 * t + i] = (x[i] * gain) << 2;                   /* Q15 x Q14 -> Q31 */
     }

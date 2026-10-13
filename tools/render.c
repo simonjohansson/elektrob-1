@@ -13,8 +13,8 @@ static void put16(FILE *f, uint32_t v) { fputc(v, f); fputc(v >> 8, f); }
 int main(int argc, char **argv)
 {
     double freq, seconds;
-    int32_t wave, block[32];
-    struct dsp_osc o = {{0}, 0};
+    int32_t wave, block[32], sub[32];
+    struct dsp_osc o = {{0}, 0, 32767, 32767};
     uint32_t inc, frames, i, n;
     FILE *f;
     if (argc != 5) {
@@ -39,9 +39,9 @@ int main(int argc, char **argv)
     fputs("data", f); put32(f, 2 * frames);
     for (n = 0; n < frames; n += 32) {
         if (wave < 64)
-            dsp_saw_type(&o, inc, -32768 + (wave << 16) / 63, block, 32);
+            dsp_saw_type(&o, inc, -32768 + (wave << 16) / 63, block, sub, 32);
         else
-            dsp_pulse_type(&o, inc, 429496730u + (uint32_t)(wave - 64) * ((0x80000000u - 429496730u) / 63), block, 32);
+            dsp_pulse_type(&o, inc, 429496730u + (uint32_t)(wave - 64) * ((0x80000000u - 429496730u) / 63), block, sub, 32);
         for (i = 0; i < 32; i++)
             put16(f, (uint32_t)(block[i] > 32767 ? 32767 : block[i] < -32768 ? -32768 : block[i]));
     }

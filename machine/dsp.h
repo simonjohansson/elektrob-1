@@ -51,19 +51,25 @@ void dsp_blep(int32_t *prev, int32_t *cur, int32_t t, int32_t h, int32_t m);
 struct dsp_osc {
     struct dsp_vco vco;
     int32_t prev;           /* the sample before, held back a sample for its polyBLEP share */
+    int32_t sub;            /* the sub-octave's flip-flop: 32767 or -32768 */
+    int32_t sub_prev;       /* its sample before */
 };
 
 /* The highest step a waveshape takes: 12 kHz. It keeps the band-limiting's products inside 32 bits. */
 #define DSP_INC_MAX (1u << 30)
 
+/* Both waveshapes also render the oscillator's sub-octave (the OB-1's OCT, a 4013 flip-flop clocked by the
+ * VCO's reset) into sub: a square an octave down, toggling at each reset, so it follows the ramp's
+ * resets, a sync's included. Free-running too: it keeps its state between notes. */
+
 /* Saw type (the OB-1's WAVE in "Saw Type"): g, Q15 from -32768 to 32768, scales the ramp's lower half
  * against its upper: out = max(s, 0) + g min(s, 0). -1 is a triangle (|s|), +1 the saw. Its mean,
- * (1 - g) / 4, is taken off, as the mixer's AC coupling would. n samples into out, one sample late. */
-void dsp_saw_type(struct dsp_osc *o, uint32_t inc, int32_t g, int32_t *out, int n);
+ * (1 - g) / 4, is taken off, as the mixer's AC coupling would. n samples into out and sub, one late. */
+void dsp_saw_type(struct dsp_osc *o, uint32_t inc, int32_t g, int32_t *out, int32_t *sub, int n);
 
 /* Pulse type (the OB-1's WAVE in "Pulse Type", U11 comparing the ramp with a threshold): +1 while the
  * ramp is below `width` (a fraction of the cycle, 2^31 the square), -1 after. Its mean is taken off. n
  * samples into out, one sample late. */
-void dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *out, int n);
+void dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *out, int32_t *sub, int n);
 
 #endif
