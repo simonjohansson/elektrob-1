@@ -1,16 +1,12 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """f0, harmonic levels and the aliasing floor of a WAV: `mise run analyze FILE.wav`."""
 import sys
-import wave
 
 import numpy as np
+import soundfile as sf
 
-w = wave.open(sys.argv[1])
-rate, ch, width = w.getframerate(), w.getnchannels(), w.getsampwidth()
-if width not in (2, 4):
-    sys.exit('analyze: 16- or 32-bit PCM only')
-x = np.frombuffer(w.readframes(w.getnframes()), {2: np.int16, 4: np.int32}[width])
-x = x.reshape(-1, ch)[:, 0].astype(float) / 2 ** (8 * width - 1)
+x, rate = sf.read(sys.argv[1], dtype='float64', always_2d=True)
+x = x[:, 0]
 loud = np.nonzero(np.abs(x) > 0.01)[0]
 if not len(loud):
     sys.exit('analyze: silent')

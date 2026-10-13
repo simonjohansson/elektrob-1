@@ -38,33 +38,32 @@ run = "python -m elekloader.sdk.build machine --out out"
 description = "Build the machine's DSP for the host and run its tests"
 run = [
   "mkdir -p out",
-  "cc -std=c99 -O2 -Wall -Wextra -Werror -Imachine machine/dsp.c tests/test_dsp.c -lm -o out/test_dsp",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror -Imachine machine/dsp.c machine/voice.c tests/test_dsp.c -lm -o out/test_dsp",
   "out/test_dsp",
 ]
 
 [tasks.render]
-description = "Render the machine's DSP to out/render-FREQ-WAVE.wav"
+description = "Render the machine's voice to a WAV (tools/render.c: note, seconds, the knobs, sweep)"
 usage = '''
-arg "<freq>" help="Frequency in Hz"
-arg "[wave]" help="WAV1: 0-63 saw type (triangle to saw), 64-127 pulse type (10 % pulse to square)" default="63"
-arg "[seconds]" default="2"
+arg "<out>" help="The WAV to write"
+arg "[settings]" var=#true help="key=value: note=57 seconds=4 wav1 wav2 frq2 mix1 mix2 mod nois, sweep=KNOB:FROM:TO"
 '''
 run = [
   "mkdir -p out",
-  "cc -std=c99 -O2 -Wall -Wextra -Werror -Imachine machine/dsp.c tools/render.c -o out/render",
-  "out/render ${usage_freq} ${usage_wave} ${usage_seconds} out/render-${usage_freq}-${usage_wave}.wav",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror -Imachine machine/dsp.c machine/voice.c tools/render.c -lm -o out/render",
+  "eval out/render \"$usage_out\" ${usage_settings:-}",
 ]
 
 [tasks.analyze]
 description = "Print f0, harmonic levels and the aliasing floor of a WAV"
 usage = 'arg "<file>"'
-run = "uv run -q --with numpy python tools/analyze.py ${usage_file}"
+run = "uv run -q --with numpy --with soundfile python tools/analyze.py ${usage_file}"
 
 [tasks.bench]
 description = "Count the DSP's ColdFire instructions a block for 8 voices, in Unicorn"
 run = [
   "mkdir -p out",
-  "m68k-elf-gcc -mcpu=54455 -O2 -ffreestanding -fno-builtin -nostdlib -fomit-frame-pointer -Imachine -Wl,-Ttext=0x10000 -Wl,-e,bench machine/dsp.c tools/bench.c -o out/bench.elf",
+  "m68k-elf-gcc -mcpu=54455 -O2 -ffreestanding -fno-builtin -nostdlib -fomit-frame-pointer -Imachine -Wl,-Ttext=0x10000 -Wl,-e,bench machine/dsp.c machine/voice.c tools/bench.c -o out/bench.elf",
   "m68k-elf-objcopy -O binary out/bench.elf out/bench.bin",
   "uv run -q --with unicorn==2.1.4 --with capstone python tools/bench.py out/bench.bin out/bench.elf",
 ]

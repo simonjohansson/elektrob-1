@@ -1,54 +1,99 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* Render the machine's DSP to a 48 kHz 16-bit mono WAV: render FREQ WAVE SECONDS OUT.wav
- * WAVE as WAV1: 0-63 saw type, triangle to saw; 64-127 pulse type, 10 % pulse to square. */
+/* Render the machine's voice (machine/voice.c) to a 48 kHz mono WAV, 24-bit:
+ *     render OUT.wav [key=value ...]
+ * note (MIDI, 69 = A4 440 Hz; default 57, A3), seconds (4), and the SRC page's knobs as the machine reads
+ * them: wav1, wav2 (0-127), frq2 (0-63, 32 unison), mix1, mix2 (0-8), mod (0-3), nois (0-2). Defaults are a
+ * switch's: wav1 63, wav2 63, frq2 32, mix1 6, mix2 0, mod 0, nois 0. sweep=KNOB:FROM:TO moves a knob
+ * linearly from FROM to TO over the render, a block at a time, as an automated knob would. */
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "dsp.h"
+#include <string.h>
+#include "voice.h"
 
 #define RATE 48000
 
 static void put32(FILE *f, uint32_t v) { fputc(v, f); fputc(v >> 8, f); fputc(v >> 16, f); fputc(v >> 24, f); }
 static void put16(FILE *f, uint32_t v) { fputc(v, f); fputc(v >> 8, f); }
 
+static int32_t *field(struct ob1_knobs *k, const char *name, int32_t *frq2)
+{
+    if (!strcmp(name, "wav1")) return &k->wav1;
+    if (!strcmp(name, "wav2")) return &k->wav2;
+    if (!strcmp(name, "mix1")) return &k->mix1;
+    if (!strcmp(name, "mix2")) return &k->mix2;
+    if (!strcmp(name, "mod")) return &k->mod;
+    if (!strcmp(name, "nois")) return &k->nois;
+    if (!strcmp(name, "frq2")) return frq2;
+    return 0;
+}
+
+static int32_t clampv(const char *name, int32_t v)
+{
+    int32_t max = !strcmp(name, "frq2") ? 63 : !strncmp(name, "mix", 3) ? 8 : !strcmp(name, "mod") ? 3 :
+                  !strcmp(name, "nois") ? 2 : 127;
+    return v < 0 ? 0 : v > max ? max : v;
+}
+
 int main(int argc, char **argv)
 {
-    double freq, seconds;
-    int32_t wave, block[32], sub[32];
-    struct dsp_osc o = {{0}, 0, 32767, 32767};
-    uint32_t inc, frames, i, n;
+    struct ob1_knobs k = {63, 63, 6, 0, 0, 0};
+    struct ob1_voice v;
+    int32_t frq2 = 32, block[32], *sw = 0, from = 0, to = 0;
+    double note = 57, seconds = 4;
+    uint32_t frames, n, i;
     FILE *f;
-    if (argc != 5) {
-        fprintf(stderr, "usage: render FREQ WAVE SECONDS OUT.wav\n");
+    int a;
+    if (argc < 2) {
+        fprintf(stderr, "usage: render OUT.wav [note=57] [seconds=4] [wav1=63] [wav2=63] [frq2=32] [mix1=6] "
+                        "[mix2=0] [mod=0] [nois=0] [sweep=KNOB:FROM:TO]\n");
         return 2;
     }
-    freq = atof(argv[1]);
-    wave = atoi(argv[2]);
-    seconds = atof(argv[3]);
-    if (freq <= 0 || freq >= RATE / 2 || wave < 0 || wave > 127 || seconds <= 0) {
-        fprintf(stderr, "render: FREQ 0-24000, WAVE 0-127, SECONDS > 0\n");
+    for (a = 2; a < argc; a++) {
+        char name[8];
+        int value, x, y;
+        int32_t *p;
+        if (sscanf(argv[a], "sweep=%7[a-z0-9]:%d:%d", name, &x, &y) == 3 && (p = field(&k, name, &frq2))) {
+            sw = p, from = clampv(name, x), to = clampv(name, y);
+        } else if (sscanf(argv[a], "note=%lf", &note) == 1 || sscanf(argv[a], "seconds=%lf", &seconds) == 1)
+            ;
+        else if (sscanf(argv[a], "%7[a-z0-9]=%d", name, &value) == 2 && (p = field(&k, name, &frq2)))
+            *p = clampv(name, value);
+        else {
+            fprintf(stderr, "render: not understood: %s\n", argv[a]);
+            return 2;
+        }
+    }
+    if (seconds <= 0 || note < 0 || note > 127) {
+        fprintf(stderr, "render: seconds > 0, note 0-127\n");
         return 2;
     }
-    if (!(f = fopen(argv[4], "wb"))) {
-        perror(argv[4]);
+    if (!(f = fopen(argv[1], "wb"))) {
+        perror(argv[1]);
         return 1;
     }
-    inc = (uint32_t)(freq / RATE * 4294967296.0);
+    ob1_voice_init(&v, 1);
     frames = (uint32_t)(seconds * RATE) / 32 * 32;
-    fputs("RIFF", f); put32(f, 36 + 2 * frames); fputs("WAVEfmt ", f);
-    put32(f, 16); put16(f, 1); put16(f, 1); put32(f, RATE); put32(f, 2 * RATE); put16(f, 2); put16(f, 16);
-    fputs("data", f); put32(f, 2 * frames);
+    fputs("RIFF", f); put32(f, 36 + 3 * frames); fputs("WAVEfmt ", f);
+    put32(f, 16); put16(f, 1); put16(f, 1); put32(f, RATE); put32(f, 3 * RATE); put16(f, 3); put16(f, 24);
+    fputs("data", f); put32(f, 3 * frames);
     for (n = 0; n < frames; n += 32) {
-        if (wave < 64)
-            dsp_saw_type(&o, inc, -32768 + (wave << 16) / 63, block, sub, 32);
-        else
-            dsp_pulse_type(&o, inc, 429496730u + (uint32_t)(wave - 64) * ((0x80000000u - 429496730u) / 63), block, sub, 32);
-        for (i = 0; i < 32; i++)
-            put16(f, (uint32_t)(block[i] > 32767 ? 32767 : block[i] < -32768 ? -32768 : block[i]));
+        double hz1, hz2;
+        if (sw)
+            *sw = from + (int32_t)lround((double)(to - from) * n / frames);
+        hz1 = fmin(440 * pow(2, (note - 69) / 12), 12000);
+        hz2 = fmin(hz1 * pow(2, (frq2 - 32) / 12.0), 12000);
+        ob1_voice_render(&v, &k, (uint32_t)(hz1 / RATE * 4294967296.0), (uint32_t)(hz2 / RATE * 4294967296.0),
+                         block);
+        for (i = 0; i < 32; i++) {
+            uint32_t s = (uint32_t)(block[i] >> 8);
+            fputc(s, f); fputc(s >> 8, f); fputc(s >> 16, f);
+        }
     }
     if (fclose(f)) {
-        perror(argv[4]);
+        perror(argv[1]);
         return 1;
     }
-    printf("%s\n", argv[4]);
+    printf("%s\n", argv[1]);
     return 0;
 }

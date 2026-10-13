@@ -10,7 +10,7 @@
  * Machine 120: ids 120-127 are for examples and experiments; it takes one of its own before it is shared
  * (docs/ADAPTING.md, "SRC machines"). */
 #include "digitakt-mk1/core3.h"
-#include "dsp.h"
+#include "voice.h"
 
 #define OB1_ID      120
 #define K_TUNE      0                   /* the SRC page's knobs, A-H: SLICE's parameters */
@@ -25,29 +25,8 @@
 
 /* ---- the sound (ev_render_voices: the render, interrupt level) ----------------------------------- */
 
-static struct dsp_osc vco1[8], vco2[8];    /* free-running, as the OB-1's VCOs: never reset */
-static struct dsp_hpf hpf[8];
-static uint32_t noise[8] = {1, 2, 3, 4, 5, 6, 7, 8};   /* each voice its own: never 0 */
-
-/* A mixer setting, 0-2 (off, low, high), as its gain. */
-static const int32_t mix_gain[3] = {0, DSP_MIX_LOW, DSP_MIX_HIGH};
-static const int32_t noise_gain[3] = {0, DSP_MIX_NOISE_LOW, DSP_MIX_NOISE_HIGH};
-static const int32_t zero[32];                 /* a source not rendered */
-
-/* WAV1 and WAV2 0-63: saw type, triangle (0) to saw (63), as g -1 to +1, Q15. */
-static int32_t wave_g(int32_t w)
-{
-    return -32768 + (w << 16) / 63;
-}
-
-/* WAV1 and WAV2 64-127: pulse type, from the narrowest pulse (64) to the square (127), as the OB-1's WAVE pot
- * turned clockwise ends on the square (trimmed to 50 %). shortcut: the narrowest width is a guess, 10 %;
- * set it from a real OB-1's sweep (#15). */
-#define PW_MIN  429496730u                         /* 10 % of 2^32 */
-static uint32_t wave_width(int32_t w)
-{
-    return PW_MIN + (uint32_t)(w - 64) * ((0x80000000u - PW_MIN) / 63);
-}
+static struct ob1_voice voice[8];            /* set up on its first block */
+static uint8_t ready[8];
 
 /* A pitch (semitones << 16, the pitch table at 1 for 3 << 16) as a VCO's step. */
 static uint32_t pitch_inc(int32_t pitch)
@@ -61,15 +40,6 @@ static int32_t knob(const volatile int16_t *p, int k, int32_t max)
 {
     int32_t v = p[k] >> 8;
     return v < 0 ? 0 : v > max ? max : v;
-}
-
-/* WAV1/WAV2's value as a waveshape. */
-static void shape(struct dsp_shape *sh, int32_t w)
-{
-    if (w < 64)
-        dsp_shape_saw(sh, wave_g(w));
-    else
-        dsp_shape_pulse(sh, wave_width(w));
 }
 
 /* A voice the AMP envelope has silenced and no trig starts: inaudible after the AMP page, so it is not
@@ -86,10 +56,8 @@ void ob1_render(int32_t *blocks)
     int t;
     for (t = 0; t < 8; t++) {
         const volatile int16_t *p = &fw_voice_params[53 * t];
-        int32_t pitch, mix1, mix2, mod, i, f1[32], s1[32], f2[32], s2[32], gain[4];
-        const int32_t *src[4];
-        uint32_t inc1, inc2;
-        struct dsp_shape sh1, sh2;
+        struct ob1_knobs k;
+        int32_t pitch, i;
         if (fw_render_machine[t] != OB1_ID)
             continue;
         if (silent(t)) {
@@ -97,36 +65,20 @@ void ob1_render(int32_t *blocks)
                 blocks[32 * t + i] = 0;
             continue;
         }
+        if (!ready[t]) {
+            ob1_voice_init(&voice[t], t + 1);
+            ready[t] = 1;
+        }
+        k.wav1 = knob(p, K_WAV1, 127);
+        k.wav2 = knob(p, K_WAV2, 127);
+        k.mix1 = knob(p, K_MIX1, 8);
+        k.mix2 = knob(p, K_MIX2, 8);
+        k.mod = knob(p, K_MOD, 3);
+        k.nois = knob(p, K_NOIS, 2);
         /* the note and TUNE as the playback takes a sample's: the pitch table at 1 for note 60, TUNE 0 */
         pitch = ((int32_t)p[K_TUNE] - 0x4000) * 256 + fw_voice_note[t] + (3 << 16);
-        inc1 = pitch_inc(pitch);
-        inc2 = pitch_inc(pitch + ((knob(p, K_FRQ2, 63) - 32) << 16));
-        shape(&sh1, knob(p, K_WAV1, 127));
-        shape(&sh2, knob(p, K_WAV2, 127));
-        mix1 = knob(p, K_MIX1, 8);
-        mix2 = knob(p, K_MIX2, 8);
-        mod = knob(p, K_MOD, 3);                                       /* DSP_SYNC | DSP_XMOD */
-        if (!(mod & DSP_XMOD) || !mix1)
-            mod &= ~DSP_XMOD;                                          /* moves only VCO1 */
-        if (!mix2)
-            mod &= ~DSP_SYNC;                                          /* moves only VCO2 */
-        if (mod)
-            dsp_pair(&vco1[t], &vco2[t], inc1, inc2, &sh1, &sh2, mod, f1, s1, f2, s2, 32);
-        else {                                                         /* each alone, or not at all */
-            if (mix1)
-                dsp_osc_block(&vco1[t], inc1, &sh1, f1, s1, 32);
-            if (mix2)
-                dsp_osc_block(&vco2[t], inc2, &sh2, f2, s2, 32);
-        }
-        src[0] = mix1 ? f1 : zero;                                     /* FUND and OCT, each VCO */
-        src[1] = mix1 ? s1 : zero;
-        src[2] = mix2 ? f2 : zero;
-        src[3] = mix2 ? s2 : zero;
-        gain[0] = mix_gain[mix1 / 3];
-        gain[1] = mix_gain[mix1 % 3];
-        gain[2] = mix_gain[mix2 / 3];
-        gain[3] = mix_gain[mix2 % 3];
-        dsp_voice_out(&hpf[t], src, gain, &noise[t], noise_gain[knob(p, K_NOIS, 2)], &blocks[32 * t], 32);
+        ob1_voice_render(&voice[t], &k, pitch_inc(pitch), pitch_inc(pitch + ((knob(p, K_FRQ2, 63) - 32) << 16)),
+                         &blocks[32 * t]);
     }
 }
 
