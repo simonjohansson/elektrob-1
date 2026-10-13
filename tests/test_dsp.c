@@ -220,6 +220,66 @@ static void test_sub_follows_resets(void)
     assert(abs(flips - (int)(48000.0 * step(1000) / 4294967296.0)) <= 1);
 }
 
+/* Sync: VCO2 at 1.5 F0, reset by VCO1 at F0, repeats at F0: its spectrum is F0's harmonics, the aliases
+ * below 10 kHz far down. Unsynced, its own 2850 Hz is not one of them. */
+static void test_sync(void)
+{
+    struct dsp_osc o1 = {{0}, 0, 32767, 32767}, o2 = {{0}, 0, 32767, 32767};
+    struct dsp_shape saw;
+    static int32_t f1[RATE], s1[RATE], f2[RATE], s2[RATE];
+    double floor_sync;
+    dsp_shape_saw(&saw, 32768);
+    dsp_pair(&o1, &o2, step(F0), step(1.5 * F0), &saw, &saw, DSP_SYNC, f1, s1, f2, s2, RATE);
+    dsp_pair(&o1, &o2, step(F0), step(1.5 * F0), &saw, &saw, DSP_SYNC, f1, s1, f2, s2, N);
+    spectrum(f2);
+    floor_sync = alias_floor(10000);
+    printf("sync at %d Hz, VCO2 at 1.5x: aliases below 10 kHz %.1f dB\n", F0, floor_sync);
+    assert(floor_sync < -40);
+    dsp_pair(&o1, &o2, step(F0), step(1.5 * F0), &saw, &saw, 0, f1, s1, f2, s2, N);
+    spectrum(f2);
+    assert(alias_floor(10000) > -6);            /* 2850 Hz, between F0's harmonics */
+}
+
+/* A synced VCO2 slower than VCO1 never resets by itself: its sub-octave toggles once per VCO1 reset. */
+static void test_sync_clocks_sub(void)
+{
+    struct dsp_osc o1 = {{0}, 0, 32767, 32767}, o2 = {{0}, 0, 32767, 32767};
+    struct dsp_shape saw;
+    static int32_t f1[RATE], s1[RATE], f2[RATE], s2[RATE];
+    int i, flips = 0, resets = 0;
+    dsp_shape_saw(&saw, 32768);
+    dsp_pair(&o1, &o2, step(1000), step(750), &saw, &saw, DSP_SYNC, f1, s1, f2, s2, RATE);
+    for (i = 1; i < RATE; i++) {
+        flips += (s2[i] > 0) != (s2[i - 1] > 0);
+        resets += (s1[i] > 0) != (s1[i - 1] > 0);  /* VCO1's sub flips at each VCO1 reset */
+    }
+    assert(abs(flips - resets) <= 1);
+}
+
+/* The cross mod's factor is 2^(x / 32768) within 0.1 %. */
+static void test_xmod_factor(void)
+{
+    int32_t x;
+    for (x = -32768; x < 32768; x += 97)
+        assert(fabs(dsp_xmod_factor(x) / (16384 * pow(2, (double)x / 32768)) - 1) < 0.001);
+}
+
+/* A slow full-depth cross mod: VCO1 sweeps an octave each way along VCO2's ramp, on average 2^u over
+ * u in [-1, 1]: 1.5 / (2 ln 2) = 1.082 times its own pitch. */
+static void test_xmod_pitch(void)
+{
+    struct dsp_osc o1 = {{0}, 0, 32767, 32767}, o2 = {{0}, 0, 32767, 32767};
+    struct dsp_shape saw;
+    static int32_t f1[RATE], s1[RATE], f2[RATE], s2[RATE];
+    int i, flips = 0;
+    dsp_shape_saw(&saw, 32768);
+    dsp_pair(&o1, &o2, step(1000), step(2), &saw, &saw, DSP_XMOD, f1, s1, f2, s2, RATE);
+    for (i = 1; i < RATE; i++)
+        flips += (s1[i] > 0) != (s1[i - 1] > 0);    /* VCO1's resets */
+    printf("xmod: VCO1 at %d resets a second, against 1082\n", flips);
+    assert(fabs(flips / 1082.0 - 1) < 0.015);
+}
+
 /* The mixer's gains: low is 47/100 of high, -6.6 dB. */
 static void test_mix_gains(void)
 {
@@ -291,6 +351,10 @@ int main(void)
     test_pulse_type_narrow();
     test_sub_octave();
     test_sub_follows_resets();
+    test_sync();
+    test_sync_clocks_sub();
+    test_xmod_factor();
+    test_xmod_pitch();
     test_mix_gains();
     test_mix_out();
     puts("dsp: all tests passed");

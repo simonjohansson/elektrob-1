@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /* ob1: the Oberheim OB-1's oscillator section as an SRC machine on core 3.0: two VCOs (machine/dsp.c), VCO1 at
  * the trig's note and TUNE, VCO2 FRQ2 semitones from it, each with its wave type and WAVE and its FUND and
- * OCT mix; the track's filter, envelope, level, LFOs and sends work on it as on a sample.
+ * OCT mix, VCO2 synced to VCO1 and VCO1 cross-modulated by VCO2 on MOD; the track's filter, envelope, level,
+ * LFOs and sends work on it as on a sample.
  *
  * It names no firmware address: the locations are core 3.0's exports (fw_*), and its page is drawn by the
  * machine-pages mod from the description below. So its mod.json's 1.54 port is empty.
@@ -16,6 +17,7 @@
 #define K_FRQ2      1                   /* PLAY's slot, 0-63: VCO2, -32 to +31 semitones from VCO1 */
 #define K_WAV1      2                   /* BR's: its range, 0-127, and its knob as they are */
 #define K_WAV2      3                   /* SAMP's slot, 0-127, not opening the sample list */
+#define K_MOD       4                   /* SLICE's slot, 0-3: OFF, SYNC, XMOD, BOTH */
 #define K_MIX1      5                   /* LEN's slot, 0-8: the nine settings of VCO1 FUND x OCT */
 #define K_MIX2      6                   /* GRID's slot, 0-8: VCO2's */
 #define K_LEV       7
@@ -58,18 +60,13 @@ static int32_t knob(const volatile int16_t *p, int k, int32_t max)
     return v < 0 ? 0 : v > max ? max : v;
 }
 
-/* One VCO a block, its FUND and OCT added into acc at a MIX setting (0-8). Skipped when both are off. */
-static void vco(struct dsp_osc *o, uint32_t inc, int32_t w, int32_t mix, int32_t *acc)
+/* WAV1/WAV2's value as a waveshape. */
+static void shape(struct dsp_shape *sh, int32_t w)
 {
-    int32_t x[32], sub[32];
-    if (!mix)
-        return;
     if (w < 64)
-        dsp_saw_type(o, inc, wave_g(w), x, sub, 32);
+        dsp_shape_saw(sh, wave_g(w));
     else
-        dsp_pulse_type(o, inc, wave_width(w), x, sub, 32);
-    dsp_mix_add(acc, x, mix_gain[mix / 3], 32);                    /* FUND */
-    dsp_mix_add(acc, sub, mix_gain[mix % 3], 32);                  /* OCT */
+        dsp_shape_pulse(sh, wave_width(w));
 }
 
 void ob1_render(int32_t *blocks)
@@ -77,16 +74,42 @@ void ob1_render(int32_t *blocks)
     int t;
     for (t = 0; t < 8; t++) {
         const volatile int16_t *p = &fw_voice_params[53 * t];
-        int32_t pitch, lev, i, acc[32];
+        int32_t pitch, lev, mix1, mix2, mod, i, acc[32], f1[32], s1[32], f2[32], s2[32];
+        uint32_t inc1, inc2;
+        struct dsp_shape sh1, sh2;
         if (fw_render_machine[t] != OB1_ID)
             continue;
         /* the note and TUNE as the playback takes a sample's: the pitch table at 1 for note 60, TUNE 0 */
         pitch = ((int32_t)p[K_TUNE] - 0x4000) * 256 + fw_voice_note[t] + (3 << 16);
+        inc1 = pitch_inc(pitch);
+        inc2 = pitch_inc(pitch + ((knob(p, K_FRQ2, 63) - 32) << 16));
+        shape(&sh1, knob(p, K_WAV1, 127));
+        shape(&sh2, knob(p, K_WAV2, 127));
+        mix1 = knob(p, K_MIX1, 8);
+        mix2 = knob(p, K_MIX2, 8);
+        mod = knob(p, K_MOD, 3);                                       /* DSP_SYNC | DSP_XMOD */
+        if (!(mod & DSP_XMOD) || !mix1)
+            mod &= ~DSP_XMOD;                                          /* moves only VCO1 */
+        if (!mix2)
+            mod &= ~DSP_SYNC;                                          /* moves only VCO2 */
+        if (mod)
+            dsp_pair(&vco1[t], &vco2[t], inc1, inc2, &sh1, &sh2, mod, f1, s1, f2, s2, 32);
+        else {                                                         /* each alone, or not at all */
+            if (mix1)
+                dsp_osc_block(&vco1[t], inc1, &sh1, f1, s1, 32);
+            if (mix2)
+                dsp_osc_block(&vco2[t], inc2, &sh2, f2, s2, 32);
+        }
         for (i = 0; i < 32; i++)
             acc[i] = 0;
-        vco(&vco1[t], pitch_inc(pitch), knob(p, K_WAV1, 127), knob(p, K_MIX1, 8), acc);
-        vco(&vco2[t], pitch_inc(pitch + ((knob(p, K_FRQ2, 63) - 32) << 16)), knob(p, K_WAV2, 127),
-            knob(p, K_MIX2, 8), acc);
+        if (mix1) {
+            dsp_mix_add(acc, f1, mix_gain[mix1 / 3], 32);              /* FUND */
+            dsp_mix_add(acc, s1, mix_gain[mix1 % 3], 32);              /* OCT */
+        }
+        if (mix2) {
+            dsp_mix_add(acc, f2, mix_gain[mix2 / 3], 32);
+            dsp_mix_add(acc, s2, mix_gain[mix2 % 3], 32);
+        }
         lev = knob(p, K_LEV, 127);
         dsp_mix_out(&hpf[t], acc, lev * lev, &blocks[32 * t], 32);    /* LEV's law, as a sample's: Q14 */
     }
@@ -120,6 +143,20 @@ static int32_t frq_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
     if (v >= 10)
         buf[n++] = (char)('0' + v / 10);
     buf[n++] = (char)('0' + v % 10);
+    buf[n] = 0;
+    return 1;
+}
+
+/* MOD's text. */
+static int32_t mod_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
+{
+    static const char *const word[4] = {"OFF", "SYNC", "XMOD", "BOTH"};
+    int32_t v = value >> 8, n = 0;
+    const char *w;
+    (void)ctx;
+    (void)machine;
+    for (w = word[v < 0 ? 0 : v > 3 ? 3 : v]; *w; )
+        buf[n++] = *w++;
     buf[n] = 0;
     return 1;
 }
@@ -160,7 +197,7 @@ static void set(uint8_t *sound, int32_t track, int k, int32_t v)
     fw_set_param(v << 8, track, 17 + k);
 }
 
-/* A track turns to OB-1: both VCOs saws in unison, VCO1's FUND high, VCO2 off. CM_DEFAULT alone does not
+/* A track turns to OB-1: both VCOs saws in unison, VCO1's FUND high, VCO2 off, no sync or cross mod. CM_DEFAULT alone does not
  * reach the slots on a switch (they keep SLICE's stock defaults: MIX1 0, all off, silent). */
 static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
 {
@@ -170,6 +207,7 @@ static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
     set(sound, track, K_WAV2, 63);
     set(sound, track, K_MIX1, 6);
     set(sound, track, K_MIX2, 0);
+    set(sound, track, K_MOD, 0);
 }
 
 static const struct cm_ui ob1_page = {
@@ -183,7 +221,8 @@ static const struct cm_ui ob1_page = {
         [K_WAV1] = { .name = "WAV1", .lname = "VCO1 wave", .fmt = wave_text },
         [K_WAV2] = { .name = "WAV2", .lname = "VCO2 wave", .look = ID_BR, .flags = CM_NOT_SAMPLE | CM_RANGE |
                      CM_DEFAULT, .min = 0, .max = 127 << 8, .def = 63 << 8, .fmt = wave_text },
-        [4] = { .flags = CM_HIDDEN },                   /* SLICE: MOD, sync and cross mod (#7, #8) */
+        [K_MOD] = { .name = "MOD", .lname = "Sync/cross mod", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT,
+                    .min = 0, .max = 3 << 8, .def = 0, .fmt = mod_text },
         [K_MIX1] = { .name = "MIX1", .lname = "VCO1 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT,
                      .min = 0, .max = 8 << 8, .def = 6 << 8, .fmt = mix_text },   /* FUND high, OCT off */
         [K_MIX2] = { .name = "MIX2", .lname = "VCO2 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT,

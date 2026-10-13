@@ -58,19 +58,46 @@ struct dsp_osc {
 /* The highest step a waveshape takes: 12 kHz. It keeps the band-limiting's products inside 32 bits. */
 #define DSP_INC_MAX (1u << 30)
 
-/* Both waveshapes also render the oscillator's sub-octave (the OB-1's OCT, a 4013 flip-flop clocked by the
- * VCO's reset) into sub: a square an octave down, toggling at each reset, so it follows the ramp's
- * resets, a sync's included. Free-running too: it keeps its state between notes. */
+/* A waveshape, set once a block. The OB-1's two: saw type (WAVE in "Saw Type"): g, Q15 from -32768 to 32768,
+ * scales the ramp's lower half against its upper, out = max(s, 0) + g min(s, 0), -1 a triangle (|s|), +1 the
+ * saw; pulse type (WAVE in "Pulse Type", U11 comparing the ramp with a threshold): +1 while the ramp is below
+ * `width` (a fraction of the cycle, 2^31 the square), -1 after. Each has its mean taken off, as the mixer's
+ * AC coupling would. */
+struct dsp_shape {
+    int32_t pulse;          /* 0 saw type, 1 pulse type */
+    int32_t g;              /* saw type */
+    uint32_t width;         /* pulse type */
+    uint32_t mid;           /* where its second corner or edge is: 2^31 (saw type, s = 0) or width */
+    int32_t dc;             /* its mean */
+};
+void dsp_shape_saw(struct dsp_shape *sh, int32_t g);
+void dsp_shape_pulse(struct dsp_shape *sh, uint32_t width);
 
-/* Saw type (the OB-1's WAVE in "Saw Type"): g, Q15 from -32768 to 32768, scales the ramp's lower half
- * against its upper: out = max(s, 0) + g min(s, 0). -1 is a triangle (|s|), +1 the saw. Its mean,
- * (1 - g) / 4, is taken off, as the mixer's AC coupling would. n samples into out and sub, one late. */
+/* One oscillator a block: n samples of the waveshape into out and of the sub-octave into sub (the OB-1's OCT,
+ * a 4013 flip-flop clocked by the VCO's reset: a square an octave down, toggling at each reset, a sync's
+ * included, and free-running too), both one sample late. */
+void dsp_osc_block(struct dsp_osc *o, uint32_t inc, const struct dsp_shape *sh, int32_t *out, int32_t *sub,
+                   int n);
+
+/* The same, a shape at a time. */
 void dsp_saw_type(struct dsp_osc *o, uint32_t inc, int32_t g, int32_t *out, int32_t *sub, int n);
-
-/* Pulse type (the OB-1's WAVE in "Pulse Type", U11 comparing the ramp with a threshold): +1 while the
- * ramp is below `width` (a fraction of the cycle, 2^31 the square), -1 after. Its mean is taken off. n
- * samples into out, one sample late. */
 void dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *out, int32_t *sub, int n);
+
+/* ---- the two VCOs together --------------------------------------------------------------------------
+ * SYNC: VCO1's reset pulse resets VCO2 (R120, Q21; SW17). XMOD: VCO2's ramp moves VCO1's pitch through its
+ * exponential converter (R4, R5 into U4; SW18), so by DSP_XMOD_OCT octaves each way at the ramp's ends.
+ * shortcut: DSP_XMOD_OCT is a guess, 1; set it from the resistors or a real OB-1 (#8, #15). */
+#define DSP_SYNC        1
+#define DSP_XMOD        2
+#define DSP_XMOD_OCT    1
+
+/* Both VCOs a block, sample by sample, with mod (DSP_SYNC | DSP_XMOD): fund and sub of each into f1, s1, f2,
+ * s2, one sample late. */
+void dsp_pair(struct dsp_osc *o1, struct dsp_osc *o2, uint32_t inc1, uint32_t inc2, const struct dsp_shape *sh1,
+              const struct dsp_shape *sh2, int mod, int32_t *f1, int32_t *s1, int32_t *f2, int32_t *s2, int n);
+
+/* 2^(DSP_XMOD_OCT x / 32768), Q14, x from -32768 to 32767: the cross mod's pitch factor. */
+int32_t dsp_xmod_factor(int32_t x);
 
 /* ---- the mixer ----------------------------------------------------------------------------------------
  * The OB-1 mixes VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each switched off, low or high (U13-U15, 4016s
