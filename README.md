@@ -1,5 +1,7 @@
 # OB-1 for the Digitakt
 
+![OB-1's SRC page on the Digitakt: TUNE, FRQ2, WAV1, WAV2, MOD, MIX1, MIX2 and NOIS](src-page.png)
+
 An Oberheim OB-1 oscillator section as a sample-track machine for the Digitakt mk1. It's an SRC machine,
 added to the OS by [elekloader](https://github.com/irpina/elekloader). Pick OB-1 as a track's machine and
 its SRC page plays two analog-style VCOs instead of a sample. The track's filter, envelopes, LFOs, level
