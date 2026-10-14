@@ -17,15 +17,15 @@ and sends work on it as they do on a sample.
 - **Band-limited** with polyBLEPs, so high notes, sync sweeps and pulses stay clean.
 - **Knob graphics** that show each setting: the waveform, the interval, the routing, the mix.
 
-Built for OS 1.53. It's machine id 120, in elekloader's experiments range (120–127).
+Built for OS 1.53 and 1.54. It's machine id 120, in elekloader's experiments range (120–127).
 
 ## Install
 
-You need the stock Digitakt mk1 OS 1.53 file, `Digitakt_OS1.53.syx`, from Elektron. The build patches it,
-and only its main OS section changes. You also need macOS or Linux with [mise](https://mise.jdx.dev).
+You need the stock Digitakt mk1 OS file from Elektron: `Digitakt_OS1.54.syx` (or 1.53's, with `ELEKLOADER_STOCK`
+in `mise.toml` pointed at it). The build patches it, and only its main OS section changes. You also need macOS or Linux with [mise](https://mise.jdx.dev).
 
 ```sh
-cp ~/Downloads/Digitakt_OS1.53.syx firmware/
+cp ~/Downloads/Digitakt_OS1.54.syx firmware/
 mise bootstrap        # the m68k toolchain, tools, submodules, the emulator's dependencies
 mise run firmware     # builds everything and writes out/Digitakt_custom.syx
 ```
@@ -103,7 +103,7 @@ and its owner's manual. Where those leave a value open, the issues record where 
 | Task | Does |
 |---|---|
 | `mise run build` | builds the core, machine-pages and OB-1 mods into `out/os<OS>/`, for each `Digitakt_OS<OS>.syx` in `firmware/` |
-| `mise run firmware` | patches the stock OS that `ELEKLOADER_STOCK` names (1.53) into `out/Digitakt_custom.syx` (version `OB-1`) |
+| `mise run firmware` | patches the stock OS that `ELEKLOADER_STOCK` names (1.54) into `out/Digitakt_custom.syx` (version `OB-1`) |
 | `mise run emu` | adds the build to [digiemu](https://github.com/irpina/digiemu) and opens its panel (FUNC+SRC there too; shift-click FUNC to latch it) |
 | `mise run test` | builds the DSP for the host and runs `tests/` |
 | `mise run render OUT.wav [key=value...]` | renders a voice: `note=57 seconds=4`, the knobs `wav1 wav2 frq2 mix1 mix2 mod nois`, `sweep=KNOB:FROM:TO` |

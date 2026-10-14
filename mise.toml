@@ -12,7 +12,7 @@ cmake = "latest"
 [env]
 _.path = ["/opt/homebrew/bin", "/home/linuxbrew/.linuxbrew/bin"]   # where mise's brew installs them
 PYTHONPATH = "{{config_root}}/vendor/elekloader"
-ELEKLOADER_STOCK = "{{config_root}}/firmware/Digitakt_OS1.53.syx"   # your unit's OS: what firmware and emu build
+ELEKLOADER_STOCK = "{{config_root}}/firmware/Digitakt_OS1.54.syx"   # your unit's OS: what firmware and emu build
 ELEKLOADER_CROSS = "m68k-elf-"
 DIGIEMU_HOME = "{{config_root}}/.digiemu"
 FW_VERSION = "OB-1"                     # the OS version the unit shows: 4 characters
