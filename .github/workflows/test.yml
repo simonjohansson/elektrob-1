@@ -1,0 +1,16 @@
+name: test
+
+# The DSP's host tests. Building the .elemod needs the stock OS, which stays off GitHub:
+# `mise run release` builds and releases it where that file is.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - run: mise run test

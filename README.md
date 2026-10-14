@@ -110,6 +110,7 @@ and its owner's manual. Where those leave a value open, the issues record where 
 | `mise run analyze FILE.wav` | prints f0, harmonic levels and the aliasing floor |
 | `mise run knobs` | prints the SRC page's knob graphics as text |
 | `mise run bench` | counts the DSP's instructions a block in Unicorn (`-v` in `tools/bench.py` splits them by function) |
+| `mise run release` | builds, tests and releases `out/ob1-<version>.elemod` on GitHub as `ob1-v<version>`, from a pushed commit. It needs your stock file, so it runs here, not in CI |
 | `mise run protocol`, `mise run compare DIR` | renders the comparison protocol's tests (#15, T1–T8) and measures captures against them |
 
 The code:

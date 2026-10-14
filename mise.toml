@@ -111,3 +111,13 @@ for d in $DIGIEMU_HOME/firmware/dt1-$v-*; do [ "$d" = "$fw" ] || rm -rf "$d"; do
 # what the launcher's Play button runs
 uv run python -m emu.portable --worker panel "$fw"
 '''
+
+[tasks.release]
+description = "Build the machine and release its .elemod on GitHub as ob1-v<version> (machine/mod.json's)"
+depends = ["build", "test"]
+run = '''
+[ -z "$(git status --porcelain)" ] || { echo "release: commit first, so the release is the source it's tagged on"; exit 1; }
+git fetch -q origin && [ -z "$(git log origin/main..HEAD)" ] || { echo "release: push first"; exit 1; }
+v=$(python -c "import json; print(json.load(open('machine/mod.json'))['version'])")
+gh release create "ob1-v$v" "out/ob1-$v.elemod" --target "$(git rev-parse HEAD)" --title "OB-1 $v" --generate-notes
+'''
