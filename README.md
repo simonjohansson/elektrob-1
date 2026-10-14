@@ -32,27 +32,17 @@ mise run firmware     # builds everything and writes out/Digitakt_custom.syx
 
 ### Flash it
 
-Over USB, from this repo:
+With Elektron Transfer, as for any OS update ([elekloader's steps](https://github.com/irpina/elekloader/blob/main/docs/BUILDING.md#flash-it)):
 
-1. Connect the Digitakt over USB.
-2. Hold **FUNC** while powering it on, then press **TRIG 4** for **OS UPGRADE**.
-3. Run `mise run flash`. It builds the firmware, finds the Digitakt's MIDI port, and sends the file after you confirm.
-4. Don't power the unit off until it has written the OS and restarted.
-
-`mise run flash --port NAME` picks another MIDI output, `--delay MS` changes the pause between SysEx messages
-(default 10, about 2 minutes in all), and `--yes` skips the question.
-
-You can also flash with Elektron Transfer, as for any OS update: connect, then drop
-`out/Digitakt_custom.syx` onto it.
+1. Connect the Digitakt over USB and open Transfer.
+2. Select the unit and **Connect**.
+3. Drag `out/Digitakt_custom.syx` onto **Drop files here**.
+4. Press **YES** on the unit, and don't power it off until it has written the OS and restarted.
 
 ### If it won't start
 
 The bootloader is never changed, so the stock OS always restores the unit. Hold **FUNC** while powering on,
-press **TRIG 4**, and send the stock file, with Transfer's legacy OS upgrade mode or with:
-
-```sh
-uv run --with mido --with python-rtmidi python tools/upload.py firmware/Digitakt_OS1.53.syx
-```
+press **TRIG 4** for **OS UPGRADE**, and send the stock file with Transfer's legacy OS upgrade mode.
 
 ## Playing it
 
@@ -114,7 +104,6 @@ and its owner's manual. Where those leave a value open, the issues record where 
 |---|---|
 | `mise run build` | builds the core, machine-pages and OB-1 mods into `out/` |
 | `mise run firmware` | patches the stock OS into `out/Digitakt_custom.syx` (version `OB-1`) |
-| `mise run flash` | the above, then sends it to a Digitakt in OS UPGRADE mode |
 | `mise run emu` | adds the build to [digiemu](https://github.com/irpina/digiemu) and opens its panel (FUNC+SRC there too; shift-click FUNC to latch it) |
 | `mise run test` | builds the DSP for the host and runs `tests/` |
 | `mise run render OUT.wav [key=value...]` | renders a voice: `note=57 seconds=4`, the knobs `wav1 wav2 frq2 mix1 mix2 mod nois`, `sweep=KNOB:FROM:TO` |
