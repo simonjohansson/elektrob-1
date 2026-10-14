@@ -20,11 +20,11 @@ Built for OS 1.53. It's machine id 120, in elekloader's experiments range (120â€
 ## Install
 
 You need the stock Digitakt mk1 OS 1.53 file, `Digitakt_OS1.53.syx`, from Elektron. The build patches it,
-and only its main OS section changes. You also need macOS with [mise](https://mise.jdx.dev) and Homebrew.
+and only its main OS section changes. You also need macOS or Linux with [mise](https://mise.jdx.dev).
 
 ```sh
 cp ~/Downloads/Digitakt_OS1.53.syx firmware/
-mise run setup        # submodules, the m68k toolchain, the emulator's dependencies
+mise bootstrap        # the m68k toolchain, tools, submodules, the emulator's dependencies
 mise run firmware     # builds everything and writes out/Digitakt_custom.syx
 ```
 
@@ -127,7 +127,7 @@ The code:
 - `machine/ob1.c`: the machine's description and its SRC page.
 - `machine/knobs.c`: the knob graphics.
 
-The toolchain is Homebrew's `m68k-elf` gcc and binutils, installed by `mise run setup`.
+The toolchain is Homebrew's `m68k-elf` gcc and binutils, on macOS and Linux, installed by `mise bootstrap`.
 
 The bench numbers are the DSP alone. digiemu's timed firmware check (`emu.fwcheck --script`) hung in its boot
 stage with this build. What was tried for the CPU budget, and dropped, is on #14 and #19.

@@ -4,21 +4,24 @@ uv = "latest"
 cmake = "latest"
 
 [bootstrap.packages]
+# Homebrew has Linux bottles too, so both get the same gcc
 "brew:m68k-elf-gcc" = "latest"
 "brew:m68k-elf-binutils" = "latest"
+"apt:build-essential" = { os = "linux" }
 
 [env]
+_.path = ["/opt/homebrew/bin", "/home/linuxbrew/.linuxbrew/bin"]   # where mise's brew installs them
 PYTHONPATH = "{{config_root}}/vendor/elekloader"
 ELEKLOADER_STOCK = "{{config_root}}/firmware/Digitakt_OS1.53.syx"
 ELEKLOADER_CROSS = "m68k-elf-"
 DIGIEMU_HOME = "{{config_root}}/.digiemu"
 FW_VERSION = "OB-1"                     # the OS version the unit shows: 4 characters
 
-[tasks.setup]
-description = "Fetch submodules, the m68k toolchain and the emulator's dependencies"
+# `mise bootstrap` installs [bootstrap.packages] and [tools], then runs this
+[tasks.bootstrap]
+description = "Fetch submodules and the emulator's dependencies"
 run = [
   "git submodule update --init",
-  "mise bootstrap packages apply",
   "cd vendor/digiemu && uv sync && tools/install-patched-unicorn.sh",
 ]
 
