@@ -28,7 +28,7 @@ static void show(const char *title, void (*fn)(int32_t, uint32_t *), const int32
 int main(void)
 {
     static const int32_t wv[] = {0, 32, 63, 64, 96, 127};
-    static const char *const wn[] = {"S0 triangle", "S32", "S63 saw", "P0 10 %", "P32", "P63 square"};
+    static const char *const wn[] = {"S0 triangle", "S32", "S63 saw", "P0 6.7 %", "P32", "P63 square"};
     static const int32_t fv[] = {0, 20, 32, 39, 44, 63};
     static const char *const fn[] = {"-32", "-12", "0", "+7", "+12", "+31"};
     static const int32_t mv[] = {0, 1, 2, 3};
