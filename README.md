@@ -41,9 +41,9 @@ and counts its instructions per 32-sample block, 8 voices (`-v` in
 
 | setting | instructions a block | a voice | 8 voices, of a block |
 |---|---|---|---|
-| default: one saw | 15,028 | 1,879 | +14 % |
-| both VCOs and subs | 23,614 | 2,952 | +22 % |
-| worst: + SYNC, XMOD, noise | 41,502 | 5,188 | +40 % |
+| default: one saw | 15,554 | 1,944 | +15 % |
+| both VCOs and subs | 24,090 | 3,011 | +23 % |
+| worst: + SYNC, XMOD, noise | 48,125 | 6,016 | +46 % |
 
 The stock render alone takes about 84,000 instructions a block, 80 % of it
 (Digi Mono's measurement on a unit), so the last column is on top of that:

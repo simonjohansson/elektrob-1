@@ -86,18 +86,21 @@ void dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *ou
 /* ---- the two VCOs together --------------------------------------------------------------------------
  * SYNC: VCO1's reset pulse resets VCO2 (R120, Q21; SW17). XMOD: VCO2's ramp moves VCO1's pitch through its
  * exponential converter (R4, R5 into U4; SW18), so by DSP_XMOD_OCT octaves each way at the ramp's ends.
- * shortcut: DSP_XMOD_OCT is a guess, 1; set it from the resistors or a real OB-1 (#8, #15). */
+ * DSP_XMOD_OCT from sheet 1342 (#22): the saw reaches U4 through 94K against the key CV's 100K, so 1.06
+ * octaves a volt, and R100 centres OSC 2 SAW at about +-4.8 V. shortcut: the saw's bottom end is inferred
+ * from that centring (the reset comparator's reference is illegible); a clearer scan could refine it. */
 #define DSP_SYNC        1
 #define DSP_XMOD        2
-#define DSP_XMOD_OCT    1
+#define DSP_XMOD_OCT    5
 
 /* Both VCOs a block, sample by sample, with mod (DSP_SYNC | DSP_XMOD): fund and sub of each into f1, s1, f2,
  * s2, one sample late. */
 void dsp_pair(struct dsp_osc *o1, struct dsp_osc *o2, uint32_t inc1, uint32_t inc2, const struct dsp_shape *sh1,
               const struct dsp_shape *sh2, int mod, int32_t *f1, int32_t *s1, int32_t *f2, int32_t *s2, int n);
 
-/* 2^(DSP_XMOD_OCT x / 32768), Q14, x from -32768 to 32767: the cross mod's pitch factor. */
-int32_t dsp_xmod_factor(int32_t x);
+/* The cross mod's pitch factor on v: (v 2^(DSP_XMOD_OCT x / 32768)) << sh (>> -sh if negative), x from
+ * -32768 to 32767, v < 2^16, saturating at max. */
+uint32_t dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max);
 
 /* ---- the mixer ----------------------------------------------------------------------------------------
  * The OB-1 mixes VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each switched off, low or high (U13-U15, 4016s

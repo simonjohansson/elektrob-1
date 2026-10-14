@@ -256,16 +256,19 @@ static void test_sync_clocks_sub(void)
     assert(abs(flips - resets) <= 1);
 }
 
-/* The cross mod's factor is 2^(x / 32768) within 0.1 %. */
-static void test_xmod_factor(void)
+/* The cross mod's factor is 2^(DSP_XMOD_OCT x / 32768) within 0.1 %, and saturates at max. */
+static void test_xmod_scale(void)
 {
     int32_t x;
     for (x = -32768; x < 32768; x += 97)
-        assert(fabs(dsp_xmod_factor(x) / (16384 * pow(2, (double)x / 32768)) - 1) < 0.001);
+        assert(fabs(dsp_xmod_scale(65535, x, -14, 0xffffffffu) / (65535 / 16384.0 * 16384 *
+                    pow(2, DSP_XMOD_OCT * (double)x / 32768)) - 1) < 0.001);
+    assert(dsp_xmod_scale(65535, 32767, 0, DSP_INC_MAX) == DSP_INC_MAX);
 }
 
-/* A slow full-depth cross mod: VCO1 sweeps an octave each way along VCO2's ramp, on average 2^u over
- * u in [-1, 1]: 1.5 / (2 ln 2) = 1.082 times its own pitch. */
+/* A slow full-depth cross mod: VCO1 sweeps DSP_XMOD_OCT (5) octaves each way along VCO2's ramp, on average
+ * 2^u over u in [-5, 5]: (32 - 1/32) / (10 ln 2) = 4.612 times its own pitch. At 200 Hz its peak, 6.4 kHz,
+ * stays under DSP_INC_MAX. */
 static void test_xmod_pitch(void)
 {
     struct dsp_osc o1 = {{0}, 0, 32767, 32767}, o2 = {{0}, 0, 32767, 32767};
@@ -273,11 +276,25 @@ static void test_xmod_pitch(void)
     static int32_t f1[RATE], s1[RATE], f2[RATE], s2[RATE];
     int i, flips = 0;
     dsp_shape_saw(&saw, 32768);
-    dsp_pair(&o1, &o2, step(1000), step(2), &saw, &saw, DSP_XMOD, f1, s1, f2, s2, RATE);
+    dsp_pair(&o1, &o2, step(200), step(2), &saw, &saw, DSP_XMOD, f1, s1, f2, s2, RATE);
     for (i = 1; i < RATE; i++)
         flips += (s1[i] > 0) != (s1[i - 1] > 0);    /* VCO1's resets */
-    printf("xmod: VCO1 at %d resets a second, against 1082\n", flips);
-    assert(fabs(flips / 1082.0 - 1) < 0.015);
+    printf("xmod: VCO1 at %d resets a second, against 922\n", flips);
+    assert(fabs(flips / 922.4 - 1) < 0.015);
+}
+
+/* Cross mod at a high pitch: VCO1's peak (2 kHz x 32) sits at DSP_INC_MAX for part of VCO2's ramp, where
+ * its reciprocal follows the clamped step, so the band-limited output stays within a polyBLEP's overshoot. */
+static void test_xmod_clamp(void)
+{
+    struct dsp_osc o1 = {{0}, 0, 32767, 32767}, o2 = {{0}, 0, 32767, 32767};
+    struct dsp_shape saw;
+    static int32_t f1[RATE / 10], s1[RATE / 10], f2[RATE / 10], s2[RATE / 10];
+    int i;
+    dsp_shape_saw(&saw, 32768);
+    dsp_pair(&o1, &o2, step(2000), step(50), &saw, &saw, DSP_XMOD, f1, s1, f2, s2, RATE / 10);
+    for (i = 0; i < RATE / 10; i++)
+        assert(abs(f1[i]) < 49152 && abs(s1[i]) < 49152);
 }
 
 /* Noise: no DC, the RMS of a uniform spread (1 / sqrt 3), and white: neighbouring samples uncorrelated. */
@@ -376,8 +393,9 @@ int main(void)
     test_sub_follows_resets();
     test_sync();
     test_sync_clocks_sub();
-    test_xmod_factor();
+    test_xmod_scale();
     test_xmod_pitch();
+    test_xmod_clamp();
     test_noise();
     test_mix_gains();
     test_mix_out();

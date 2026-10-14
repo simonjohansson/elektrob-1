@@ -181,7 +181,7 @@ void dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *ou
     dsp_osc_block(o, inc, &sh, out, sub, n);
 }
 
-/* 2^((k - 32) / 32), Q14, k 0-64: round(16384 * 2 ** ((k - 32) / 32)). */
+/* 2^((k - 32) / 32), Q14, k 0-64: round(16384 * 2 ** ((k - 32) / 32)). The cross mod uses k 32-64. */
 static const uint16_t exp2_tab[65] = {
     8192, 8371, 8555, 8742, 8933, 9129, 9329, 9533,
     9742, 9955, 10173, 10396, 10624, 10856, 11094, 11337,
@@ -194,10 +194,29 @@ static const uint16_t exp2_tab[65] = {
     32768,
 };
 
-int32_t dsp_xmod_factor(int32_t x)
+/* 2^(f / 65536), Q14 (16384-32768), f 0-65535. */
+HOT uint32_t exp2_frac(uint32_t f)
 {
-    uint32_t u = (uint32_t)(x + 32768), k = u >> 10, f = u & 1023;
-    return exp2_tab[k] + (((exp2_tab[k + 1] - exp2_tab[k]) * (int32_t)f) >> 10);
+    uint32_t k = 32 + (f >> 11);
+    return exp2_tab[k] + (((exp2_tab[k + 1] - exp2_tab[k]) * (f & 2047)) >> 11);
+}
+
+/* (v << sh) 2^(u / 65536 - DSP_XMOD_OCT), u the octaves Q16, saturating at max (v < 2^16). */
+HOT uint32_t xmod_scale(uint32_t v, uint32_t u, int32_t sh, uint32_t max)
+{
+    uint32_t p = v * exp2_frac(u & 0xffff);     /* < 2^31 */
+    int32_t s = (int32_t)(u >> 16) - DSP_XMOD_OCT + sh;
+    if (s < 0)
+        return (p >> -s) > max ? max : p >> -s;
+    return p > (max >> s) ? max : p << s;
+}
+
+/* x (-32768 to 32767) as the octaves Q16 of 2^(DSP_XMOD_OCT x / 32768) above 2^-DSP_XMOD_OCT. */
+#define XMOD_U(x)   ((uint32_t)((x) + 32768) * (2 * DSP_XMOD_OCT))
+
+uint32_t dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max)
+{
+    return xmod_scale(v, XMOD_U(x), sh, max);
 }
 
 /* dsp_pair's loop, compiled once for each pair of waveshapes. */
@@ -211,10 +230,10 @@ HOT void pair(struct dsp_osc *o1, struct dsp_osc *o2, const struct dsp_shape *sh
     int i;
     for (i = 0; i < n; i++) {
         if (mod & DSP_XMOD) {                   /* VCO1's step and its reciprocal, times 2^x and 2^-x */
-            int32_t x = dsp_saw(b.vco.phase);
-            uint32_t inc = base * (uint32_t)dsp_xmod_factor(x);
-            a.vco.inc = inc > DSP_INC_MAX ? DSP_INC_MAX : inc;
-            a.vco.rinc = (rbase * (uint32_t)dsp_xmod_factor(-1 - x)) >> 14;
+            uint32_t u = XMOD_U(dsp_saw(b.vco.phase)), r = XMOD_U(32767) - u;   /* r: -1 - x's */
+            a.vco.inc = xmod_scale(base, u, 0, DSP_INC_MAX);
+            a.vco.rinc = a.vco.inc == DSP_INC_MAX ? 1u << a.vco.shift      /* 2^30 / (DSP_INC_MAX >> shift) */
+                                                  : (rbase * exp2_frac(r & 0xffff)) >> (14 + DSP_XMOD_OCT - (r >> 16));
         }
         reset = tick(&a, &h1, p1, -1, &f1[i], &s1[i]);
         tick(&b, &h2, p2, (mod & DSP_SYNC) ? reset : -1, &f2[i], &s2[i]);
