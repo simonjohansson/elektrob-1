@@ -12,7 +12,7 @@ cmake = "latest"
 [env]
 _.path = ["/opt/homebrew/bin", "/home/linuxbrew/.linuxbrew/bin"]   # where mise's brew installs them
 PYTHONPATH = "{{config_root}}/vendor/elekloader"
-ELEKLOADER_STOCK = "{{config_root}}/firmware/Digitakt_OS1.53.syx"
+ELEKLOADER_STOCK = "{{config_root}}/firmware/Digitakt_OS1.53.syx"   # your unit's OS: what firmware and emu build
 ELEKLOADER_CROSS = "m68k-elf-"
 DIGIEMU_HOME = "{{config_root}}/.digiemu"
 FW_VERSION = "OB-1"                     # the OS version the unit shows: 4 characters
@@ -25,17 +25,32 @@ run = [
   "cd vendor/digiemu && uv sync && tools/install-patched-unicorn.sh",
 ]
 
+# Each stock file in firmware/ builds into out/os<OS>/, which then holds that OS's mods and nothing else
 [tasks."build:deps"]
-description = "Build the core and machine-pages mods the machine requires"
-run = [
-  "python -m elekloader.sdk.build vendor/elekloader/mods/core --out out",
-  "python -m elekloader.sdk.build vendor/elekloader/mods/machine-pages --out out",
-]
+description = "Build the core and machine-pages mods the machine requires, for each OS in firmware/"
+run = '''
+rm -rf out/os*
+for s in firmware/Digitakt_OS*.syx; do
+  os=${s##*_OS}; mkdir -p out/os${os%.syx}
+  python -m elekloader.sdk.build vendor/elekloader/mods/core --stock "$s" --out out/os${os%.syx} || exit 1
+  python -m elekloader.sdk.build vendor/elekloader/mods/machine-pages --stock "$s" --out out/os${os%.syx} || exit 1
+done
+'''
 
 [tasks.build]
-description = "Build the machine's .elemod"
+description = "Build the machine's .elemod, for each OS in firmware/"
 depends = ["build:deps"]
-run = "python -m elekloader.sdk.build machine --out out"
+run = '''
+for s in firmware/Digitakt_OS*.syx; do
+  os=${s##*_OS}
+  os=${os%.syx}
+  python -m elekloader.sdk.build machine --stock "$s" --out out/os$os || exit 1
+  # the SDK suffixes only the ports' files: suffix the 1.53 ones too, so every file names its OS
+  for f in out/os$os/*.elemod; do
+    case $f in *-os$os.elemod) ;; *) mv "$f" "${f%.elemod}-os$os.elemod" ;; esac
+  done
+done
+'''
 
 [tasks.test]
 description = "Build the machine's DSP for the host and run its tests"
@@ -93,9 +108,13 @@ run = [
 ]
 
 [tasks.firmware]
-description = "Patch the stock OS with core, machine-pages and the OB-1 machine"
+description = "Patch the stock OS ($ELEKLOADER_STOCK) with core, machine-pages and the OB-1 machine"
 depends = ["build"]
-run = "python -m elekloader.patch --stock $ELEKLOADER_STOCK --mod out/core-*.elemod --mod out/machine-pages-*.elemod --mod out/ob1-*.elemod --out out/Digitakt_custom.syx --version $FW_VERSION"
+run = '''
+os=${ELEKLOADER_STOCK##*_OS}
+set -- out/os${os%.syx}/*.elemod
+python -m elekloader.patch --stock $ELEKLOADER_STOCK $(printf -- '--mod %s ' "$@") --out out/Digitakt_custom.syx --version $FW_VERSION
+'''
 
 [tasks.emu]
 description = "Add the custom firmware to digiemu and open its panel"
@@ -113,11 +132,11 @@ uv run python -m emu.portable --worker panel "$fw"
 '''
 
 [tasks.release]
-description = "Build the machine and release its .elemod on GitHub as ob1-v<version> (machine/mod.json's)"
+description = "Build the machine and release its .elemod for each OS on GitHub as ob1-v<version> (machine/mod.json's)"
 depends = ["build", "test"]
 run = '''
 [ -z "$(git status --porcelain)" ] || { echo "release: commit first, so the release is the source it's tagged on"; exit 1; }
 git fetch -q origin && [ -z "$(git log origin/main..HEAD)" ] || { echo "release: push first"; exit 1; }
 v=$(python -c "import json; print(json.load(open('machine/mod.json'))['version'])")
-gh release create "ob1-v$v" "out/ob1-$v.elemod" --target "$(git rev-parse HEAD)" --title "OB-1 $v" --generate-notes
+gh release create "ob1-v$v" out/os*/ob1-$v*.elemod --target "$(git rev-parse HEAD)" --title "OB-1 $v" --generate-notes
 '''

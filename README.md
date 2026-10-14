@@ -102,15 +102,15 @@ and its owner's manual. Where those leave a value open, the issues record where 
 
 | Task | Does |
 |---|---|
-| `mise run build` | builds the core, machine-pages and OB-1 mods into `out/` |
-| `mise run firmware` | patches the stock OS into `out/Digitakt_custom.syx` (version `OB-1`) |
+| `mise run build` | builds the core, machine-pages and OB-1 mods into `out/os<OS>/`, for each `Digitakt_OS<OS>.syx` in `firmware/` |
+| `mise run firmware` | patches the stock OS that `ELEKLOADER_STOCK` names (1.53) into `out/Digitakt_custom.syx` (version `OB-1`) |
 | `mise run emu` | adds the build to [digiemu](https://github.com/irpina/digiemu) and opens its panel (FUNC+SRC there too; shift-click FUNC to latch it) |
 | `mise run test` | builds the DSP for the host and runs `tests/` |
 | `mise run render OUT.wav [key=value...]` | renders a voice: `note=57 seconds=4`, the knobs `wav1 wav2 frq2 mix1 mix2 mod nois`, `sweep=KNOB:FROM:TO` |
 | `mise run analyze FILE.wav` | prints f0, harmonic levels and the aliasing floor |
 | `mise run knobs` | prints the SRC page's knob graphics as text |
 | `mise run bench` | counts the DSP's instructions a block in Unicorn (`-v` in `tools/bench.py` splits them by function) |
-| `mise run release` | builds, tests and releases `out/ob1-<version>.elemod` on GitHub as `ob1-v<version>`, from a pushed commit. It needs your stock file, so it runs here, not in CI |
+| `mise run release` | builds, tests and releases each OS's `ob1-<version>*.elemod` on GitHub as `ob1-v<version>`, from a pushed commit. It needs your stock file, so it runs here, not in CI |
 | `mise run protocol`, `mise run compare DIR` | renders the comparison protocol's tests (#15, T1–T8) and measures captures against them |
 
 The code:
