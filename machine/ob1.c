@@ -52,6 +52,14 @@ static int32_t zone(int32_t value, int32_t n)
 }
 #define ZONE_AT(s, n)   (((s) * 128 + 64) / (n))
 
+/* MIX1's and MIX2's value as its setting, FUND x 3 + OCT (0 OFF, 1 -3 dB, 2 ON): FUND rises first, then OCT
+ * with FUND ON, then the octave-led settings. */
+static int32_t mix(int32_t value)
+{
+    static const int8_t order[9] = {0, 3, 6, 7, 8, 4, 5, 1, 2};
+    return order[zone(value, 9)];
+}
+
 /* A voice the AMP envelope has silenced and no trig starts: inaudible after the AMP page, so it is not
  * rendered. Its VCOs then stand still, which a free-running VCO's phase hides. The envelope's level is 0
  * only then: the output goes about as its cube root (measured in digiemu), so a release still sounds at
@@ -81,8 +89,8 @@ void ob1_render(int32_t *blocks)
         }
         k.wav1 = knob(p, K_WAV1, 127);
         k.wav2 = knob(p, K_WAV2, 127);
-        k.mix1 = zone(p[K_MIX1], 9);
-        k.mix2 = zone(p[K_MIX2], 9);
+        k.mix1 = mix(p[K_MIX1]);
+        k.mix2 = mix(p[K_MIX2]);
         k.mod = zone(p[K_MOD], 4);
         k.nois = zone(p[K_NOIS], 3);
         /* the note and TUNE as the playback takes a sample's: the pitch table at 1 for note 60, TUNE 0 */
@@ -158,7 +166,7 @@ static int32_t mix_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
 {
     static const char *const lvl[3] = {"-", "-3", "ON"};
     static const char *const word[3] = {"OFF", "-3", "ON"};
-    int32_t v = zone(value, 9), n = 0;
+    int32_t v = mix(value), n = 0;
     const char *w;
     (void)machine;
     if (!ctx) {
@@ -234,7 +242,7 @@ static int32_t draw_mix(void *bmp, int32_t x, int32_t y, int32_t value, int32_t 
 {
     uint32_t rows[KNOB_PX];
     (void)flag;
-    knob_mix(zone(value, 9), rows);
+    knob_mix(mix(value), rows);
     return draw_rows(bmp, x, y, rows);
 }
 
@@ -254,7 +262,7 @@ static void set(uint8_t *sound, int32_t track, int k, int32_t v)
     fw_set_param(v << 8, track, 17 + k);
 }
 
-/* A track turns to OB-1: both VCOs saws in unison, VCO1's FUND ON, VCO2 and noise OFF, no sync or
+/* A track turns to OB-1: both VCOs saws in unison, VCO1's FUND ON, VCO2's at -3 dB, noise OFF, no sync or
  * cross mod. CM_DEFAULT alone does not
  * reach the slots on a switch (they keep SLICE's stock defaults: MIX1 0, all off, silent). */
 static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
@@ -263,8 +271,8 @@ static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
     set(sound, track, K_FRQ2, 32);
     set(sound, track, K_WAV1, 63);
     set(sound, track, K_WAV2, 63);
-    set(sound, track, K_MIX1, ZONE_AT(6, 9));
-    set(sound, track, K_MIX2, 0);
+    set(sound, track, K_MIX1, ZONE_AT(2, 9));                 /* ON/- */
+    set(sound, track, K_MIX2, ZONE_AT(1, 9));                 /* -3/- */
     set(sound, track, K_MOD, 0);
     set(sound, track, K_NOIS, 0);
 }
@@ -284,9 +292,9 @@ static const struct cm_ui ob1_page = {
         [K_MOD] = { .name = "MOD", .lname = "Sync/cross mod", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
                     .min = 0, .max = 127 << 8, .def = 0, .fmt = mod_text, .draw = draw_mod },
         [K_MIX1] = { .name = "MIX1", .lname = "VCO1 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
-                     .min = 0, .max = 127 << 8, .def = ZONE_AT(6, 9) << 8, .fmt = mix_text, .draw = draw_mix },  /* ON/- */
+                     .min = 0, .max = 127 << 8, .def = ZONE_AT(2, 9) << 8, .fmt = mix_text, .draw = draw_mix },  /* ON/- */
         [K_MIX2] = { .name = "MIX2", .lname = "VCO2 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
-                     .min = 0, .max = 127 << 8, .def = 0, .fmt = mix_text, .draw = draw_mix },        /* -/- */
+                     .min = 0, .max = 127 << 8, .def = ZONE_AT(1, 9) << 8, .fmt = mix_text, .draw = draw_mix },  /* -3/- */
         [K_NOIS] = { .name = "NOIS", .lname = "Noise", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
                      .min = 0, .max = 127 << 8, .def = 0, .fmt = noise_text, .draw = draw_noise },
     },

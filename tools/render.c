@@ -3,7 +3,7 @@
  *     render OUT.wav [key=value ...]
  * note (MIDI, 69 = A4 440 Hz; default 57, A3), seconds (4), and the SRC page's knobs as the machine reads
  * them: wav1, wav2 (0-127), frq2 (0-63, 32 unison), mix1, mix2 (0-8), mod (0-3), nois (0-2). Defaults are a
- * switch's: wav1 63, wav2 63, frq2 32, mix1 6, mix2 0, mod 0, nois 0. sweep=KNOB:FROM:TO moves a knob
+ * switch's: wav1 63, wav2 63, frq2 32, mix1 6, mix2 3, mod 0, nois 0. sweep=KNOB:FROM:TO moves a knob
  * linearly from FROM to TO over the render, a block at a time, as an automated knob would. */
 #include <math.h>
 #include <stdio.h>
@@ -37,7 +37,7 @@ static int32_t clampv(const char *name, int32_t v)
 
 int main(int argc, char **argv)
 {
-    struct ob1_knobs k = {63, 63, 6, 0, 0, 0};
+    struct ob1_knobs k = {63, 63, 6, 3, 0, 0};
     struct ob1_voice v;
     int32_t frq2 = 32, block[32], *sw = 0, from = 0, to = 0;
     double note = 57, seconds = 4;
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
     int a;
     if (argc < 2) {
         fprintf(stderr, "usage: render OUT.wav [note=57] [seconds=4] [wav1=63] [wav2=63] [frq2=32] [mix1=6] "
-                        "[mix2=0] [mod=0] [nois=0] [sweep=KNOB:FROM:TO]\n");
+                        "[mix2=3] [mod=0] [nois=0] [sweep=KNOB:FROM:TO]\n");
         return 2;
     }
     for (a = 2; a < argc; a++) {

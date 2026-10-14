@@ -57,7 +57,7 @@ uv run --with mido --with python-rtmidi python tools/upload.py firmware/Digitakt
 ## Playing it
 
 On a track's SRC page, open the machine menu (**FUNC + SRC**) and pick **OB-1**. A track switched to OB-1
-starts as a single sawtooth: VCO1's fundamental ON, everything else OFF.
+starts as two sawtooths in unison: VCO1's fundamental ON, VCO2's at −3 dB, everything else OFF.
 
 | Knob | Name | Values | What it does |
 |---|---|---|---|
