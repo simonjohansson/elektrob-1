@@ -257,6 +257,26 @@ static void test_sync_clocks_sub(void)
     assert(abs(flips - resets) <= 1);
 }
 
+/* A synced VCO2 at a whole multiple of VCO1, at A4 (1200/11 samples a cycle, so where the sync falls in a
+ * sample repeats every 11 cycles): its own reset meets the sync, and counts once, so its sub-octave flips 1
+ * (unison) or 2 (an octave up) times a VCO1 reset, not a rhythm of extra flips. */
+static void test_sync_whole_multiple(void)
+{
+    static int32_t f1[RATE], s1[RATE], f2[RATE], s2[RATE];
+    struct dsp_shape saw;
+    int m, i, flips, resets;
+    dsp_shape_saw(&saw, 32768);
+    for (m = 1; m <= 2; m++) {
+        struct dsp_osc o1 = {{0}, 0, 32767, 32767}, o2 = {{0}, 0, 32767, 32767};
+        dsp_pair(&o1, &o2, step(440), step(440) * m, &saw, &saw, DSP_SYNC, f1, s1, f2, s2, RATE);
+        for (i = 1, flips = resets = 0; i < RATE; i++) {
+            flips += (s2[i] > 0) != (s2[i - 1] > 0);
+            resets += (s1[i] > 0) != (s1[i - 1] > 0);
+        }
+        assert(abs(flips - m * resets) <= m);
+    }
+}
+
 /* The cross mod's factor is 2^(DSP_XMOD_OCT x / 32768) within 0.1 %, and saturates at max. */
 static void test_xmod_scale(void)
 {
@@ -394,6 +414,7 @@ int main(void)
     test_sub_follows_resets();
     test_sync();
     test_sync_clocks_sub();
+    test_sync_whole_multiple();
     test_xmod_scale();
     test_xmod_pitch();
     test_xmod_clamp();

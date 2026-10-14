@@ -104,7 +104,7 @@ HOT int32_t tick(struct dsp_osc *o, const struct dsp_shape *sh, int pulse, int32
 {
     struct dsp_vco *v = &o->vco;
     uint32_t old = v->phase, at, np, d;
-    int32_t ds = (int32_t)(v->inc >> 16), y, ys = o->sub, h, m, reset = -1, t;
+    int32_t ds = (int32_t)(v->inc >> 16), y, ys = o->sub, h, m, reset = -1, t, merged = 0;
     v->phase = old + v->inc;
     if (sync < 0) {
         y = value(sh, pulse, v->phase);
@@ -118,9 +118,20 @@ HOT int32_t tick(struct dsp_osc *o, const struct dsp_shape *sh, int pulse, int32
             blep(&o->prev, &y, t, h, m);
         }
     } else {
-        np = (v->inc >> 16) * (uint32_t)sync;  /* the ramp since the sync, about sync x inc */
+        /* the ramp since the sync, sync x inc: the low half as well, or it lags VCO1 by up to 1 % of a step */
+        np = (v->inc >> 16) * (uint32_t)sync + (((v->inc & 0xffff) * (uint32_t)sync) >> 16);
         at = v->phase - np;                     /* where it was when the sync came */
         y = value(sh, pulse, np);
+        /* its own reset within 1/1024 of a sample before the sync is the sync's, as on the OB-1 one reset
+         * pulse: counted apart, rounding picks the cycles it lands on, and a whole-multiple FRQ2 gets a
+         * rhythm. In this sample, the sync takes it from the top; in the one before, it has already reset
+         * and toggled the sub-octave, so the sync does not toggle it again. */
+        if (at < v->inc >> 10) {
+            if (at < at - old)
+                at = 0xffffffffu;
+            else
+                merged = 1;
+        }
         /* its own reset and mid, if it passed them earlier in the sample, before the sync: t is the sync's
          * plus how long before it, (at - point) / inc */
         if ((d = at) < at - old) {
@@ -138,7 +149,8 @@ HOT int32_t tick(struct dsp_osc *o, const struct dsp_shape *sh, int pulse, int32
         /* the sync: from where it was to the start of the ramp. shortcut: an edge the restarted ramp passes
          * in the same sample (a very narrow pulse near 12 kHz) is not band-limited. */
         blep(&o->prev, &y, sync, value(sh, pulse, 0) - value(sh, pulse, at), slope(sh, pulse, 0, ds) - slope(sh, pulse, at, ds));
-        toggle(o, &o->sub_prev, &ys, sync);
+        if (!merged)
+            toggle(o, &o->sub_prev, &ys, sync);
         v->phase = np;
         reset = sync;
     }
