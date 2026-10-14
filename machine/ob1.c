@@ -7,13 +7,13 @@
  * It names no firmware address: the locations are core 3.0's exports (fw_*), and its page is drawn by the
  * machine-pages mod from the description below. So its mod.json's 1.54 port is empty.
  *
- * Machine 120: ids 120-127 are for examples and experiments; it takes one of its own before it is shared
- * (docs/ADAPTING.md, "SRC machines"). */
+ * Machine 69, claimed as the resource machine:69: kits store it, so it is fixed for good (docs/ADAPTING.md,
+ * "SRC machines"). */
 #include "digitakt-mk1/core3.h"
 #include "voice.h"
 #include "knobs.h"
 
-#define OB1_ID      120
+#define OB1_ID      69
 #define K_TUNE      0                   /* the SRC page's knobs, A-H: SLICE's parameters */
 #define K_FRQ2      1                   /* PLAY's slot, 0-63: VCO2, -32 to +31 semitones from VCO1 */
 #define K_WAV1      2                   /* BR's: its range, 0-127, and its knob as they are */

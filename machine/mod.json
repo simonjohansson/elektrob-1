@@ -1,16 +1,16 @@
 {
  "id": "ob1",
- "version": "0.1",
+ "version": "0.2",
  "title": "OB-1",
  "category": "Machines",
  "license": "GPL-2.0-or-later",
- "description": "OB-1, an SRC machine after the Oberheim OB-1's oscillator section. Work in progress: two VCOs, each with saw type (triangle to saw) and pulse type (narrow pulse to square) and a sub-octave, sync and cross mod, and noise, each mixed ON, -3 dB or OFF. Machine id 120, from the experiments range.",
+ "description": "OB-1, an SRC machine after the Oberheim OB-1's oscillator section. Work in progress: two VCOs, each with saw type (triangle to saw) and pulse type (narrow pulse to square) and a sub-octave, sync and cross mod, and noise, each mixed ON, -3 dB or OFF. Machine id 69.",
  "device": "digitakt-mk1",
  "os": "1.53",
  "sources": ["ob1.c", "voice.c", "knobs.c", "dsp.c"],
  "ports": {"1.54": {}},
- "machines": [{"id": 120, "descriptor": "ob1_machine"}],
+ "machines": [{"id": 69, "descriptor": "ob1_machine"}],
  "subscribe": [{"event": "ev_render_voices", "fn": "ob1_render", "order": 20}],
  "requires": ["core", "machine-pages"],
- "resources": {"core": "3.0"}
+ "resources": {"core": "3.0", "names": ["machine:69"]}
 }

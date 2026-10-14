@@ -17,7 +17,7 @@ and sends work on it as they do on a sample.
 - **Band-limited** with polyBLEPs, so high notes, sync sweeps and pulses stay clean.
 - **Knob graphics** that show each setting: the waveform, the interval, the routing, the mix.
 
-Built for OS 1.53 and 1.54. It's machine id 120, in elekloader's experiments range (120–127).
+Built for OS 1.53 and 1.54. It's machine id 69.
 
 ## Install
 
