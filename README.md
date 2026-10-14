@@ -43,7 +43,7 @@ and counts its instructions per 32-sample block, 8 voices (`-v` in
 |---|---|---|---|
 | default: one saw | 15,554 | 1,944 | +15 % |
 | both VCOs and subs | 24,090 | 3,011 | +23 % |
-| worst: + SYNC, XMOD, noise | 48,125 | 6,016 | +46 % |
+| worst: + SYNC, XMOD, noise | 39,861 | 4,983 | +38 % |
 
 The stock render alone takes about 84,000 instructions a block, 80 % of it
 (Digi Mono's measurement on a unit), so the last column is on top of that:
@@ -52,7 +52,8 @@ The stock render alone takes about 84,000 instructions a block, 80 % of it
   trig starting, is not rendered. The envelope's level runs about as the
   cube of the output, so a long release keeps a voice going for seconds.
 - 8 sounding voices of the default sound about fit; 4 sounding voices of
-  both VCOs fit (+11 %); 8 sounding worst-case voices would overload the
+  both VCOs fit (+11 %). Heavy sounds (both VCOs with sync, cross mod and
+  noise) fit about 4 sounding voices at once (+19 %); 8 would overload the
   unit.
 - Not measured: the stock render's own savings on tracks it does not play
   from a sample, and the per-voice pitch and knob code in `machine/ob1.c`
