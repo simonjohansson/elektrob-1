@@ -11,7 +11,7 @@ and sends work on it as they do on a sample.
   - a **sub-octave** square.
 - **Hard sync** (VCO2 to VCO1) and **cross mod** (VCO2's saw sweeping VCO1's pitch, ±5 octaves).
 - **A noise source.**
-- **The OB-1's mixer:** VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each off, low or high, AC-coupled.
+- **The OB-1's mixer:** VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each ON, −3 dB or OFF as on the panel, AC-coupled.
 - **Band-limited** with polyBLEPs, so high notes, sync sweeps and pulses stay clean.
 - **Knob graphics** that show each setting: the waveform, the interval, the routing, the mix.
 
@@ -55,7 +55,7 @@ uv run --with mido --with python-rtmidi python tools/upload.py firmware/Digitakt
 ## Playing it
 
 On a track's SRC page, open the machine menu (**FUNC + SRC**) and pick **OB-1**. A track switched to OB-1
-starts as a single sawtooth: VCO1's fundamental high, everything else off.
+starts as a single sawtooth: VCO1's fundamental ON, everything else OFF.
 
 | Knob | Name | Values | What it does |
 |---|---|---|---|
@@ -64,14 +64,14 @@ starts as a single sawtooth: VCO1's fundamental high, everything else off.
 | C | WAV1 | S0–S63, P0–P63 | VCO1's waveshape: S is saw type (S0 triangle, S63 saw); P is pulse type (P0 a 6.7 % pulse, P63 a square) |
 | D | WAV2 | S0–S63, P0–P63 | VCO2's waveshape, as WAV1 |
 | E | MOD | OFF, SYNC, XMOD, BOTH | VCO2 hard-synced to VCO1, VCO1 cross-modulated by VCO2's saw, or both |
-| F | MIX1 | FUND and OCT, each off, low or high | VCO1's fundamental and sub-octave in the mix |
-| G | MIX2 | FUND and OCT, each off, low or high | VCO2's, as MIX1 |
-| H | NOIS | OFF, LO, HI | Noise in the mix |
+| F | MIX1 | FUND/OCT, each ON, -3 or - (OFF) | VCO1's fundamental and sub-octave in the mix |
+| G | MIX2 | FUND/OCT, each ON, -3 or - (OFF) | VCO2's, as MIX1 |
+| H | NOIS | OFF, -3DB, ON | Noise in the mix |
 
 Some things to try:
 - **Sync sweep:** MOD on SYNC, VCO2 alone, then sweep FRQ2 or put an LFO on it.
 - **Bells and gongs:** MOD on XMOD with VCO2 a few octaves down. That's what the OB-1's manual suggests cross mod for.
-- **A fat unison:** both VCOs at high, with FRQ2 at +0 or +12, and the subs added.
+- **A fat unison:** both VCOs ON, with FRQ2 at +0 or +12, and the subs added.
 
 Both VCOs run freely between notes, as the OB-1's do, so each note starts at a different phase.
 
@@ -101,7 +101,7 @@ The DSP follows the OB-1's schematics (synth board sheet 1342, performance board
 and its owner's manual. Where those leave a value open, the issues record where each constant comes from:
 
 - **Waveshapes:** saw type scales one half of the saw against the other (`max(s, 0) + g·min(s, 0)`), with a linear taper, as the WAVE CV path is linear (#4, #17). Pulse type compares the ramp against a threshold, from 6.7 % to a square (#5, #23).
-- **Mixer:** 47K/100K for the VCOs (high is 6.6 dB over low) and 100K/220K for noise, AC-coupled at about 11 Hz (#10). The noise source's level was set by ear: high sits 14.5 dB under a full saw (#25).
+- **Mixer:** 47K/100K for the VCOs (so the panel's −3 dB position comes out 6.6 dB under ON here: still to be checked) and 100K/220K for noise, AC-coupled at about 11 Hz (#10). The noise source's level was set by ear: ON sits 14.5 dB under a full saw (#25).
 - **Sync and cross mod:** VCO1's reset restarts VCO2 (#7). VCO2's saw drives VCO1's exponential converter through 94K, about ±5 octaves (#8, #22).
 - **FRQ2:** semitone steps over about five octaves, as the manual and the programmer's 6-bit pots give (#11, #24).
 - **Left out:** drift and other analog variation. The expo converters are temperature-compensated, and there was no reference to show what's audible (#13).

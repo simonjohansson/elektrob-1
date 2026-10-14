@@ -8,9 +8,9 @@
 /* The SRC page's knobs, as the machine reads them. */
 struct ob1_knobs {
     int32_t wav1, wav2;     /* 0-63 saw type, triangle to saw; 64-127 pulse type, narrowest to square */
-    int32_t mix1, mix2;     /* 0-8: FUND x OCT, each off, low, high */
+    int32_t mix1, mix2;     /* 0-8: FUND x OCT, each OFF, -3 dB, ON */
     int32_t mod;            /* 0-3: OFF, SYNC, XMOD, BOTH */
-    int32_t nois;           /* 0-2: off, low, high */
+    int32_t nois;           /* 0-2: OFF, -3 dB, ON */
 };
 
 struct ob1_voice {

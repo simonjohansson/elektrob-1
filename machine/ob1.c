@@ -18,10 +18,10 @@
 #define K_FRQ2      1                   /* PLAY's slot, 0-63: VCO2, -32 to +31 semitones from VCO1 */
 #define K_WAV1      2                   /* BR's: its range, 0-127, and its knob as they are */
 #define K_WAV2      3                   /* SAMP's slot, 0-127, not opening the sample list */
-#define K_MOD       4                   /* SLICE's slot, 0-3: OFF, SYNC, XMOD, BOTH */
-#define K_MIX1      5                   /* LEN's slot, 0-8: the nine settings of VCO1 FUND x OCT */
-#define K_MIX2      6                   /* GRID's slot, 0-8: VCO2's */
-#define K_NOIS      7                   /* LEV's slot, 0-2: NOISE off, low, high */
+#define K_MOD       4                   /* SLICE's slot, 0-127 as 4 zones: OFF, SYNC, XMOD, BOTH */
+#define K_MIX1      5                   /* LEN's slot, 0-127 as 9 zones: VCO1 FUND x OCT */
+#define K_MIX2      6                   /* GRID's slot, 0-127 as 9 zones: VCO2's */
+#define K_NOIS      7                   /* LEV's slot, 0-127 as 3 zones: NOISE OFF, -3 dB, ON */
 #define ID_BR       134                 /* BR's parameter id (SLICE's knob C): a plain knob, for a slot whose own turns oddly */
 
 /* ---- the sound (ev_render_voices: the render, interrupt level) ----------------------------------- */
@@ -42,6 +42,15 @@ static int32_t knob(const volatile int16_t *p, int k, int32_t max)
     int32_t v = p[k] >> 8;
     return v < 0 ? 0 : v > max ? max : v;
 }
+
+/* A switch's knob value, 8.8, 0-127 in n equal zones (a detent a setting was too fiddly to turn), as its
+ * setting, 0 to n - 1; ZONE_AT(s, n) is setting s's middle. */
+static int32_t zone(int32_t value, int32_t n)
+{
+    int32_t v = value >> 8;
+    return (v < 0 ? 0 : v > 127 ? 127 : v) * n >> 7;
+}
+#define ZONE_AT(s, n)   (((s) * 128 + 64) / (n))
 
 /* A voice the AMP envelope has silenced and no trig starts: inaudible after the AMP page, so it is not
  * rendered. Its VCOs then stand still, which a free-running VCO's phase hides. The envelope's level is 0
@@ -72,10 +81,10 @@ void ob1_render(int32_t *blocks)
         }
         k.wav1 = knob(p, K_WAV1, 127);
         k.wav2 = knob(p, K_WAV2, 127);
-        k.mix1 = knob(p, K_MIX1, 8);
-        k.mix2 = knob(p, K_MIX2, 8);
-        k.mod = knob(p, K_MOD, 3);
-        k.nois = knob(p, K_NOIS, 2);
+        k.mix1 = zone(p[K_MIX1], 9);
+        k.mix2 = zone(p[K_MIX2], 9);
+        k.mod = zone(p[K_MOD], 4);
+        k.nois = zone(p[K_NOIS], 3);
         /* the note and TUNE as the playback takes a sample's: the pitch table at 1 for note 60, TUNE 0 */
         pitch = ((int32_t)p[K_TUNE] - 0x4000) * 256 + fw_voice_note[t] + (3 << 16);
         ob1_voice_render(&voice[t], &k, pitch_inc(pitch), pitch_inc(pitch + ((knob(p, K_FRQ2, 63) - 32) << 16)),
@@ -118,12 +127,12 @@ static int32_t frq_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
 /* NOISE's text. */
 static int32_t noise_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
 {
-    static const char *const word[3] = {"OFF", "LO", "HI"};
-    int32_t v = value >> 8, n = 0;
+    static const char *const word[3] = {"OFF", "-3DB", "ON"};
+    int32_t n = 0;
     const char *w;
     (void)ctx;
     (void)machine;
-    for (w = word[v < 0 ? 0 : v > 2 ? 2 : v]; *w; )
+    for (w = word[zone(value, 3)]; *w; )
         buf[n++] = *w++;
     buf[n] = 0;
     return 1;
@@ -133,30 +142,32 @@ static int32_t noise_text(char *buf, int32_t value, int32_t ctx, int32_t machine
 static int32_t mod_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
 {
     static const char *const word[4] = {"OFF", "SYNC", "XMOD", "BOTH"};
-    int32_t v = value >> 8, n = 0;
+    int32_t n = 0;
     const char *w;
     (void)ctx;
     (void)machine;
-    for (w = word[v < 0 ? 0 : v > 3 ? 3 : v]; *w; )
+    for (w = word[zone(value, 4)]; *w; )
         buf[n++] = *w++;
     buf[n] = 0;
     return 1;
 }
 
-/* MIX1's and MIX2's text: FUND and OCT as - (off), L (low) or H (high), "H/-"; the pop-up spells it out. */
+/* MIX1's and MIX2's text: FUND and OCT as - (OFF), -3 (-3 dB) or ON, "ON/-"; the pop-up spells it out, in
+ * its 15 characters. */
 static int32_t mix_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
 {
-    static const char lvl[3] = {'-', 'L', 'H'};
-    static const char *const word[3] = {"OFF", "LO", "HI"};
-    int32_t v = value >> 8, n = 0;
+    static const char *const lvl[3] = {"-", "-3", "ON"};
+    static const char *const word[3] = {"OFF", "-3", "ON"};
+    int32_t v = zone(value, 9), n = 0;
     const char *w;
     (void)machine;
-    v = v < 0 ? 0 : v > 8 ? 8 : v;
     if (!ctx) {
-        buf[0] = lvl[v / 3];
-        buf[1] = '/';
-        buf[2] = lvl[v % 3];
-        buf[3] = 0;
+        for (w = lvl[v / 3]; *w; )
+            buf[n++] = *w++;
+        buf[n++] = '/';
+        for (w = lvl[v % 3]; *w; )
+            buf[n++] = *w++;
+        buf[n] = 0;
         return 1;
     }
     for (w = "FUND "; *w; )
@@ -215,7 +226,7 @@ static int32_t draw_mod(void *bmp, int32_t x, int32_t y, int32_t value, int32_t 
 {
     uint32_t rows[KNOB_PX];
     (void)flag;
-    knob_mod(value >> 8, rows);
+    knob_mod(zone(value, 4), rows);
     return draw_rows(bmp, x, y, rows);
 }
 
@@ -223,7 +234,7 @@ static int32_t draw_mix(void *bmp, int32_t x, int32_t y, int32_t value, int32_t 
 {
     uint32_t rows[KNOB_PX];
     (void)flag;
-    knob_mix(value >> 8, rows);
+    knob_mix(zone(value, 9), rows);
     return draw_rows(bmp, x, y, rows);
 }
 
@@ -231,7 +242,7 @@ static int32_t draw_noise(void *bmp, int32_t x, int32_t y, int32_t value, int32_
 {
     uint32_t rows[KNOB_PX];
     (void)flag;
-    knob_noise(value >> 8, rows);
+    knob_noise(zone(value, 3), rows);
     return draw_rows(bmp, x, y, rows);
 }
 
@@ -243,7 +254,7 @@ static void set(uint8_t *sound, int32_t track, int k, int32_t v)
     fw_set_param(v << 8, track, 17 + k);
 }
 
-/* A track turns to OB-1: both VCOs saws in unison, VCO1's FUND high, VCO2 and noise off, no sync or
+/* A track turns to OB-1: both VCOs saws in unison, VCO1's FUND ON, VCO2 and noise OFF, no sync or
  * cross mod. CM_DEFAULT alone does not
  * reach the slots on a switch (they keep SLICE's stock defaults: MIX1 0, all off, silent). */
 static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
@@ -252,7 +263,7 @@ static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
     set(sound, track, K_FRQ2, 32);
     set(sound, track, K_WAV1, 63);
     set(sound, track, K_WAV2, 63);
-    set(sound, track, K_MIX1, 6);
+    set(sound, track, K_MIX1, ZONE_AT(6, 9));
     set(sound, track, K_MIX2, 0);
     set(sound, track, K_MOD, 0);
     set(sound, track, K_NOIS, 0);
@@ -271,13 +282,13 @@ static const struct cm_ui ob1_page = {
                      CM_DEFAULT | CM_DRAW, .min = 0, .max = 127 << 8, .def = 63 << 8, .fmt = wave_text,
                      .draw = draw_wave },
         [K_MOD] = { .name = "MOD", .lname = "Sync/cross mod", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
-                    .min = 0, .max = 3 << 8, .def = 0, .fmt = mod_text, .draw = draw_mod },
+                    .min = 0, .max = 127 << 8, .def = 0, .fmt = mod_text, .draw = draw_mod },
         [K_MIX1] = { .name = "MIX1", .lname = "VCO1 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
-                     .min = 0, .max = 8 << 8, .def = 6 << 8, .fmt = mix_text, .draw = draw_mix },  /* H/- */
+                     .min = 0, .max = 127 << 8, .def = ZONE_AT(6, 9) << 8, .fmt = mix_text, .draw = draw_mix },  /* ON/- */
         [K_MIX2] = { .name = "MIX2", .lname = "VCO2 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
-                     .min = 0, .max = 8 << 8, .def = 0, .fmt = mix_text, .draw = draw_mix },       /* off */
+                     .min = 0, .max = 127 << 8, .def = 0, .fmt = mix_text, .draw = draw_mix },        /* -/- */
         [K_NOIS] = { .name = "NOIS", .lname = "Noise", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
-                     .min = 0, .max = 2 << 8, .def = 0, .fmt = noise_text, .draw = draw_noise },
+                     .min = 0, .max = 127 << 8, .def = 0, .fmt = noise_text, .draw = draw_noise },
     },
 };
 

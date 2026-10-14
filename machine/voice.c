@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "voice.h"
 
-/* A mixer setting, 0-2 (off, low, high), as its gain. */
+/* A mixer setting, 0-2 (OFF, -3 dB, ON), as its gain. */
 static const int32_t mix_gain[3] = {0, DSP_MIX_LOW, DSP_MIX_HIGH};
 static const int32_t noise_gain[3] = {0, DSP_MIX_NOISE_LOW * DSP_NOISE_LEVEL >> 12, DSP_MIX_NOISE_HIGH * DSP_NOISE_LEVEL >> 12};
 static const int32_t zero[32];                 /* a source not rendered */

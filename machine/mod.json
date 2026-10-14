@@ -4,7 +4,7 @@
  "title": "OB-1",
  "category": "Machines",
  "license": "GPL-2.0-or-later",
- "description": "OB-1, an SRC machine after the Oberheim OB-1's oscillator section. Work in progress: two VCOs, each with saw type (triangle to saw) and pulse type (narrow pulse to square) and a sub-octave, sync and cross mod, and noise, each mixed off, low or high. Machine id 120, from the experiments range.",
+ "description": "OB-1, an SRC machine after the Oberheim OB-1's oscillator section. Work in progress: two VCOs, each with saw type (triangle to saw) and pulse type (narrow pulse to square) and a sub-octave, sync and cross mod, and noise, each mixed ON, -3 dB or OFF. Machine id 120, from the experiments range.",
  "device": "digitakt-mk1",
  "os": "1.53",
  "sources": ["ob1.c", "voice.c", "knobs.c", "dsp.c"],

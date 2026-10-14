@@ -101,7 +101,7 @@ void knob_noise(int32_t n, uint32_t *rows)
 void knob_mix(int32_t m, uint32_t *rows)
 {
     static const uint32_t letters[5] = {0x07038, 0x04028, 0x06028, 0x04028, 0x04038};   /* F and O */
-    static const int top[3] = {10, 6, 1};       /* each fader's top row: off, low, high */
+    static const int top[3] = {10, 6, 1};       /* each fader's top row: OFF, -3 dB, ON */
     int r;
     m = m < 0 ? 0 : m > 8 ? 8 : m;
     clear(rows);

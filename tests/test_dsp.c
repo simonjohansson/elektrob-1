@@ -317,14 +317,14 @@ static void test_noise(void)
     assert(fabs(corr / power) < 0.02);
 }
 
-/* The mixer's gains: low is 47/100 of high, -6.6 dB. */
+/* The mixer's gains: -3 dB is 47/100 of ON, -6.6 dB. */
 static void test_mix_gains(void)
 {
     assert(fabs(20 * log10((double)DSP_MIX_LOW / DSP_MIX_HIGH) + 6.56) < 0.05);
     assert(fabs(20 * log10((double)DSP_MIX_NOISE_LOW / DSP_MIX_HIGH) + 13.4) < 0.05);
 }
 
-/* The output: a quarter of a source at high, DC gone within a second, a source at gain 0 left out, and
+/* The output: a quarter of a source at ON, DC gone within a second, a source at gain 0 left out, and
  * clipped, never wrapped. */
 static void test_mix_out(void)
 {

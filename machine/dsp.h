@@ -103,9 +103,9 @@ void dsp_pair(struct dsp_osc *o1, struct dsp_osc *o2, uint32_t inc1, uint32_t in
 uint32_t dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max);
 
 /* ---- the mixer ----------------------------------------------------------------------------------------
- * The OB-1 mixes VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each switched off, low or high (U13-U15, 4016s
- * into 47K for high and 100K for low; noise 100K and 220K), each AC-coupled at about 11 Hz (47K, 0.1 uF,
- * 100K). Gains against an oscillator at high: */
+ * The OB-1 mixes VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each switched ON, -3 dB or OFF (U13-U15, 4016s
+ * into 47K for ON and 100K for -3 dB, which makes it -6.6 dB, not the panel's -3; noise 100K and 220K), each AC-coupled at about 11 Hz (47K, 0.1 uF,
+ * 100K). Gains against an oscillator at ON: */
 #define DSP_MIX_HIGH        4096            /* 47K, Q12 */
 #define DSP_MIX_LOW         1925            /* 100K: 47 / 100 */
 #define DSP_MIX_NOISE_HIGH  1925            /* 100K */
@@ -115,7 +115,7 @@ uint32_t dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max);
  * 32-bit xorshift whose state must not be 0. n samples, -32768 to 32767. */
 void dsp_noise(uint32_t *state, int32_t *out, int n);
 
-/* The source's level against a VCO's ramp, Q12, for the noise gains: -8 dB, so noise at high sits 14.5 dB
+/* The source's level against a VCO's ramp, Q12, for the noise gains: -8 dB, so noise at ON sits 14.5 dB
  * under a full saw. The OB-1's is a selected transistor's, printed nowhere, so it is set by ear (#25). */
 #define DSP_NOISE_LEVEL     1631
 
@@ -126,8 +126,8 @@ struct dsp_hpf {
 /* A voice's output, in one pass: src[0-3] (VCO1, VCO1 OCT, VCO2, VCO2 OCT) at gain[0-3] (Q12: a source at
  * gain 0 may point at anything readable), and noise from *noise at noise_gain (0: none), summed; the 11 Hz
  * high-pass (one for the voice, where the OB-1 has one a source: it only differs at DC); a quarter, so two
- * oscillators and their subs at high fit, and beyond that clipped at full scale, Q31. A single oscillator
- * at high peaks at -12 dB. */
+ * oscillators and their subs at ON fit, and beyond that clipped at full scale, Q31. A single oscillator
+ * at ON peaks at -12 dB. */
 void dsp_voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t gain[4], uint32_t *noise,
                    int32_t noise_gain, int32_t *out, int n);
 

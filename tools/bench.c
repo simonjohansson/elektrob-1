@@ -8,9 +8,9 @@ static struct ob1_voice voice[8];
 static int32_t out[8 * 32];
 
 /* nblocks blocks of `voices` voices in one setting:
- * 0  the worst case: VCO1 pulse type and VCO2 saw type, both with their subs high, BOTH, noise high
- * 1  the default sound: VCO1, a saw, FUND high
- * 2  both VCOs and their subs high, no sync or cross mod, no noise */
+ * 0  the worst case: VCO1 pulse type and VCO2 saw type, both with their subs ON, BOTH, noise ON
+ * 1  the default sound: VCO1, a saw, FUND ON
+ * 2  both VCOs and their subs ON, no sync or cross mod, no noise */
 void bench(int nblocks, int voices, int setting)
 {
     static const struct ob1_knobs knobs[3] = {
