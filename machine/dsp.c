@@ -229,11 +229,17 @@ HOT void pair(struct dsp_osc *o1, struct dsp_osc *o2, const struct dsp_shape *sh
     int32_t reset;
     int i;
     for (i = 0; i < n; i++) {
-        if (mod & DSP_XMOD) {                   /* VCO1's step and its reciprocal, times 2^x and 2^-x */
-            uint32_t u = XMOD_U(dsp_saw(b.vco.phase)), r = XMOD_U(32767) - u;   /* r: -1 - x's */
+        if (mod & DSP_XMOD) {                   /* VCO1's step, times 2^x */
+            uint32_t u = XMOD_U(dsp_saw(b.vco.phase)), np, r;
             a.vco.inc = xmod_scale(base, u, 0, DSP_INC_MAX);
-            a.vco.rinc = a.vco.inc == DSP_INC_MAX ? 1u << a.vco.shift      /* 2^30 / (DSP_INC_MAX >> shift) */
-                                                  : (rbase * exp2_frac(r & 0xffff)) >> (14 + DSP_XMOD_OCT - (r >> 16));
+            np = a.vco.phase + a.vco.inc;
+            /* its reciprocal, times 2^-x, only for a sample whose ramp passes 0 or the corner (tick's
+             * dsp_vco_crossed): once or twice a cycle, not every sample */
+            if (np < a.vco.inc || np - h1.mid < a.vco.inc) {
+                r = XMOD_U(32767) - u;              /* -1 - x's */
+                a.vco.rinc = a.vco.inc == DSP_INC_MAX ? 1u << a.vco.shift  /* 2^30 / (DSP_INC_MAX >> shift) */
+                                                      : (rbase * exp2_frac(r & 0xffff)) >> (14 + DSP_XMOD_OCT - (r >> 16));
+            }
         }
         reset = tick(&a, &h1, p1, -1, &f1[i], &s1[i]);
         tick(&b, &h2, p2, (mod & DSP_SYNC) ? reset : -1, &f2[i], &s2[i]);
