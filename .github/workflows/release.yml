@@ -1,0 +1,32 @@
+name: release
+
+# A tag ob1-v<version> builds and tests the machine and releases its .elemod, for elekloader's
+# library to pin. Run by hand, it only builds and tests.
+on:
+  push:
+    tags: ["ob1-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      MISE_YES: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - run: git submodule update --init vendor/elekloader    # digiemu is only for the emulator
+      - uses: jdx/mise-action@v2
+      - run: mise bootstrap packages apply                    # the m68k toolchain, from Homebrew
+      - run: mise run test
+      - run: mise run build
+      - if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=${GITHUB_REF_NAME}
+          file=out/ob1-${tag#ob1-v}.elemod
+          [ -f "$file" ] || { echo "$tag does not match machine/mod.json's version: $(ls out/ob1-*.elemod)"; exit 1; }
+          gh release create "$tag" "$file" --title "OB-1 ${tag#ob1-v}" --generate-notes
