@@ -3,7 +3,7 @@
 
 /* A mixer setting, 0-2 (off, low, high), as its gain. */
 static const int32_t mix_gain[3] = {0, DSP_MIX_LOW, DSP_MIX_HIGH};
-static const int32_t noise_gain[3] = {0, DSP_MIX_NOISE_LOW, DSP_MIX_NOISE_HIGH};
+static const int32_t noise_gain[3] = {0, DSP_MIX_NOISE_LOW * DSP_NOISE_LEVEL >> 12, DSP_MIX_NOISE_HIGH * DSP_NOISE_LEVEL >> 12};
 static const int32_t zero[32];                 /* a source not rendered */
 
 /* WAV1 and WAV2 0-63: saw type, triangle (0) to saw (63), as g -1 to +1, Q15. */

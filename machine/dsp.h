@@ -115,6 +115,10 @@ uint32_t dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max);
  * 32-bit xorshift whose state must not be 0. n samples, -32768 to 32767. */
 void dsp_noise(uint32_t *state, int32_t *out, int n);
 
+/* The source's level against a VCO's ramp, Q12, for the noise gains: -8 dB, so noise at high sits 14.5 dB
+ * under a full saw. The OB-1's is a selected transistor's, printed nowhere, so it is set by ear (#25). */
+#define DSP_NOISE_LEVEL     1631
+
 struct dsp_hpf {
     int32_t lp;             /* the low-pass the high-pass takes off, Q8 */
 };
