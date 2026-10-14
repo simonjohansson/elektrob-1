@@ -1,7 +1,8 @@
 {
  "id": "ob1",
- "version": "0.2",
+ "version": "0.3",
  "title": "OB-1",
+ "author": "simonjohansson",
  "category": "Machines",
  "license": "GPL-2.0-or-later",
  "description": "OB-1, an SRC machine after the Oberheim OB-1's oscillator section. Work in progress: two VCOs, each with saw type (triangle to saw) and pulse type (narrow pulse to square) and a sub-octave, sync and cross mod, and noise, each mixed ON, -3 dB or OFF. Machine id 69.",
