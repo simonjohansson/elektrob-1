@@ -94,6 +94,16 @@ description = "Patch the stock OS with core, machine-pages and the OB-1 machine"
 depends = ["build"]
 run = "python -m elekloader.patch --stock $ELEKLOADER_STOCK --mod out/core-*.elemod --mod out/machine-pages-*.elemod --mod out/ob1-*.elemod --out out/Digitakt_custom.syx --version $FW_VERSION"
 
+[tasks.flash]
+description = "Build the firmware and send it to a Digitakt mk1 in OS UPGRADE mode over USB MIDI"
+depends = ["firmware"]
+usage = '''
+flag "--port <name>" help="A MIDI output whose name contains this" default="Digitakt"
+flag "--delay <ms>" help="Milliseconds between SysEx messages" default="10"
+flag "--yes" help="Send without asking"
+'''
+run = 'uv run -q --with mido --with python-rtmidi python tools/upload.py out/Digitakt_custom.syx --port "$usage_port" --delay "$usage_delay" ${usage_yes:+--yes}'
+
 [tasks.emu]
 description = "Add the custom firmware to digiemu and open its panel"
 depends = ["firmware"]

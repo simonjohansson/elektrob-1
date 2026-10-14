@@ -1,70 +1,137 @@
-# ob1
+# OB-1 for the Digitakt
 
-A custom SRC machine for the Digitakt mk1 (OS 1.53), built as an
-[elekloader](https://github.com/irpina/elekloader) mod and tested in
-[digiemu](https://github.com/irpina/digiemu). `machine/` starts as elekloader's
-`examples/sine-machine`.
+An Oberheim OB-1 oscillator section as a sample-track machine for the Digitakt mk1. It's an SRC machine,
+added to the OS by [elekloader](https://github.com/irpina/elekloader). Pick OB-1 as a track's machine and
+its SRC page plays two analog-style VCOs instead of a sample. The track's filter, envelopes, LFOs, level
+and sends work on it as they do on a sample.
 
-## Setup
+- **Two VCOs.** Each has the OB-1's two waveshapes:
+  - **saw type**, from triangle to sawtooth;
+  - **pulse type**, from a narrow pulse to a square;
+  - a **sub-octave** square.
+- **Hard sync** (VCO2 to VCO1) and **cross mod** (VCO2's saw sweeping VCO1's pitch, ±5 octaves).
+- **A noise source.**
+- **The OB-1's mixer:** VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each off, low or high, AC-coupled.
+- **Band-limited** with polyBLEPs, so high notes, sync sweeps and pulses stay clean.
+- **Knob graphics** that show each setting: the waveform, the interval, the routing, the mix.
 
-Put `Digitakt_OS1.53.syx` in `firmware/`, then:
+Built for OS 1.53. It's machine id 120, in elekloader's experiments range (120–127).
+
+## Install
+
+You need the stock Digitakt mk1 OS 1.53 file, `Digitakt_OS1.53.syx`, from Elektron. The build patches it,
+and only its main OS section changes. You also need macOS with [mise](https://mise.jdx.dev) and Homebrew.
 
 ```sh
-mise run setup
+cp ~/Downloads/Digitakt_OS1.53.syx firmware/
+mise run setup        # submodules, the m68k toolchain, the emulator's dependencies
+mise run firmware     # builds everything and writes out/Digitakt_custom.syx
 ```
 
-## Tasks
+### Flash it
 
-| task | does |
+Over USB, from this repo:
+
+1. Connect the Digitakt over USB.
+2. Hold **FUNC** while powering it on, then press **TRIG 4** for **OS UPGRADE**.
+3. Run `mise run flash`. It builds the firmware, finds the Digitakt's MIDI port, and sends the file after you confirm.
+4. Don't power the unit off until it has written the OS and restarted.
+
+`mise run flash --port NAME` picks another MIDI output, `--delay MS` changes the pause between SysEx messages
+(default 10, about 2 minutes in all), and `--yes` skips the question.
+
+You can also flash with Elektron Transfer, as for any OS update: connect, then drop
+`out/Digitakt_custom.syx` onto it.
+
+### If it won't start
+
+The bootloader is never changed, so the stock OS always restores the unit. Hold **FUNC** while powering on,
+press **TRIG 4**, and send the stock file, with Transfer's legacy OS upgrade mode or with:
+
+```sh
+uv run --with mido --with python-rtmidi python tools/upload.py firmware/Digitakt_OS1.53.syx
+```
+
+## Playing it
+
+On a track's SRC page, open the machine menu (**FUNC + SRC**) and pick **OB-1**. A track switched to OB-1
+starts as a single sawtooth: VCO1's fundamental high, everything else off.
+
+| Knob | Name | Values | What it does |
+|---|---|---|---|
+| A | TUNE | as a sample's | VCO1's pitch against the trig's note |
+| B | FRQ2 | −32 to +31 | VCO2, in semitones from VCO1 |
+| C | WAV1 | S0–S63, P0–P63 | VCO1's waveshape: S is saw type (S0 triangle, S63 saw); P is pulse type (P0 a 6.7 % pulse, P63 a square) |
+| D | WAV2 | S0–S63, P0–P63 | VCO2's waveshape, as WAV1 |
+| E | MOD | OFF, SYNC, XMOD, BOTH | VCO2 hard-synced to VCO1, VCO1 cross-modulated by VCO2's saw, or both |
+| F | MIX1 | FUND and OCT, each off, low or high | VCO1's fundamental and sub-octave in the mix |
+| G | MIX2 | FUND and OCT, each off, low or high | VCO2's, as MIX1 |
+| H | NOIS | OFF, LO, HI | Noise in the mix |
+
+Some things to try:
+- **Sync sweep:** MOD on SYNC, VCO2 alone, then sweep FRQ2 or put an LFO on it.
+- **Bells and gongs:** MOD on XMOD with VCO2 a few octaves down. That's what the OB-1's manual suggests cross mod for.
+- **A fat unison:** both VCOs at high, with FRQ2 at +0 or +12, and the subs added.
+
+Both VCOs run freely between notes, as the OB-1's do, so each note starts at a different phase.
+
+### Voices and CPU
+
+Each sounding OB-1 voice costs DSP time on top of the stock engine. A voice whose amp envelope has finished
+costs nothing.
+
+| Sound | Fits at once |
 |---|---|
-| `mise run test` | builds the DSP (`machine/dsp.c`, `machine/voice.c`) for the host and runs `tests/` |
-| `mise run render OUT.wav [key=value...]` | renders the machine's voice: `note=57 seconds=4`, the knobs `wav1 wav2 frq2 mix1 mix2 mod nois`, `sweep=KNOB:FROM:TO` |
-| `mise run analyze FILE.wav` | prints f0, harmonic levels and the aliasing floor |
-| `mise run knobs` | prints the SRC page's knob graphics as text |
-| `mise run protocol` | renders the machine's side of the comparison protocol (#15, T1-T8) into `out/ours/` |
-| `mise run compare DIR` | measures captures named as in the protocol against `out/ours/`, test by test |
-| `mise run bench` | counts the DSP's ColdFire instructions a block for 8 voices, in Unicorn |
-| `mise run build` | builds core, machine-pages and the machine into `out/` |
-| `mise run firmware` | patches the stock OS into `out/Digitakt_custom.syx` (version `$FW_VERSION`, `OB-1`) |
-| `mise run emu` | adds that build to digiemu and opens its panel |
+| One VCO (the default saw) | about 8 voices |
+| Both VCOs and their subs | about 6 voices |
+| Heavy: both VCOs with sync, cross mod and noise | **about 4 voices** |
 
-In the emulator: FUNC+SRC (shift-click FUNC to latch) opens the machine menu.
+More than that overloads the unit. Measured with `mise run bench`, which counts the DSP's ColdFire
+instructions per 32-sample block for 8 voices, against the stock engine's measured 80 % of a block:
 
-The toolchain is Homebrew's `m68k-elf` gcc/binutils, installed by mise's
-`[bootstrap.packages]` into `/opt/homebrew`.
-
-## CPU
-
-`mise run bench` runs the DSP compiled for the Digitakt's ColdFire in Unicorn
-and counts its instructions per 32-sample block, 8 voices (`-v` in
-`tools/bench.py` splits them by function):
-
-| setting | instructions a block | a voice | 8 voices, of a block |
+| Setting | Instructions a block | A voice | 8 voices, of a block |
 |---|---|---|---|
 | default: one saw | 15,554 | 1,944 | +15 % |
 | both VCOs and subs | 24,090 | 3,011 | +23 % |
-| worst: + SYNC, XMOD, noise | 39,861 | 4,983 | +38 % |
+| heavy: + SYNC, XMOD, noise | 39,861 | 4,983 | +38 % |
 
-The stock render alone takes about 84,000 instructions a block, 80 % of it
-(Digi Mono's measurement on a unit), so the last column is on top of that:
+## How faithful it is
 
-- Only sounding voices cost this: a voice whose AMP envelope is at 0, with no
-  trig starting, is not rendered. The envelope's level runs about as the
-  cube of the output, so a long release keeps a voice going for seconds.
-- 8 sounding voices of the default sound about fit; 4 sounding voices of
-  both VCOs fit (+11 %). Heavy sounds (both VCOs with sync, cross mod and
-  noise) fit about 4 sounding voices at once (+19 %); 8 would overload the
-  unit.
-- Not measured: the stock render's own savings on tracks it does not play
-  from a sample, and the per-voice pitch and knob code in `machine/ob1.c`
-  (a few dozen instructions).
+The DSP follows the OB-1's schematics (synth board sheet 1342, performance board 1340, programmer 1341)
+and its owner's manual. Where those leave a value open, the issues record where each constant comes from:
 
-The C has been tuned once: the per-sample step inlined and compiled per
-waveshape, the oscillator state kept out of memory, and the mixer, noise,
-high-pass and clip in one loop. From the first measurement that took 38 %
-off the worst case (66,539) and 22 % off the default (19,208). Going further
-needs hand-written assembly or FAST AUDIO's SRAM (`.fast`, which needs
-digihealth).
+- **Waveshapes:** saw type scales one half of the saw against the other (`max(s, 0) + g·min(s, 0)`), with a linear taper, as the WAVE CV path is linear (#4, #17). Pulse type compares the ramp against a threshold, from 6.7 % to a square (#5, #23).
+- **Mixer:** 47K/100K for the VCOs (high is 6.6 dB over low) and 100K/220K for noise, AC-coupled at about 11 Hz (#10). The noise source's level was set by ear: high sits 14.5 dB under a full saw (#25).
+- **Sync and cross mod:** VCO1's reset restarts VCO2 (#7). VCO2's saw drives VCO1's exponential converter through 94K, about ±5 octaves (#8, #22).
+- **FRQ2:** semitone steps over about five octaves, as the manual and the programmer's 6-bit pots give (#11, #24).
+- **Left out:** drift and other analog variation. The expo converters are temperature-compensated, and there was no reference to show what's audible (#13).
 
-digiemu's timed firmware check (`emu.fwcheck --script`) hung in its boot
-stage twice with this build, so these numbers are the DSP alone.
+## Development
+
+| Task | Does |
+|---|---|
+| `mise run build` | builds the core, machine-pages and OB-1 mods into `out/` |
+| `mise run firmware` | patches the stock OS into `out/Digitakt_custom.syx` (version `OB-1`) |
+| `mise run flash` | the above, then sends it to a Digitakt in OS UPGRADE mode |
+| `mise run emu` | adds the build to [digiemu](https://github.com/irpina/digiemu) and opens its panel (FUNC+SRC there too; shift-click FUNC to latch it) |
+| `mise run test` | builds the DSP for the host and runs `tests/` |
+| `mise run render OUT.wav [key=value...]` | renders a voice: `note=57 seconds=4`, the knobs `wav1 wav2 frq2 mix1 mix2 mod nois`, `sweep=KNOB:FROM:TO` |
+| `mise run analyze FILE.wav` | prints f0, harmonic levels and the aliasing floor |
+| `mise run knobs` | prints the SRC page's knob graphics as text |
+| `mise run bench` | counts the DSP's instructions a block in Unicorn (`-v` in `tools/bench.py` splits them by function) |
+| `mise run protocol`, `mise run compare DIR` | renders the comparison protocol's tests (#15, T1–T8) and measures captures against them |
+
+The code:
+- `machine/dsp.c`: the DSP, with no Digitakt dependencies (the oscillators, band-limiting, mixer and noise).
+- `machine/voice.c`: one voice, from knob values.
+- `machine/ob1.c`: the machine's description and its SRC page.
+- `machine/knobs.c`: the knob graphics.
+
+The toolchain is Homebrew's `m68k-elf` gcc and binutils, installed by `mise run setup`.
+
+The bench numbers are the DSP alone. digiemu's timed firmware check (`emu.fwcheck --script`) hung in its boot
+stage with this build. What was tried for the CPU budget, and dropped, is on #14 and #19.
+
+## License
+
+GPL-2.0-or-later.
