@@ -29,12 +29,13 @@ with their sources; the local archive is not required to understand this documen
 
 | Topic | Evidence and reasoning | Confidence and remaining question |
 |---|---|---|
-| Saw-type family | Synthesizer sheet 1342/1 shows fixed and controlled waveform paths. The model scales one half of a ramp against the other. Pot board 1339 specifies linear WAVE pots. | The topology supports the family; a linear pot does not prove the complete OTA/transistor gain law. The linear taper is a model choice pending controlled waveform sweeps. |
-| Pulse range | The manual describes pulse shaping; Tauntek's repair notes trim fully clockwise pulse to a square. The model uses a provisional minimum of 6.7 %. | Square trim has documentary support. The narrow endpoint is not established by a printed factory limit or physical measurement. |
-| Cross-modulation route | Sheet 1342/1 routes VCO2's raw saw to VCO1's pitch summer through R4 and R5, each 47 kΩ. The key-CV input is 100 kΩ into the same summer. | Readable component values establish a relative sensitivity of `100/94 ≈ 1.06` times keyboard-CV sensitivity per volt. Absolute depth still needs saw amplitude. |
-| Cross-modulation depth | The manual's keyboard-CV statement is 1/12 V per key. With that scaling, an assumed centered saw of about ±4.8 V gives approximately ±5 octaves. | The lower ramp endpoint is not established from a readable reset threshold. Centering is an inference; ±5 octaves is not a measured hardware depth. |
+| Saw-type family | Synthesizer sheet 1342/1 shows fixed and controlled waveform paths. The model scales one half of a ramp against the other. Pot board 1339 specifies linear WAVE pots. | The linear U8 summer feeds grounded-base Q10 through T4 and R48; its current sets the 3080 gain approximately linearly above the transistor threshold. This supports a linear taper, but does not calibrate its endpoints or small dead zone. The folded triangle has half the saw's peak-to-peak swing in this model; equal-loudness compensation is not established by the drawing. |
+| Pulse range | The manual describes pulse shaping; Tauntek's repair notes trim fully clockwise pulse to a square. The model uses a provisional minimum of 6.7 %. | The model deliberately ends at square rather than continuing beyond it, following the documented clockwise square trim. The narrow endpoint is provisional: it is not established by a printed factory limit or physical measurement. |
+| Cross-modulation route | Sheet 1342/1 routes VCO2's raw saw to VCO1's pitch summer through R4 and R5, each 47 kΩ. The key-CV input is 100 kΩ into the same summer. | Readable component values establish a relative sensitivity of `100/94 ≈ 1.06` times keyboard-CV sensitivity per volt. The tap precedes selectable waveshaping and mixing, so changing the audible VCO2 waveform or muting its mixer must not remove the required raw-ramp source. Absolute depth still needs saw amplitude. |
+| Cross-modulation depth | The manual's keyboard-CV statement is 1/12 V per key. With that scaling, an assumed centered saw of about ±4.8 V gives approximately ±5 octaves. | The lower ramp endpoint is not established from a readable reset threshold. Centering is an inference; ±5 octaves is not a measured hardware depth. Zero mean modulation voltage still raises the mean oscillator frequency because the pitch response is exponential; that rise does not by itself establish a DC offset. |
 | VCO2 tuning | The manual, printed p. 2, describes up to five octaves in semitone steps and refers VCO2 back to VCO1; programmer notes describe six-bit values. | Supports a stepped coarse range. The model's exact −32 to +31 mapping is not a recovered factory code-to-frequency table. |
-| Mixer ratios | Sheet 1342/1 lists 47 kΩ/100 kΩ oscillator branches and 100 kΩ/220 kΩ noise branches. The manual calls the middle setting −3 dB. | Component values are readable. Which gates the panel enables together remains unresolved; the modeled −6.6 dB oscillator step is not established as hardware behavior. |
+| Mixer ratios | Sheet 1342/1 lists 47 kΩ/100 kΩ oscillator branches and 100 kΩ/220 kΩ noise branches. The manual calls the middle setting −3 dB. | Component values are readable, but the source coupling network loads the switched branches. Neither their bare resistor ratio nor the panel label establishes the loaded gain. Which gates the panel enables together remains unresolved; the modeled −6.6 dB oscillator step is not established as hardware behavior. |
+| Sync and sub reset timing | Sheet 1342/1 routes the master reset into the slave core and clocks the 4013 sub flip-flop from oscillator resets. | The model uses immediate resets and merges numerically coincident events. It retains a strong square under octave sync; a plugin's near-silent output does not establish a hardware target. Finite reset duration and near-integer sub timing are not physically calibrated. |
 | Coupling | Sheet 1342/1 shows 47 kΩ, 0.1 µF and 100 kΩ oscillator coupling networks. | About 11 Hz is a circuit approximation. One shared high-pass does not reproduce every switched-source transient. |
 | Noise | Performance sheet 1340 specifies a selected transistor and frequency-shaping network, without output amplitude. | White noise and a level about 14.5 dB below a full saw are model choices; the level was set by ear, not calibrated from a unit. |
 | Analog variation | Temperature compensation is present, but its existence does not quantify residual drift, mismatch or reset behavior. | No controlled evidence establishes an audible variation model; these effects are omitted. |
@@ -46,9 +47,11 @@ With separate 47 kΩ and 100 kΩ paths, choosing the latter instead of the forme
 47 kΩ branch, the ratio instead becomes about −3.3 dB. That interpretation would also raise ON
 relative to the current model. The analogous noise branches have the same unresolved gate question.
 
-Settling it requires tracing the actual switch-control connections or measuring a unit at both
-positions. Changing the ratios must include output headroom and noise-level calibration, rather
-than silently making the instrument louder.
+These are switched-resistor ratios only: the 47 kΩ source resistance, 0.1 µF coupling and
+100 kΩ shunt also affect the level and frequency response when the branch load changes.
+Settling it requires tracing the actual switch-control connections and including that loaded source
+network, or measuring a unit at both positions. Changing the ratios must include output headroom
+and noise-level calibration, rather than silently making the instrument louder.
 
 ## Resolving open questions
 

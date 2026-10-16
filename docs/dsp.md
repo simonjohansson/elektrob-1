@@ -62,7 +62,8 @@ The exponential is approximated with a table and interpolation. Both sync and cr
 operate together, so the two oscillators must be advanced as an interacting pair.
 
 An inaudible modulator can still be required: VCO2 must run for audible VCO1 cross modulation, and
-VCO1 must run for audible VCO2 sync. When no audible destination needs a routing, that routing is
+VCO1 must run for audible VCO2 sync. With both modes enabled, sync remains active on a muted VCO2
+because its reset ramp still modulates audible VCO1. When no audible destination needs a routing, that routing is
 skipped. Oscillator and noise state are retained while skipped, rather than advanced through silence.
 
 ## Mixer, noise and headroom
@@ -83,10 +84,13 @@ After summing, a one-pole high-pass removes DC at about 11 Hz. Its low-pass coef
 `47/32768 ≈ 2π × 11/48000`. A single filter after the sum approximates separate coupling networks;
 their transients need not agree when source levels change.
 
-Output is scaled by one quarter, making a single full saw at ON peak around −12 dBFS. That leaves
-room for the two fundamentals and their subs; it is not a guarantee against every combination's
-overshoot or added noise. Output saturates at full scale rather than wrapping. Preserve or reduce
-maximum loudness when changing gains, and compare levels as well as timbre.
+The voice applies a fixed −10 dB trim to the source gains before mixing, followed by the mixer's
+quarter scale. A single full saw at ON peaks around −22 dBFS. The trim is folded into the constant
+source gains, so it adds no per-sample or per-block multiplication. Sources remain additive; there
+is no source-count normalization or automatic limiter. Saturation remains a final numeric guard.
+The level adjustment follows a particular device listening/USB comparison, not universal loudness
+calibration. Preserve or reduce maximum loudness when changing gains, and compare levels as well
+as timbre.
 
 No drift, component mismatch, finite analog reset time or transistor-level noise coloration is
 modeled. See [Architecture](architecture.md#timing-and-state) for the approximation during silent time.

@@ -5,7 +5,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "dsp.h"
+#include "voice.h"
 
 #define RATE 48000
 #define N 4800                  /* 0.1 s: 10 Hz bins */
@@ -399,8 +399,133 @@ static void test_saw_type_aliasing(void)
     assert(blep < naive - 20);
 }
 
+/* The pulse control ends at square; audible source shaping must not alter raw-ramp XMOD. */
+static void test_wave_mapping_and_xmod_source(void)
+{
+    struct dsp_shape shape, carrier;
+    int32_t f1[32], s1[32], f2[32], s2[32], reference[32 * 32];
+    uint32_t previous = 0;
+    int wave, block, i;
+    dsp_shape_saw(&carrier, 32768);
+    for (wave = 64; wave < 128; wave++) {
+        ob1_shape(&shape, wave);
+        assert(shape.pulse && shape.width > previous && shape.width <= 0x80000000u);
+        previous = shape.width;
+    }
+    ob1_shape(&shape, 64);
+    assert(fabs(shape.width / 4294967296.0 - 0.067) < 1e-8);
+    assert(fabs(previous / 4294967296.0 - 0.5) < 1e-7);
+    for (wave = 0; wave < 128; wave++) {
+        struct dsp_osc a = {{0}, 0, 32767, 32767}, b = a;
+        ob1_shape(&shape, wave);
+        for (block = 0; block < 32; block++) {
+            dsp_pair(&a, &b, step(200), step(2), &carrier, &shape, DSP_XMOD,
+                     f1, s1, f2, s2, 32);
+            for (i = 0; i < 32; i++) {
+                if (!wave)
+                    reference[block * 32 + i] = f1[i];
+                else
+                    assert(f1[i] == reference[block * 32 + i]);
+            }
+        }
+    }
+}
+
+/* Mixer audibility must not change a modulation source that still feeds an audible destination. */
+static void test_modulation_routing(void)
+{
+    int mode, mix, block, i, different = 0;
+    int32_t out[32], other[32];
+    struct ob1_voice muted, audible, xmod;
+    struct ob1_knobs k = {63, 127, 6, 0, 0, 0}, a;
+    for (mode = 0; mode < 4; mode++) {
+        ob1_voice_init(&muted, 1);
+        ob1_voice_init(&audible, 1);
+        k.mod = mode;
+        a = k;
+        a.mix2 = 8;
+        for (block = 0; block < 200; block++) {
+            ob1_voice_render(&muted, &k, step(220), step(330), out);
+            ob1_voice_render(&audible, &a, step(220), step(330), other);
+            assert(muted.vco1.vco.phase == audible.vco1.vco.phase);
+            if (mode & DSP_XMOD) {
+                assert(muted.vco2.vco.phase == audible.vco2.vco.phase);
+                assert(muted.vco2.sub == audible.vco2.sub);
+            } else
+                assert(muted.vco2.vco.phase == 0);
+        }
+    }
+    ob1_voice_init(&muted, 1);
+    ob1_voice_init(&xmod, 1);
+    for (block = 0; block < 200; block++) {
+        k.mod = DSP_SYNC | DSP_XMOD;
+        ob1_voice_render(&muted, &k, step(220), step(330), out);
+        k.mod = DSP_XMOD;
+        ob1_voice_render(&xmod, &k, step(220), step(330), other);
+        for (i = 0; i < 32; i++)
+            different |= out[i] != other[i];
+    }
+    assert(different);
+    for (mix = 0; mix <= 8; mix++) {
+        ob1_voice_init(&muted, 1);
+        k.mix1 = 0;
+        k.mix2 = mix;
+        for (mode = 0; mode < 4; mode++) {
+            uint32_t previous = muted.vco1.vco.phase;
+            k.mod = mode;
+            ob1_voice_render(&muted, &k, step(220), step(330), out);
+            if (!mix)
+                assert(muted.vco1.vco.phase == 0 && muted.vco2.vco.phase == 0);
+            else if (!(mode & DSP_SYNC))
+                assert(muted.vco1.vco.phase == previous);
+        }
+    }
+}
+
+/* Immediate reset clocks one sub event per natural/forced reset, merging coincident events. */
+static void test_sync_ratio_boundaries(void)
+{
+    const uint32_t inc = 1u << 25;  /* 128 samples per master period: exact event positions. */
+    int multiple, side, shape, i, resets;
+    int32_t f1, s1, f2, s2;
+    struct dsp_shape saw, square;
+    dsp_shape_saw(&saw, 32768);
+    dsp_shape_pulse(&square, 0x80000000u);
+    for (multiple = 1; multiple <= 2; multiple++)
+        for (side = -1; side <= 1; side++)
+            for (shape = 0; shape < 2; shape++) {
+                struct dsp_osc a = {{0}, 0, 32767, 32767}, b = a;
+                int32_t previous1 = a.sub;
+                double energy = 0;
+                resets = 0;
+                for (i = 0; i < 128 * 200; i++) {
+                    dsp_pair(&a, &b, inc, inc * multiple + side * (int32_t)(inc / 512),
+                             &saw, shape ? &square : &saw, DSP_SYNC, &f1, &s1, &f2, &s2, 1);
+                    resets += a.sub != previous1;
+                    previous1 = a.sub;
+                    if (i % 128 == 127)
+                        assert(b.sub == ((resets * (multiple + (side > 0))) & 1 ? -32768 : 32767));
+                    energy += (double)f2 * f2;
+                }
+                assert(sqrt(energy / i) > 8000);  /* A synced square retains both comparator edges. */
+            }
+}
+
+/* At an exact sample boundary a full positive pulse jump must subtract, never wrap sign. */
+static void test_blep_full_jump(void)
+{
+    int32_t prev = 0, cur = 32767;
+    dsp_blep(&prev, &cur, 0, 65536, 0);
+    assert(prev == 0 && cur == -1);
+    prev = 0;
+    cur = -32768;
+    dsp_blep(&prev, &cur, 0, -65536, 0);
+    assert(prev == 0 && cur == 0);
+}
+
 int main(void)
 {
+    test_blep_full_jump();
     test_vco_resets();
     test_vco_crossing_position();
     test_saw();
@@ -415,6 +540,9 @@ int main(void)
     test_sync();
     test_sync_clocks_sub();
     test_sync_whole_multiple();
+    test_sync_ratio_boundaries();
+    test_modulation_routing();
+    test_wave_mapping_and_xmod_source();
     test_xmod_scale();
     test_xmod_pitch();
     test_xmod_clamp();

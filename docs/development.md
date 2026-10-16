@@ -101,6 +101,9 @@ interrupts or the rest of the firmware. They are useful for comparing the same w
 after a DSP change, not for certifying voice capacity. Record the source revision, toolchain and
 settings with performance claims, and measure complete firmware on the intended device.
 
+The recorded [performance baseline](performance.md) includes matched instruction and complete-firmware
+simulator measurements for future changes.
+
 ## Releases
 
 Use a clean source revision already reachable from `origin/main` and the intended mod version.

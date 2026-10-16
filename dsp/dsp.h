@@ -87,7 +87,7 @@ void dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *ou
  * SYNC: VCO1's reset pulse resets VCO2 (R120, Q21; SW17). XMOD: VCO2's ramp moves VCO1's pitch through its
  * exponential converter (R4, R5 into U4; SW18), so by DSP_XMOD_OCT octaves each way at the ramp's ends.
  * DSP_XMOD_OCT from sheet 1342: the saw reaches U4 through 94K against the key CV's 100K, so 1.06
- * octaves a volt, and R100 centres OSC 2 SAW at about +-4.8 V. shortcut: the saw's bottom end is inferred
+ * octaves a volt, assuming R100 centres OSC 2 SAW at about +-4.8 V. shortcut: the saw's bottom end is inferred
  * from that centring (the reset comparator's reference is illegible); a clearer scan could refine it. */
 #define DSP_SYNC        1
 #define DSP_XMOD        2
@@ -107,6 +107,7 @@ uint32_t dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max);
  * Oscillators are modeled as 47K for ON and 100K for -3 dB: -6.6 dB, not the panel's -3; gate logic is unresolved.
  * Noise uses 100K and 220K. Each source is AC-coupled at about 11 Hz (47K, 0.1 uF,
  * 100K). Gains against an oscillator at ON: */
+#define DSP_OUTPUT_GAIN     1295            /* Q12: fixed -10 dB voice trim, folded into source gains */
 #define DSP_MIX_HIGH        4096            /* 47K, Q12 */
 #define DSP_MIX_LOW         1925            /* 100K: 47 / 100 */
 #define DSP_MIX_NOISE_HIGH  1925            /* 100K */

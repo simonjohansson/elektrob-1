@@ -20,13 +20,18 @@ void dsp_vco_set(struct dsp_vco *v, uint32_t inc)
 /* The residuals of a kernel two samples wide, x the time from the event in samples:
  * jump:  before (x + 1)^2 / 2, after -(1 - x)^2 / 2;  slope: before (x + 1)^3 / 6, after (1 - x)^3 / 6.
  * The previous sample is 1 - t before the event (x + 1 = t), the current one t after. |h| <= 65536 and
- * |m| <= 32768 (DSP_INC_MAX) keep every product inside 32 bits. */
+ * |m| <= 32768 (DSP_INC_MAX); the positive full-scale jump is handled before multiplying. */
 HOT void blep(int32_t *prev, int32_t *cur, int32_t t, int32_t h, int32_t m)
 {
     int32_t a = t >> 1, b = 32768 - a;          /* t and 1 - t, Q15 */
     int32_t a2 = (a * a) >> 15, b2 = (b * b) >> 15;
-    *prev += (h * a2) >> 16;
-    *cur -= (h * b2) >> 16;
+    if (h == 65536) {
+        *prev += a2;
+        *cur -= b2;
+    } else {
+        *prev += (h * a2) >> 16;
+        *cur -= (h * b2) >> 16;
+    }
     if (m) {
         int32_t a3 = (a2 * a) >> 15, b3 = (b2 * b) >> 15;
         *prev += (((m * a3) >> 15) * 10923) >> 16;     /* / 6 */
@@ -310,9 +315,9 @@ HOT void voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t
             x += ((int32_t)z >> 16) * ng;
         }
         x >>= 14;                               /* Q12 to Q15, and a quarter */
-        lp += (((x << 8) - lp) * 47) >> 15;     /* the low-pass the high-pass takes off: 2 pi 11 / 48000 */
+        lp += (((x * 256) - lp) * 47) >> 15;     /* the low-pass the high-pass takes off: 2 pi 11 / 48000 */
         x -= lp >> 8;
-        out[i] = x > 32767 ? 0x7fffffff : x < -32768 ? (int32_t)0x80000000 : x << 16;
+        out[i] = x > 32767 ? 0x7fffffff : x < -32768 ? (int32_t)0x80000000 : x * 65536;
     }
     h->lp = lp;
     *noise = z;

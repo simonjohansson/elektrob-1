@@ -1,9 +1,10 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "voice.h"
 
-/* A mixer setting, 0-2 (OFF, -3 dB, ON), as its gain. */
-static const int32_t mix_gain[3] = {0, DSP_MIX_LOW, DSP_MIX_HIGH};
-static const int32_t noise_gain[3] = {0, DSP_MIX_NOISE_LOW * DSP_NOISE_LEVEL >> 12, DSP_MIX_NOISE_HIGH * DSP_NOISE_LEVEL >> 12};
+/* Constant source gains include the fixed output trim before summing and saturation. */
+static const int32_t mix_gain[3] = {0, DSP_MIX_LOW * DSP_OUTPUT_GAIN >> 12, DSP_MIX_HIGH * DSP_OUTPUT_GAIN >> 12};
+static const int32_t noise_gain[3] = {0, ((DSP_MIX_NOISE_LOW * DSP_NOISE_LEVEL) >> 12) * DSP_OUTPUT_GAIN >> 12,
+                                      ((DSP_MIX_NOISE_HIGH * DSP_NOISE_LEVEL) >> 12) * DSP_OUTPUT_GAIN >> 12};
 static const int32_t zero[32];                 /* a source not rendered */
 
 /* WAV1 and WAV2 0-63: saw type, triangle (0) to saw (63), as g -1 to +1, Q15. */
@@ -56,8 +57,8 @@ void ob1_voice_render(struct ob1_voice *v, const struct ob1_knobs *k, uint32_t i
     ob1_shape(&sh2, k->wav2);
     if (!(mod & DSP_XMOD) || !mix1)
         mod &= ~DSP_XMOD;                                          /* moves only VCO1 */
-    if (!mix2)
-        mod &= ~DSP_SYNC;                                          /* moves only VCO2 */
+    if (!mix2 && !(mod & DSP_XMOD))
+        mod &= ~DSP_SYNC;                                          /* VCO2 may still feed XMOD */
     if (mod)
         dsp_pair(&v->vco1, &v->vco2, inc1, inc2, &sh1, &sh2, mod, f1, s1, f2, s2, 32);
     else {                                                         /* each alone, or not at all */

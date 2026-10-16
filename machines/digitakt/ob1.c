@@ -11,6 +11,7 @@
 #include "digitakt-mk1/core3.h"
 #include "../../dsp/voice.h"
 #include "knobs.h"
+#include "pitch.h"
 
 #define OB1_ID      69
 #define K_TUNE      0                   /* the SRC page's knobs, A-H: SLICE's parameters */
@@ -27,13 +28,6 @@
 
 static struct ob1_voice voice[8];            /* set up on its first block */
 static uint8_t ready[8];
-
-/* A pitch (semitones << 16, the pitch table at 1 for 3 << 16) as a VCO's step. */
-static uint32_t pitch_inc(int32_t pitch)
-{
-    pitch = pitch < 0 ? 0 : pitch > (87 << 16) ? 87 << 16 : pitch;
-    return (23410327u >> 13) * (fw_pitch_tab[pitch / 384] >> 16);  /* 261.63 Hz at 48 kHz, times it */
-}
 
 /* A knob's value, 8.8, as 0-max. */
 static int32_t knob(const volatile int16_t *p, int k, int32_t max)
@@ -94,7 +88,8 @@ void ob1_render(int32_t *blocks)
         k.nois = zone(p[K_NOIS], 3);
         /* the note and TUNE as the playback takes a sample's: the pitch table at 1 for note 60, TUNE 0 */
         pitch = ((int32_t)p[K_TUNE] - 0x4000) * 256 + fw_voice_note[t] + (3 << 16);
-        ob1_voice_render(&voice[t], &k, pitch_inc(pitch), pitch_inc(pitch + ((knob(p, K_FRQ2, 63) - 32) << 16)),
+        ob1_voice_render(&voice[t], &k, ob1_pitch_inc(pitch, fw_pitch_tab),
+                         ob1_pitch_inc(pitch + ((knob(p, K_FRQ2, 63) - 32) * 65536), fw_pitch_tab),
                          &blocks[32 * t]);
     }
 }

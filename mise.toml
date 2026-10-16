@@ -66,6 +66,10 @@ run = [
   "mkdir -p out",
   "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c dsp/voice.c tests/test_dsp.c -lm -o out/test_dsp",
   "out/test_dsp",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c dsp/voice.c tests/test_voice_headroom.c -lm -o out/test_voice_headroom",
+  "out/test_voice_headroom",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror tests/test_digitakt_pitch.c -lm -o out/test_digitakt_pitch",
+  "out/test_digitakt_pitch",
 ]
 
 [tasks.render]

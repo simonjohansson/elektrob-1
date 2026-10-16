@@ -81,6 +81,7 @@ can leave the displayed or reloaded sound different from the sound being played.
 ## Pitch, pages and dependencies
 
 Digitakt uses its firmware pitch table to preserve the stock relationship between notes and TUNE.
+Above the table range, octave scaling extends the device pitch to the shared 12 kHz ceiling.
 The host renderer uses equal-tempered frequencies with A4 = 440 Hz. Both supply oscillator phase
 increments; host pitch calculations do not prove exact device pitch behavior.
 
