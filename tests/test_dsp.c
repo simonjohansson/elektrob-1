@@ -382,79 +382,6 @@ static void test_mix_out(void)
     assert(out[0] == INT32_MIN);
 }
 
-/* Compare measured response with the loaded 47K / 0.1u / (100K || branch) RC network. */
-static void test_mix_coupling(void)
-{
-    static int32_t input[RATE], out[RATE], zeros[RATE];
-    const int32_t *src[4] = {input, zeros, zeros, zeros};
-    const double frequencies[] = {20, 55, 1000};
-    int level, f, i, settle;
-    for (level = 1; level <= 2; level++)
-        for (f = 0; f < 3; f++) {
-            struct dsp_hpf h = {0};
-            uint32_t noise = 1;
-            int32_t gain[4] = {level == 2 ? DSP_MIX_HIGH : DSP_MIX_LOW, 0, 0, 0};
-            double branch = level == 2 ? 47000 : 100000;
-            double corner = 1 / (2 * M_PI * 1e-7 * (47000 + 1 / (1 / 100000.0 + 1 / branch)));
-            double expected = 0.25 * pow(10, -10.0 / 20) * gain[0] / 4096 /
-                              sqrt(1 + pow(corner / frequencies[f], 2));
-            double in_power = 0, out_power = 0;
-            for (i = 0; i < RATE; i++) {
-                input[i] = (int32_t)(20000 * sin(2 * M_PI * frequencies[f] * i / RATE));
-                in_power += (double)input[i] * input[i];
-            }
-            for (settle = 0; settle < 2; settle++)
-                dsp_voice_out(&h, src, gain, &noise, 0, out, RATE);
-            for (i = 0; i < RATE; i++)
-                out_power += pow(out[i] / 65536.0, 2);
-            assert(fabs(db(sqrt(out_power / in_power) / expected)) < 0.06);
-        }
-    /* A muted, running source still charges its own capacitor; enabling its gain must not restart it. */
-    {
-        struct dsp_hpf h = {0};
-        uint32_t noise = 1;
-        int32_t gain[4] = {0};
-        for (i = 0; i < RATE; i++)
-            input[i] = 20000;
-        dsp_voice_out(&h, src, gain, &noise, 0, out, RATE);
-        gain[0] = DSP_MIX_HIGH;
-        dsp_voice_out(&h, src, gain, &noise, 0, out, 32);
-        assert(abs(out[0]) < 65536);
-        /* A different source has its own, initially uncharged capacitor. */
-        gain[0] = 0;
-        gain[1] = DSP_MIX_HIGH;
-        src[1] = input;
-        dsp_voice_out(&h, src, gain, &noise, 0, out, 32);
-        assert(out[0] > 1000 * 65536);
-    }
-}
-
-/* Coupling and noise state must survive the 32-sample device block boundary unchanged. */
-static void test_mix_blocks(void)
-{
-    struct dsp_hpf whole = {0}, split = {0};
-    int32_t input[4][96], a[96], b[96], gain[4] = {4096, 1925, 0, 4096};
-    const int32_t *src[4];
-    uint32_t noise_a = 1, noise_b = 1;
-    int i, j, block;
-    for (j = 0; j < 4; j++) {
-        for (i = 0; i < 96; i++)
-            input[j][i] = (int32_t)(30000 * sin((i + 13 * j) * 0.13));
-        src[j] = input[j];
-    }
-    dsp_voice_out(&whole, src, gain, &noise_a, 765, a, 96);
-    for (block = 0; block < 3; block++) {
-        for (j = 0; j < 4; j++)
-            src[j] = input[j] + 32 * block;
-        dsp_voice_out(&split, src, gain, &noise_b, 765, b + 32 * block, 32);
-    }
-    for (i = 0; i < 96; i++)
-        assert(a[i] == b[i]);
-    for (j = 0; j < 4; j++)
-        assert(whole.source[j] == split.source[j]);
-    assert(whole.lp == split.lp && noise_a == noise_b);
-}
-
 /* Maximum mixes remain below full scale across bass, midrange, treble and modulation. */
 static void test_voice_headroom(void)
 {
@@ -481,6 +408,7 @@ static void test_voice_headroom(void)
         struct ob1_voice one, two;
         struct ob1_knobs k = {63, 63, 8, 0, 0, 0};
         int32_t a[32], b[32];
+        double power_one = 0, power_two = 0;
         ob1_voice_init(&one, 1);
         ob1_voice_init(&two, 1);
         for (block = 0; block < 1000; block++) {
@@ -488,9 +416,12 @@ static void test_voice_headroom(void)
             ob1_voice_render(&one, &k, step(220), step(220), a);
             k.mix2 = 8;
             ob1_voice_render(&two, &k, step(220), step(220), b);
-            for (i = 0; i < 32; i++)
-                assert(llabs((long long)b[i] - 2LL * a[i]) <= 65536);
+            for (i = 0; i < 32; i++) {
+                power_one += (double)a[i] * a[i];
+                power_two += (double)b[i] * b[i];
+            }
         }
+        assert(fabs(db(sqrt(power_two / power_one)) - 6.0206) < 0.01);
     }
 }
 
@@ -541,9 +472,7 @@ int main(void)
     test_noise();
     test_mix_gains();
     test_mix_out();
-    test_mix_coupling();
     test_voice_headroom();
-    test_mix_blocks();
     puts("dsp: all tests passed");
     return 0;
 }

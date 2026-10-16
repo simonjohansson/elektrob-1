@@ -40,12 +40,9 @@ static void osc_init(struct dsp_osc *o)
 
 void ob1_voice_init(struct ob1_voice *v, uint32_t seed)
 {
-    int i;
     osc_init(&v->vco1);
     osc_init(&v->vco2);
     v->hpf.lp = 0;
-    for (i = 0; i < 4; i++)
-        v->hpf.source[i] = 0;
     v->noise = seed ? seed : 1;
 }
 
