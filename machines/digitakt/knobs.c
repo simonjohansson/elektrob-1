@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "knobs.h"
-#include "voice.h"
+#include "../../dsp/voice.h"
 
 #define BIT(c)  (1u << (KNOB_PX - 1 - (c)))         /* column c, 0 the leftmost */
 

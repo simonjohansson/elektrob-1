@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* Host tests for machine/dsp.c: `mise run test`. */
+/* Host tests for dsp/dsp.c: `mise run test`. */
 #define _DEFAULT_SOURCE /* glibc hides M_PI under -std=c99 */
 #include <assert.h>
 #include <math.h>

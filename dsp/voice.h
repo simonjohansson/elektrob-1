@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* One OB-1 voice from its knobs, with no Digitakt dependencies: the machine (machine/ob1.c), the host render
- * (tools/render.c) and the benchmark (tools/bench.c) all run this, so a host render is the machine's sound. */
+/* One OB-1 voice from its knobs, with no device dependencies: the Digitakt wrapper (machines/digitakt/ob1.c),
+ * the host render (tools/render.c) and the benchmark (tools/bench.c) all run this. */
 #ifndef VOICE_H
 #define VOICE_H
 #include "dsp.h"

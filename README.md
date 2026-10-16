@@ -19,6 +19,8 @@ and sends work on it as they do on a sample.
 
 Built for OS 1.53 and 1.54. It's machine id 69.
 
+Digitone support is [scaffolded](machines/digitone/README.md); its build tasks are placeholders.
+
 ## Install
 
 You need the stock Digitakt mk1 OS file from Elektron: `Digitakt_OS1.54.syx` (or 1.53's, with `ELEKLOADER_STOCK`
@@ -102,22 +104,44 @@ and its owner's manual. Where those leave a value open, the issues record where 
 
 | Task | Does |
 |---|---|
-| `mise run build` | builds the core, machine-pages and OB-1 mods into `out/os<OS>/`, for each `Digitakt_OS<OS>.syx` in `firmware/` |
-| `mise run firmware` | patches the stock OS that `ELEKLOADER_STOCK` names (1.54) into `out/Digitakt_custom.syx` (version `OB-1`) |
-| `mise run emu` | adds the build to [digiemu](https://github.com/irpina/digiemu) and opens its panel (FUNC+SRC there too; shift-click FUNC to latch it) |
+| `mise run build` | runs both target builds; Digitakt builds core, machine-pages and OB-1 into `out/os<OS>/` for each stock OS in `firmware/` |
+| `mise run firmware` | runs both firmware tasks; Digitakt patches `ELEKLOADER_STOCK` (1.54) into `out/Digitakt_custom.syx` (version `OB-1`) |
+| `mise run emu` | runs both emulator tasks; Digitakt adds the build to [digiemu](https://github.com/irpina/digiemu) and opens its panel (FUNC+SRC there too; shift-click FUNC to latch it) |
 | `mise run test` | builds the DSP for the host and runs `tests/` |
 | `mise run render OUT.wav [key=value...]` | renders a voice: `note=57 seconds=4`, the knobs `wav1 wav2 frq2 mix1 mix2 mod nois`, `sweep=KNOB:FROM:TO` |
 | `mise run analyze FILE.wav` | prints f0, harmonic levels and the aliasing floor |
-| `mise run knobs` | prints the SRC page's knob graphics as text |
+| `mise run knobs` | runs both knob tasks; Digitakt prints the SRC page's knob graphics as text |
 | `mise run bench` | counts the DSP's instructions a block in Unicorn (`-v` in `tools/bench.py` splits them by function) |
-| `mise run release` | builds, tests and releases each OS's `ob1-<version>*.elemod` on GitHub as `ob1-v<version>`, from a pushed commit. It needs your stock file, so it runs here, not in CI |
+| `mise run release` | runs both release tasks; Digitakt builds, tests and releases each OS's `ob1-<version>*.elemod` on GitHub as `ob1-v<version>`, from a pushed commit. It needs your stock file, so it runs here, not in CI |
 | `mise run protocol`, `mise run compare DIR` | renders the comparison protocol's tests (#15, T1–T8) and measures captures against them |
 
+Device-specific tasks dispatch to both targets. Run a target subtask directly to work on only that device:
+
+| Both targets | Digitakt | Digitone placeholder |
+|---|---|---|
+| `mise run build` | `mise run build:digitakt` | `mise run build:digitone` |
+| `mise run build:deps` | `mise run build:deps:digitakt` | `mise run build:deps:digitone` |
+| `mise run firmware` | `mise run firmware:digitakt` | `mise run firmware:digitone` |
+| `mise run emu` | `mise run emu:digitakt` | `mise run emu:digitone` |
+| `mise run release` | `mise run release:digitakt` | `mise run release:digitone` |
+| `mise run knobs` | `mise run knobs:digitakt` | `mise run knobs:digitone` |
+
+Each Digitone task prints that support is not implemented and returns success without producing
+artifacts. They need no stock firmware or toolchain.
+
+Shared DSP tasks (`test`, `render`, `bench`, `protocol`, `analyze`, `compare`) and `bootstrap` run once.
+
 The code:
-- `machine/dsp.c`: the DSP, with no Digitakt dependencies (the oscillators, band-limiting, mixer and noise).
-- `machine/voice.c`: one voice, from knob values.
-- `machine/ob1.c`: the machine's description and its SRC page.
-- `machine/knobs.c`: the knob graphics.
+
+- `dsp/dsp.c`: the shared DSP, with no device dependencies (the oscillators, band-limiting, mixer and noise).
+- `dsp/voice.c`: one shared voice, from knob values.
+- `machines/digitakt/ob1.c`: the Digitakt wrapper, its parameter mapping and SRC page.
+- `machines/digitakt/knobs.c`: the Digitakt knob graphics.
+- `machines/digitakt/mod.json`: the Digitakt mod manifest, which builds the wrapper and shared DSP together.
+- `machines/digitone/`: the future Digitone wrapper's scaffold.
+
+Each device wrapper owns its firmware integration, parameter mapping, pitch conversion, voice lifecycle,
+output scaling and UI. The sound engine is shared; device-specific code stays in its wrapper.
 
 The toolchain is Homebrew's `m68k-elf` gcc and binutils, on macOS and Linux, installed by `mise bootstrap`.
 

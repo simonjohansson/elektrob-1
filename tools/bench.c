@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* The machine's voice (machine/voice.c), for the ColdFire: tools/bench.py runs bench() in Unicorn and counts
+/* The machine's voice (dsp/voice.c), for the ColdFire: tools/bench.py runs bench() in Unicorn and counts
  * its instructions a block (`mise run bench`). ob1.c's knob reads and pitch lookups are left out: a few
  * dozen instructions a voice. */
 #include "voice.h"

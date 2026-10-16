@@ -25,8 +25,12 @@ run = [
   "cd vendor/digiemu && uv sync && tools/install-patched-unicorn.sh",
 ]
 
-# Each stock file in firmware/ builds into out/os<OS>/, which then holds that OS's mods and nothing else
 [tasks."build:deps"]
+description = "Build dependencies for Digitakt and Digitone"
+depends = ["build:deps:digitakt", "build:deps:digitone"]
+
+# Each Digitakt stock file builds into out/os<OS>/, which holds only that OS's mods
+[tasks."build:deps:digitakt"]
 description = "Build the core and machine-pages mods the machine requires, for each OS in firmware/"
 run = '''
 rm -rf out/os*
@@ -38,13 +42,17 @@ done
 '''
 
 [tasks.build]
+description = "Build the Digitakt and Digitone mods"
+depends = ["build:digitakt", "build:digitone"]
+
+[tasks."build:digitakt"]
 description = "Build the machine's .elemod, for each OS in firmware/"
-depends = ["build:deps"]
+depends = ["build:deps:digitakt"]
 run = '''
 for s in firmware/Digitakt_OS*.syx; do
   os=${s##*_OS}
   os=${os%.syx}
-  python -m elekloader.sdk.build machine --stock "$s" --out out/os$os || exit 1
+  python -m elekloader.sdk.build machines/digitakt --stock "$s" --out out/os$os || exit 1
   # the SDK suffixes only the ports' files: suffix the 1.53 ones too, so every file names its OS
   for f in out/os$os/*.elemod; do
     case $f in *-os$os.elemod) ;; *) mv "$f" "${f%.elemod}-os$os.elemod" ;; esac
@@ -56,7 +64,7 @@ done
 description = "Build the machine's DSP for the host and run its tests"
 run = [
   "mkdir -p out",
-  "cc -std=c99 -O2 -Wall -Wextra -Werror -Imachine machine/dsp.c machine/voice.c tests/test_dsp.c -lm -o out/test_dsp",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c dsp/voice.c tests/test_dsp.c -lm -o out/test_dsp",
   "out/test_dsp",
 ]
 
@@ -68,7 +76,7 @@ arg "[settings]" var=#true help="key=value: note=57 seconds=4 wav1 wav2 frq2 mix
 '''
 run = [
   "mkdir -p out",
-  "cc -std=c99 -O2 -Wall -Wextra -Werror -Imachine machine/dsp.c machine/voice.c tools/render.c -lm -o out/render",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c dsp/voice.c tools/render.c -lm -o out/render",
   "eval out/render \"$usage_out\" ${usage_settings:-}",
 ]
 
@@ -78,10 +86,14 @@ usage = 'arg "<file>"'
 run = "uv run -q --with numpy --with soundfile python tools/analyze.py ${usage_file}"
 
 [tasks.knobs]
-description = "Print the SRC page's knob graphics as text (machine/knobs.c)"
+description = "Print knob graphics for Digitakt and Digitone"
+depends = ["knobs:digitakt", "knobs:digitone"]
+
+[tasks."knobs:digitakt"]
+description = "Print the SRC page's knob graphics as text (machines/digitakt/knobs.c)"
 run = [
   "mkdir -p out",
-  "cc -std=c99 -O2 -Wall -Wextra -Werror -Imachine machine/dsp.c machine/voice.c machine/knobs.c tools/knobs.c -o out/knobs",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp -Imachines/digitakt dsp/dsp.c dsp/voice.c machines/digitakt/knobs.c tools/knobs.c -o out/knobs",
   "out/knobs",
 ]
 
@@ -89,7 +101,7 @@ run = [
 description = "Render the machine's side of #15's protocol (T1-T8) into out/ours"
 run = [
   "mkdir -p out",
-  "cc -std=c99 -O2 -Wall -Wextra -Werror -Imachine machine/dsp.c machine/voice.c tools/render.c -lm -o out/render",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c dsp/voice.c tools/render.c -lm -o out/render",
   "uv run -q --with numpy --with soundfile python tools/protocol.py out/render out/ours",
 ]
 
@@ -102,14 +114,18 @@ run = "uv run -q --with numpy --with soundfile python tools/compare.py ${usage_d
 description = "Count the DSP's ColdFire instructions a block for 8 voices, in Unicorn"
 run = [
   "mkdir -p out",
-  "m68k-elf-gcc -mcpu=54455 -O2 -ffreestanding -fno-builtin -nostdlib -fomit-frame-pointer -Imachine -Wl,-Ttext=0x10000 -Wl,-e,bench machine/dsp.c machine/voice.c tools/bench.c -o out/bench.elf",
+  "m68k-elf-gcc -mcpu=54455 -O2 -ffreestanding -fno-builtin -nostdlib -fomit-frame-pointer -Idsp -Wl,-Ttext=0x10000 -Wl,-e,bench dsp/dsp.c dsp/voice.c tools/bench.c -o out/bench.elf",
   "m68k-elf-objcopy -O binary out/bench.elf out/bench.bin",
   "uv run -q --with unicorn==2.1.4 --with capstone python tools/bench.py out/bench.bin out/bench.elf",
 ]
 
 [tasks.firmware]
+description = "Build firmware for Digitakt and Digitone"
+depends = ["firmware:digitakt", "firmware:digitone"]
+
+[tasks."firmware:digitakt"]
 description = "Patch the stock OS ($ELEKLOADER_STOCK) with core, machine-pages and the OB-1 machine"
-depends = ["build"]
+depends = ["build:digitakt"]
 run = '''
 os=${ELEKLOADER_STOCK##*_OS}
 set -- out/os${os%.syx}/*.elemod
@@ -117,8 +133,12 @@ python -m elekloader.patch --stock $ELEKLOADER_STOCK $(printf -- '--mod %s ' "$@
 '''
 
 [tasks.emu]
+description = "Open emulators for Digitakt and Digitone"
+depends = ["emu:digitakt", "emu:digitone"]
+
+[tasks."emu:digitakt"]
 description = "Add the custom firmware to digiemu and open its panel"
-depends = ["firmware"]
+depends = ["firmware:digitakt"]
 dir = "vendor/digiemu"
 run = '''
 # digiemu names a build's folder dt1-<version, lower-cased, other characters as '-'>-<sha256[:8]>
@@ -132,11 +152,43 @@ uv run python -m emu.portable --worker panel "$fw"
 '''
 
 [tasks.release]
-description = "Build the machine and release its .elemod for each OS on GitHub as ob1-v<version> (machine/mod.json's)"
-depends = ["build", "test"]
+description = "Build, test and release the Digitakt and Digitone mods"
+depends = ["release:digitakt", "release:digitone"]
+
+[tasks."release:digitakt"]
+description = "Build the machine and release its .elemod for each OS on GitHub as ob1-v<version> (machines/digitakt/mod.json's)"
+depends = ["build:digitakt", "test"]
 run = '''
 [ -z "$(git status --porcelain)" ] || { echo "release: commit first, so the release is the source it's tagged on"; exit 1; }
 git fetch -q origin && [ -z "$(git log origin/main..HEAD)" ] || { echo "release: push first"; exit 1; }
-v=$(python -c "import json; print(json.load(open('machine/mod.json'))['version'])")
+v=$(python -c "import json; print(json.load(open('machines/digitakt/mod.json'))['version'])")
 gh release create "ob1-v$v" out/os*/ob1-$v*.elemod --target "$(git rev-parse HEAD)" --title "OB-1 $v" --generate-notes
 '''
+
+[tasks."build:digitone"]
+description = "Placeholder for the Digitone mod build; produces no artifacts"
+depends = ["build:deps:digitone"]
+run = 'echo "Digitone support is not implemented; no artifacts produced"'
+
+[tasks."build:deps:digitone"]
+description = "Placeholder for Digitone dependencies; produces no artifacts"
+run = 'echo "Digitone support is not implemented; no artifacts produced"'
+
+[tasks."firmware:digitone"]
+description = "Placeholder for the Digitone firmware build; produces no artifacts"
+depends = ["build:digitone"]
+run = 'echo "Digitone support is not implemented; no artifacts produced"'
+
+[tasks."emu:digitone"]
+description = "Placeholder for the Digitone emulator; opens no panel"
+depends = ["firmware:digitone"]
+run = 'echo "Digitone support is not implemented; no artifacts produced"'
+
+[tasks."release:digitone"]
+description = "Placeholder for the Digitone release; publishes nothing"
+depends = ["build:digitone"]
+run = 'echo "Digitone support is not implemented; no artifacts produced"'
+
+[tasks."knobs:digitone"]
+description = "Placeholder for Digitone knob graphics"
+run = 'echo "Digitone support is not implemented; no artifacts produced"'

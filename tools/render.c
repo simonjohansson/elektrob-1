@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* Render the machine's voice (machine/voice.c) to a 48 kHz mono WAV, 24-bit:
+/* Render the machine's voice (dsp/voice.c) to a 48 kHz mono WAV, 24-bit:
  *     render OUT.wav [key=value ...]
  * note (MIDI, 69 = A4 440 Hz; default 57, A3), seconds (4), and the SRC page's knobs as the machine reads
  * them: wav1, wav2 (0-127), frq2 (0-63, 32 unison), mix1, mix2 (0-8), mod (0-3), nois (0-2). Defaults are a

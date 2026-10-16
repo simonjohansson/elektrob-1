@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* ob1: the Oberheim OB-1's oscillator section as an SRC machine on core 3.0: two VCOs (machine/dsp.c), VCO1 at
+/* ob1: the Oberheim OB-1's oscillator section as an SRC machine on core 3.0: two VCOs (dsp/dsp.c), VCO1 at
  * the trig's note and TUNE, VCO2 FRQ2 semitones from it, each with its wave type and WAVE and its FUND and
  * OCT mix, VCO2 synced to VCO1 and VCO1 cross-modulated by VCO2 on MOD, and noise; the track's filter,
  * envelope, level, LFOs and sends work on it as on a sample.
@@ -10,7 +10,7 @@
  * Machine 69, claimed as the resource machine:69: kits store it, so it is fixed for good (docs/ADAPTING.md,
  * "SRC machines"). */
 #include "digitakt-mk1/core3.h"
-#include "voice.h"
+#include "../../dsp/voice.h"
 #include "knobs.h"
 
 #define OB1_ID      69
@@ -190,7 +190,7 @@ static int32_t mix_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
     return 1;
 }
 
-/* ---- the knob graphics (#18): machine/knobs.c's rows, drawn into the box x + 1 to x + 17, y to y + 16
+/* ---- the knob graphics (#18): knobs.c's rows, drawn into the box x + 1 to x + 17, y to y + 16
  * (y = 0 the screen's bottom row), its top row first ---------------------------------------------------- */
 typedef void (*rect_fn)(void *bmp, int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t colour);
 #define FILLRECT ((rect_fn)fw_fillrect)
