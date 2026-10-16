@@ -50,7 +50,7 @@ void dsp_shape_saw(struct dsp_shape *sh, int32_t g)
     sh->g = g;
     sh->width = 0;
     sh->mid = 0x80000000u;
-    sh->dc = (32768 - g) >> 2;                  /* the mean, (1 - g) / 4 */
+    sh->dc = (g - 32768) >> 2;                  /* the mean, (g - 1) / 4 */
 }
 
 void dsp_shape_pulse(struct dsp_shape *sh, uint32_t width)
@@ -66,30 +66,35 @@ void dsp_shape_pulse(struct dsp_shape *sh, uint32_t width)
 HOT int32_t value(const struct dsp_shape *sh, int pulse, uint32_t ph)
 {
     int32_t s;
-    if (pulse)
+    if (pulse == 1)
         return (ph < sh->width ? 32767 : -32768) - sh->dc;
     s = dsp_saw(ph);
-    return (s > 0 ? s : (sh->g * s) >> 15) - sh->dc;
+    if (pulse == 2)
+        return s;
+    return (s < 0 ? s : (sh->g * s) >> 15) - sh->dc;
 }
 
 /* Its slope a sample at a phase, the ramp rising ds a sample (Q15). */
 HOT int32_t slope(const struct dsp_shape *sh, int pulse, uint32_t ph, int32_t ds)
 {
-    if (pulse)
+    if (pulse == 1)
         return 0;
-    return ph >= 0x80000000u ? ds : (sh->g * ds) >> 15;
+    if (pulse == 2)
+        return ds;
+    return ph < 0x80000000u ? ds : (sh->g * ds) >> 15;
 }
 
+/* Mode 0 is the shaped ramp, 1 pulse, and 2 the full-saw fast path. */
 /* Its jump and change of slope at the reset (0) and at mid. */
 HOT void at_reset(const struct dsp_shape *sh, int pulse, int32_t ds, int32_t *h, int32_t *m)
 {
-    *h = pulse ? 65536 : -(32768 + sh->g);  /* up; or from 1 to -g */
-    *m = pulse ? 0 : -(((32768 - sh->g) * ds) >> 15);
+    *h = pulse == 1 ? 65536 : pulse == 2 ? -65536 : -(32768 + sh->g);
+    *m = pulse ? 0 : ((32768 - sh->g) * ds) >> 15;
 }
 HOT void at_mid(const struct dsp_shape *sh, int pulse, int32_t ds, int32_t *h, int32_t *m)
 {
-    *h = pulse ? -65536 : 0;                /* down; or the saw type's kink */
-    *m = pulse ? 0 : ((32768 - sh->g) * ds) >> 15;
+    *h = pulse == 1 ? -65536 : 0;           /* down; or the saw type's kink */
+    *m = pulse ? 0 : -(((32768 - sh->g) * ds) >> 15);
 }
 
 /* The sub-octave's flip-flop toggles t into the sample: its jump's polyBLEP, onto ys, its sample. */
@@ -118,7 +123,7 @@ HOT int32_t tick(struct dsp_osc *o, const struct dsp_shape *sh, int pulse, int32
             blep(&o->prev, &y, reset, h, m);
             toggle(o, &o->sub_prev, &ys, reset);
         }
-        if ((t = dsp_vco_crossed(v, sh->mid)) >= 0) {
+        if (pulse != 2 && (t = dsp_vco_crossed(v, sh->mid)) >= 0) {
             at_mid(sh, pulse, ds, &h, &m);
             blep(&o->prev, &y, t, h, m);
         }
@@ -178,6 +183,9 @@ void dsp_osc_block(struct dsp_osc *o, uint32_t inc, const struct dsp_shape *sh, 
     if (h.pulse)
         for (i = 0; i < n; i++)
             tick(&a, &h, 1, -1, &out[i], &sub[i]);
+    else if (h.g == 32768)                       /* full saw needs neither half scaling nor a middle corner */
+        for (i = 0; i < n; i++)
+            tick(&a, &h, 2, -1, &out[i], &sub[i]);
     else
         for (i = 0; i < n; i++)
             tick(&a, &h, 0, -1, &out[i], &sub[i]);
@@ -224,12 +232,14 @@ HOT uint32_t xmod_scale(uint32_t v, uint32_t u, int32_t sh, uint32_t max)
     uint32_t p = v * exp2_frac(u & 0xffff);     /* < 2^31 */
     int32_t s = (int32_t)(u >> 16) - DSP_XMOD_OCT + sh;
     if (s < 0)
-        return (p >> -s) > max ? max : p >> -s;
+        /* In the oscillator path p <= 2^31, so any right shift fits the step limit. */
+        return max == DSP_INC_MAX && sh == 0 ? p >> -s : ((p >> -s) > max ? max : p >> -s);
     return p > (max >> s) ? max : p << s;
 }
 
-/* x (-32768 to 32767) as the octaves Q16 of 2^(DSP_XMOD_OCT x / 32768) above 2^-DSP_XMOD_OCT. */
-#define XMOD_U(x)   ((uint32_t)((x) + 32768) * (2 * DSP_XMOD_OCT))
+/* Fractional depth in Q16 octaves, biased by the lookup's integer ceiling. */
+#define XMOD_U(x)   ((((uint32_t)((x) + 32768) * DSP_XMOD_DEPTH_Q6) >> 5) + \
+                     (DSP_XMOD_OCT * 65536u - DSP_XMOD_DEPTH_Q6 * 1024u))
 
 uint32_t dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max)
 {
@@ -247,13 +257,14 @@ HOT void pair(struct dsp_osc *o1, struct dsp_osc *o2, const struct dsp_shape *sh
     int i;
     for (i = 0; i < n; i++) {
         if (mod & DSP_XMOD) {                   /* VCO1's step, times 2^x */
-            uint32_t u = XMOD_U(dsp_saw(b.vco.phase)), np, r;
+            uint32_t u = (((b.vco.phase >> 16) * DSP_XMOD_DEPTH_Q6) >> 5) +
+                         (DSP_XMOD_OCT * 65536u - DSP_XMOD_DEPTH_Q6 * 1024u), np, r;
             a.vco.inc = xmod_scale(base, u, 0, DSP_INC_MAX);
             np = a.vco.phase + a.vco.inc;
             /* its reciprocal, times 2^-x, only for a sample whose ramp passes 0 or the corner (tick's
              * dsp_vco_crossed): once or twice a cycle, not every sample */
-            if (np < a.vco.inc || np - h1.mid < a.vco.inc) {
-                r = XMOD_U(32767) - u;              /* -1 - x's */
+            if (np < a.vco.inc || (p1 != 2 && np - h1.mid < a.vco.inc)) {
+                r = 2 * DSP_XMOD_OCT * 65536u - 1 - u;  /* complementary exponent, rounded down */
                 a.vco.rinc = a.vco.inc == DSP_INC_MAX ? 1u << a.vco.shift  /* 2^30 / (DSP_INC_MAX >> shift) */
                                                       : (rbase * exp2_frac(r & 0xffff)) >> (14 + DSP_XMOD_OCT - (r >> 16));
             }
@@ -272,7 +283,12 @@ void dsp_pair(struct dsp_osc *o1, struct dsp_osc *o2, uint32_t inc1, uint32_t in
 {
     dsp_vco_set(&o1->vco, inc1 > DSP_INC_MAX ? DSP_INC_MAX : inc1);
     dsp_vco_set(&o2->vco, inc2 > DSP_INC_MAX ? DSP_INC_MAX : inc2);
-    if (sh1->pulse && sh2->pulse)
+    if (!sh1->pulse && sh1->g == 32768) {
+        if (sh2->pulse)
+            pair(o1, o2, sh1, sh2, 2, 1, mod, f1, s1, f2, s2, n);
+        else
+            pair(o1, o2, sh1, sh2, 2, 0, mod, f1, s1, f2, s2, n);
+    } else if (sh1->pulse && sh2->pulse)
         pair(o1, o2, sh1, sh2, 1, 1, mod, f1, s1, f2, s2, n);
     else if (sh1->pulse)
         pair(o1, o2, sh1, sh2, 1, 0, mod, f1, s1, f2, s2, n);
@@ -284,9 +300,7 @@ void dsp_pair(struct dsp_osc *o1, struct dsp_osc *o2, uint32_t inc1, uint32_t in
 
 HOT uint32_t noise_next(uint32_t x)
 {
-    x ^= x << 13;
-    x ^= x >> 17;
-    return x ^ (x << 5);
+    return x * 1664525u + 1013904223u;
 }
 
 void dsp_noise(uint32_t *state, int32_t *out, int n)
@@ -306,13 +320,16 @@ HOT void voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t
     const int32_t *a = src[0], *b = src[1], *c = src[2], *d = src[3];
     int32_t ga = gain[0], gb = gain[1], gc = gain[2], gd = gain[3], lp = h->lp, x, i;
     uint32_t z = *noise;
+    int32_t nl = h->noise_lp;
     for (i = 0; i < n; i++) {
         x = a[i] * ga + b[i] * gb;                              /* |src| < 2^16, gain <= 2^12: < 2^30 */
         if (four)
             x += c[i] * gc + d[i] * gd;
         if (with_noise) {
             z = noise_next(z);
-            x += ((int32_t)z >> 16) * ng;
+            int32_t raw = (int32_t)z >> 16;
+            nl = raw + ((nl - raw) * 5 >> 4);
+            x += nl * ng;
         }
         x >>= 14;                               /* Q12 to Q15, and a quarter */
         lp += (((x * 256) - lp) * 47) >> 15;     /* the low-pass the high-pass takes off: 2 pi 11 / 48000 */
@@ -320,6 +337,8 @@ HOT void voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t
         out[i] = x > 32767 ? 0x7fffffff : x < -32768 ? (int32_t)0x80000000 : x * 65536;
     }
     h->lp = lp;
+    if (with_noise)
+        h->noise_lp = nl;
     *noise = z;
 }
 

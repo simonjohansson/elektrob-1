@@ -25,9 +25,13 @@ it is a numerical and sound-model constraint, not a measured analog frequency li
 ## Oscillators and waveshapes
 
 Both VCOs start from a rising ramp. For a ramp `s` in approximately [−1, +1], the saw-type family is
-`max(s, 0) + g × min(s, 0)`. As `g` moves linearly from −1 to +1, the shape moves from a folded ramp
-(triangle) to a saw. The mean is removed. The triangle's peak-to-peak amplitude is half the saw's;
-the model does not normalize their levels across the control's travel.
+`min(s, 0) + g × max(s, 0)`. The fixed half follows the reset; the other half scales from inverted
+triangle to saw. The mean is removed. A measured 64-position control curve selects shaping gain
+and fundamental level, matching the reference's intermediate cycles and relative loudness. The
+triangle's raw half swing is compensated at mixing; sub-octave gain is independent of waveshape.
+All level coefficients include the output trim and are computed as constants, with no per-sample
+waveform normalization. The full saw uses an equivalent path that omits half scaling and the absent
+middle corner.
 
 Pulse type compares phase with a width threshold. Width moves linearly from about 6.7 % to 50 % of a
 cycle. Removing its mean avoids a width-dependent DC offset, but does not make every width equally
@@ -56,7 +60,7 @@ Natural resets very close to a sync reset are merged within about 1/1024 of a sa
 does not introduce extra sub-octave flips at whole-number frequency ratios.
 
 Cross modulation uses VCO2's raw ramp, before its selectable waveshape and mixer, to change VCO1's
-pitch exponentially. For normalized ramp `x` in [−1, +1], the frequency factor is `2^(5x)`, capped by
+pitch exponentially. For normalized ramp `x` in [−1, +1], the frequency factor is `2^(3.921875x)`, capped by
 the 12 kHz oscillator limit. Changing VCO2's audible waveshape does not change this modulation source.
 The exponential is approximated with a table and interpolation. Both sync and cross modulation can
 operate together, so the two oscillators must be advanced as an interacting pair.
@@ -68,29 +72,30 @@ skipped. Oscillator and noise state are retained while skipped, rather than adva
 
 ## Mixer, noise and headroom
 
-There are five sources: each VCO's fundamental and sub-octave, plus white noise. Relative to oscillator
-ON, oscillator −3DB uses 47/100 gain. Noise ON uses 47/100 and noise −3DB uses 47/220, followed by a
-separate source-level factor of about −8 dB. Integer coefficients approximate these ratios.
+There are five sources: each VCO's fundamental and sub-octave, plus white noise. Middle positions
+are approximately −3 dB relative to ON for both oscillator and noise sources. Oscillator calibration
+uses the reference's explicit −3 dB label; the noise middle position uses the corresponding amplitude
+ratio. Normalized knob position 0.5 is a different level. Integer coefficients approximate these
+ratios. The original physical switch truth table remains a separate hardware question.
 
-The −3DB text reproduces the panel label. The modeled oscillator attenuation is about −6.6 dB, and
-the noise switch's middle position is about −6.8 dB below its ON position. The physical switch logic
-is unresolved; the resistor values alone do not establish which gates are on together.
-
-Noise is a deterministic 32-bit xorshift sequence with a nonzero seed, with distinct seeds per device
-track. Its level was set by ear: noise ON is about 14.5 dB below a full saw in RMS level. This is not
-a hardware noise calibration.
+Noise uses the high 16 bits of a full-period 32-bit linear congruential sequence with distinct
+seeds per track. A noise-only one-pole filter uses coefficient 11/16 to match the measured white
+output's gentle high-frequency rolloff. Its state is held when noise is OFF; oscillator-only paths
+omit the filter work. Noise at ON is about 20.41 dB below a full saw in the 200–8000 Hz comparison
+band. This is a match to the reference output path, which includes its filter/amplifier, rather than
+identification of physical noise-source coloration. There is no added pink-noise control.
 
 After summing, a one-pole high-pass removes DC at about 11 Hz. Its low-pass coefficient is
 `47/32768 ≈ 2π × 11/48000`. A single filter after the sum approximates separate coupling networks;
 their transients need not agree when source levels change.
 
 The voice applies a fixed −10 dB trim to the source gains before mixing, followed by the mixer's
-quarter scale. A single full saw at ON peaks around −22 dBFS. The trim is folded into the constant
-source gains, so it adds no per-sample or per-block multiplication. Sources remain additive; there
+quarter scale. A single full saw at ON peaks around −22 dBFS. The trim and measured waveform compensation are folded into constant
+source gains, so they add no per-sample or per-block multiplication. Sources remain additive; there
 is no source-count normalization or automatic limiter. Saturation remains a final numeric guard.
 The level adjustment follows a particular device listening/USB comparison, not universal loudness
 calibration. Preserve or reduce maximum loudness when changing gains, and compare levels as well
 as timbre.
 
-No drift, component mismatch, finite analog reset time or transistor-level noise coloration is
+No drift, component mismatch, finite analog reset time or transistor-level noise generation is
 modeled. See [Architecture](architecture.md#timing-and-state) for the approximation during silent time.

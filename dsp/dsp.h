@@ -59,7 +59,7 @@ struct dsp_osc {
 #define DSP_INC_MAX (1u << 30)
 
 /* A waveshape, set once a block. The OB-1's two: saw type (WAVE in "Saw Type"): g, Q15 from -32768 to 32768,
- * scales the ramp's lower half against its upper, out = max(s, 0) + g min(s, 0), -1 a triangle (|s|), +1 the
+ * scales its upper half, out = min(s, 0) + g max(s, 0), -1 an inverted folded triangle, +1 the
  * saw; pulse type (WAVE in "Pulse Type", U11 comparing the ramp with a threshold): +1 while the ramp is below
  * `width` (a fraction of the cycle, 2^31 the square), -1 after. Each has its mean taken off, as the mixer's
  * AC coupling would. */
@@ -85,44 +85,43 @@ void dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *ou
 
 /* ---- the two VCOs together --------------------------------------------------------------------------
  * SYNC: VCO1's reset pulse resets VCO2 (R120, Q21; SW17). XMOD: VCO2's ramp moves VCO1's pitch through its
- * exponential converter (R4, R5 into U4; SW18), so by DSP_XMOD_OCT octaves each way at the ramp's ends.
- * DSP_XMOD_OCT from sheet 1342: the saw reaches U4 through 94K against the key CV's 100K, so 1.06
- * octaves a volt, assuming R100 centres OSC 2 SAW at about +-4.8 V. shortcut: the saw's bottom end is inferred
- * from that centring (the reset comparator's reference is illegible); a clearer scan could refine it. */
+ * exponential converter. The depth matches OB-2 by KBPlugs' measured slow-ramp mean reset ratio, 2.78. */
 #define DSP_SYNC        1
 #define DSP_XMOD        2
-#define DSP_XMOD_OCT    5
+#define DSP_XMOD_OCT    4   /* integer ceiling for the exponential lookup */
+#define DSP_XMOD_DEPTH_Q6 251 /* +/-3.921875 octaves */
 
 /* Both VCOs a block, sample by sample, with mod (DSP_SYNC | DSP_XMOD): fund and sub of each into f1, s1, f2,
  * s2, one sample late. */
 void dsp_pair(struct dsp_osc *o1, struct dsp_osc *o2, uint32_t inc1, uint32_t inc2, const struct dsp_shape *sh1,
               const struct dsp_shape *sh2, int mod, int32_t *f1, int32_t *s1, int32_t *f2, int32_t *s2, int n);
 
-/* The cross mod's pitch factor on v: (v 2^(DSP_XMOD_OCT x / 32768)) << sh (>> -sh if negative), x from
+/* The cross mod's pitch factor on v: (v 2^((DSP_XMOD_DEPTH_Q6 / 64) x / 32768)) << sh (>> -sh if negative), x from
  * -32768 to 32767, v < 2^16, saturating at max. */
 uint32_t dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max);
 
 /* ---- the mixer ----------------------------------------------------------------------------------------
  * The OB-1 mixes VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each switched ON, -3 dB or OFF through U13-U15 (4016s).
- * Oscillators are modeled as 47K for ON and 100K for -3 dB: -6.6 dB, not the panel's -3; gate logic is unresolved.
- * Noise uses 100K and 220K. Each source is AC-coupled at about 11 Hz (47K, 0.1 uF,
- * 100K). Gains against an oscillator at ON: */
+ * Middle/ON gains match the measured OB-2 by KBPlugs -3 dB positions; source resistor ratios alone
+ * do not establish those levels. A shared 11 Hz high-pass approximates AC coupling.
+ * Gains against an oscillator at ON: */
 #define DSP_OUTPUT_GAIN     1295            /* Q12: fixed -10 dB voice trim, folded into source gains */
-#define DSP_MIX_HIGH        4096            /* 47K, Q12 */
-#define DSP_MIX_LOW         1925            /* 100K: 47 / 100 */
-#define DSP_MIX_NOISE_HIGH  1925            /* 100K */
-#define DSP_MIX_NOISE_LOW   875             /* 220K: 47 / 220 */
+#define DSP_MIX_HIGH        4096            /* Q12: oscillator ON */
+#define DSP_MIX_LOW         2900            /* Q12: measured -3 dB reference middle position */
+#define DSP_MIX_NOISE_HIGH  1925            /* Q12: noise ON before source calibration */
+#define DSP_MIX_NOISE_LOW   1363            /* Q12: -3 dB relative to noise ON */
 
-/* The noise source (on the OB-1 a transistor junction's noise, from the performance board): white, from a
- * 32-bit xorshift whose state must not be 0. n samples, -32768 to 32767. */
+/* Raw white noise from the high 16 bits of a full-period 32-bit linear congruential generator.
+ * n samples, -32768 to 32767; output coloration is applied only in the voice mixer. */
 void dsp_noise(uint32_t *state, int32_t *out, int n);
 
-/* The source's level against a VCO's ramp, Q12, for the noise gains: -8 dB, so noise at ON sits 14.5 dB
- * under a full saw. The OB-1's is a selected transistor's, printed nowhere, so it is set by ear. */
-#define DSP_NOISE_LEVEL     1631
+/* Q12 source scale: colored noise at ON is 20.41 dB below full-saw RMS in the measured 200-8000 Hz band.
+ * This calibrates the reference output path, not a physical transistor noise amplitude. */
+#define DSP_NOISE_LEVEL     1591
 
 struct dsp_hpf {
     int32_t lp;             /* the low-pass the high-pass takes off, Q8 */
+    int32_t noise_lp;       /* reference white-noise output coloration */
 };
 
 /* A voice's output, in one pass: src[0-3] (VCO1, VCO1 OCT, VCO2, VCO2 OCT) at gain[0-3] (Q12: a source at

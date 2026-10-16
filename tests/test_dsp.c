@@ -277,19 +277,17 @@ static void test_sync_whole_multiple(void)
     }
 }
 
-/* The cross mod's factor is 2^(DSP_XMOD_OCT x / 32768) within 0.1 %, and saturates at max. */
+/* The cross mod's factor is 2^((DSP_XMOD_DEPTH_Q6 / 64) x / 32768) within 0.1 %, and saturates at max. */
 static void test_xmod_scale(void)
 {
     int32_t x;
     for (x = -32768; x < 32768; x += 97)
         assert(fabs(dsp_xmod_scale(65535, x, -14, 0xffffffffu) / (65535 / 16384.0 * 16384 *
-                    pow(2, DSP_XMOD_OCT * (double)x / 32768)) - 1) < 0.001);
+                    pow(2, (DSP_XMOD_DEPTH_Q6 / 64.0) * (double)x / 32768)) - 1) < 0.001);
     assert(dsp_xmod_scale(65535, 32767, 0, DSP_INC_MAX) == DSP_INC_MAX);
 }
 
-/* A slow full-depth cross mod: VCO1 sweeps DSP_XMOD_OCT (5) octaves each way along VCO2's ramp, on average
- * 2^u over u in [-5, 5]: (32 - 1/32) / (10 ln 2) = 4.612 times its own pitch. At 200 Hz its peak, 6.4 kHz,
- * stays under DSP_INC_MAX. */
+/* OB-2 by KBPlugs' slow-ramp full-depth mean reset ratio is 2.78; test without the pitch clamp. */
 static void test_xmod_pitch(void)
 {
     struct dsp_osc o1 = {{0}, 0, 32767, 32767}, o2 = {{0}, 0, 32767, 32767};
@@ -300,11 +298,11 @@ static void test_xmod_pitch(void)
     dsp_pair(&o1, &o2, step(200), step(2), &saw, &saw, DSP_XMOD, f1, s1, f2, s2, RATE);
     for (i = 1; i < RATE; i++)
         flips += (s1[i] > 0) != (s1[i - 1] > 0);    /* VCO1's resets */
-    printf("xmod: VCO1 at %d resets a second, against 922\n", flips);
-    assert(fabs(flips / 922.4 - 1) < 0.015);
+    printf("xmod: VCO1 at %d resets a second, against 556\n", flips);
+    assert(fabs(flips / 556.0 - 1) < 0.015);
 }
 
-/* Cross mod at a high pitch: VCO1's peak (2 kHz x 32) sits at DSP_INC_MAX for part of VCO2's ramp, where
+/* Cross mod at a high pitch: VCO1's peak (2 kHz x 15.16) sits at DSP_INC_MAX for part of VCO2's ramp, where
  * its reciprocal follows the clamped step, so the band-limited output stays within a polyBLEP's overshoot. */
 static void test_xmod_clamp(void)
 {
@@ -337,11 +335,11 @@ static void test_noise(void)
     assert(fabs(corr / power) < 0.02);
 }
 
-/* The mixer's gains: -3 dB is 47/100 of ON, -6.6 dB. */
+/* Reference middle levels are -3 dB below ON for oscillator and noise sources. */
 static void test_mix_gains(void)
 {
-    assert(fabs(20 * log10((double)DSP_MIX_LOW / DSP_MIX_HIGH) + 6.56) < 0.05);
-    assert(fabs(20 * log10((double)DSP_MIX_NOISE_LOW / DSP_MIX_HIGH) + 13.4) < 0.05);
+    assert(fabs(20 * log10((double)DSP_MIX_LOW / DSP_MIX_HIGH) + 3) < 0.02);
+    assert(fabs(20 * log10((double)DSP_MIX_NOISE_LOW / DSP_MIX_NOISE_HIGH) + 3) < 0.02);
 }
 
 /* The output: a quarter of a source at ON, DC gone within a second, a source at gain 0 left out, and

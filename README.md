@@ -11,7 +11,7 @@ and sends work on it as they do on a sample.
   - **saw type**, from triangle to sawtooth;
   - **pulse type**, from a narrow pulse to a square;
   - a **sub-octave** square.
-- **Hard sync** (VCO2 to VCO1) and **cross mod** (VCO2's saw sweeping VCO1's pitch, ±5 octaves).
+- **Hard sync** (VCO2 to VCO1) and **cross mod** (VCO2's saw sweeping VCO1's pitch, about ±3.92 octaves).
 - **A noise source.**
 - **The OB-1's mixer:** VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each ON, −3 dB or OFF as on the panel, AC-coupled.
 - **Reduced aliasing** with polyBLEP and polyBLAMP corrections, with [limits at high pitches and under sync](docs/dsp.md#band-limiting).
@@ -90,11 +90,11 @@ Leave headroom and check the intended sound on the device. See [benchmark interp
 
 ## How faithful it is
 
-The model follows the OB-1's oscillator topology, schematics and owner's manual. It has not been validated
-against controlled recordings of a physical OB-1. The 6.7 % minimum pulse width is provisional,
-the ±5-octave cross-mod depth depends on a circuit assumption, and noise level was set by ear.
-The panel's −3 dB mixer position currently produces about −6.6 dB for oscillators; the hardware switch
-interpretation remains unresolved. Drift and other analog variation are omitted.
+The model follows the OB-1's oscillator topology, with saw-family shape/level, cross-modulation depth,
+mixer steps and white-noise output calibrated against OB-2 by KBPlugs. Both mixer middle positions
+are approximately −3 dB. The minimum pulse width remains provisional at 6.7 %; drift and other analog
+variation are omitted. Agreement with the reference plugin is distinct from validation against a
+physical OB-1, for which no controlled capture set is included.
 
 [Sources and confidence](docs/references.md) separates printed facts, calculations, measurements and
 model choices. [The DSP reference](docs/dsp.md) explains the sound and its approximations.

@@ -4,8 +4,10 @@ The 17 October 2026 baseline starts at revision `145adfc8b78a7715643d51006721ff2
 Measurements use the same compiler, dependencies and workloads before and after the corrections.
 Firmware, source snapshots, executable benchmarks, stimulus scripts and raw reports are retained
 locally under `capture-local/performance-20261017/`; they are not distributed with the firmware.
+The initial-correction sections record firmware `0ff0295d…`. The later VST calibration below
+records the current sound model against both that correction and the original baseline.
 
-## Sound-engine instructions
+## Initial correction: sound-engine instructions
 
 `mise run bench` counts ColdFire instructions for eight voices, 32 samples per block, subtracting
 four warm-up blocks from twenty blocks. The compiler is m68k-elf GCC 16.2.0 with the configured
@@ -32,7 +34,7 @@ Whole-firmware measurements below include the wrapper. Instruction counts are no
 hardware voice-capacity measurements. The stock-load percentages printed by the benchmark use a
 historical estimate and must not be substituted for measured firmware timing.
 
-## Complete-firmware simulator
+## Initial correction: complete-firmware simulator
 
 Both OS 1.54 firmware images booted from fresh state before the same controlled load. Each case
 imposes eight sustained voices at the actual guest render handoff, while the firmware's DSP,
@@ -103,8 +105,86 @@ not only host wall-clock time. Include high pitches and muted modulation sources
 changes. A necessary correctness change may alter event density; explain that separately from an
 unchanged-workload regression. Preserve output headroom when evaluating sound changes.
 
-The current host checks include 240 one-second maximum-mix conditions across six waveform settings,
+The host checks include 240 one-second maximum-mix conditions across six waveform settings,
 five pitches, all four modulation modes, aligned sources and mixed-shape fifths with noise ON.
-The corrected implementation's highest peak in that matrix is −4.24 dBFS. All four previously clipping
+The first correction's highest peak in that matrix was −4.24 dBFS. All four previously clipping
 campaign cases were rerendered without rail hits. This is bounded test coverage, not a proof for every
 possible control transition or physical device workload.
+
+## VST calibration
+
+The calibration target is the measured OB-2 by KBPlugs oscillator output. The same 64-position
+saw curve and fundamental-level coefficients are used across pitches and VCOs. Compact reference
+cycle/level fixtures, middle-position checks and noise checks run with the normal host tests.
+Physical circuit uncertainties remain separate from this selected reference target.
+
+| Calibration check | Previous model | VST-calibrated model |
+|---|---:|---:|
+| Median normalized saw-family cycle RMSE, 70 pitch/VCO cases | 0.4841 | 0.1143 |
+| Median absolute relative waveform-level error | 0.424 dB | 0.039 dB |
+| Maximum relative waveform-level error in those cases | 6.428 dB | 0.429 dB |
+| Checked A3 waveform-position level error | Up to 5.986 dB | At most 0.052 dB |
+| Middle oscillator attenuation | −6.56 dB | −3.00 dB |
+| White noise 200–8000 Hz / full-saw RMS | −19.383 dB | −20.420 dB (reference −20.408 dB) |
+| White-noise spectral tilt, comparison band | +0.003 dB/octave | −0.516 dB/octave (reference −0.468) |
+| Slow exponential-modulation mean-rate ratio | About 4.59× | About 2.776× |
+
+Cycle comparisons allow phase and polarity, with no time reversal or per-pitch refitting. The
+largest remaining level residual occurs at the upper test pitch. Reference filter/amplifier
+coloration remains in the recordings. Noise calibration matches level and broad color in the
+stated band, with about 1.28 dB binwise PSD fit residual; it does not reproduce every spectral bin.
+The XMOD depth is ±3.921875 octaves; 16 held-out cases have median normalized spectral-band RMSE
+0.07177 → 0.05465, with 11 improving. Higher-register modulation spectra retain differences.
+
+Waveform gain and output trim are folded into constant mixer coefficients. Full saws omit half
+scaling and nonexistent middle-corner corrections; the paired optimization matches 4,096,000
+frozen generic outputs and oscillator states exactly, with 12 persisted golden checks. A full-period
+32-bit generator supplies the high 16 noise bits, followed by the fitted noise-only filter. Eight
+track seeds were checked for distribution, spectral flatness, lag and cross-track correlation.
+The noise-off paths omit that filter work. These choices keep the measured calibration within the
+original instruction budget.
+
+| Eight-voice DSP workload | Original baseline | Initial correction | VST calibration |
+|---|---:|---:|---:|
+| One saw | 15,554 | 15,538 | 13,817 |
+| Both VCOs/subs | 24,090 | 24,059 | 20,494 |
+| Selected SYNC/XMOD/noise | 39,982 | 39,923 | 39,381 |
+
+All host suites and AddressSanitizer/UBSan checks pass. The 240 maximum-mix cases peak at
+−4.28 dBFS, slightly below the initial correction's −4.24 dBFS. The final waveform and noise
+calibration adds no increase in the checked maximum level. Both supported OS images build/link/patch;
+raw measurements, source hashes and simulator stimuli are retained locally under
+`capture-local/vst-calibration-20261017/`.
+
+The final OS 1.54 image repeats the same fresh boot/control script and controlled eight-voice
+workloads as both comparison images. No workload settings, dependency revision or timing model
+were changed. The modeled 100 ms results are:
+
+| Workload | Original busy | Initial correction busy | VST calibration busy | Original worst margin | VST calibration worst margin |
+|---|---:|---:|---:|---:|---:|
+| One saw | 75.26% | 75.23% | 73.85% | 24.68% | 27.08% |
+| Both VCOs/subs | 81.75% | 81.72% | 79.07% | 16.94% | 21.50% |
+| SYNC/XMOD/noise | 98.38% | 97.50% | 91.93% | 1.52% | 8.43% |
+
+The one-second heavy run completes 1,499 render periods with no missed deadlines or strict render
+faults. Modeled busy decreases from 98.77% originally and 97.89% after the initial correction to
+92.28%. Worst render cycles decrease from 164,399 / 163,425 to 152,959; margin improves from
+1.37% / 1.96% to 8.23%. Active instructions decrease from 195,362,531 / 195,380,684 to 182,641,329,
+and total instructions from 196,388,986 / 197,141,367 to 189,077,187. Even with more idle work,
+both active and total instruction counts improve. The margin is still below the checker's 10%
+recommended reserve and does not certify physical eight-voice capacity.
+
+Fresh UI/control busy load is 63.25%, versus 63.36% originally and 63.39% before calibration.
+Its total instructions are 666,018,051 and worst render margin is 36.05%; both improve relative to
+each comparison image. The same pre-existing strict boot read of address zero persists, so the
+complete checker still reports failure for that diagnostic. No new strict violation or render miss
+occurs. MIDI 127 retains the verified 12 kHz ceiling. Timing remains a simulator estimate, using
+the same zero-wait memory and branch-prediction assumptions described above.
+
+Final firmware SHA-256 values:
+
+- OS 1.54: `4e8c9a14547a7a031145a099761fc3c97ba3330f9586320403551bfb1d68857c`.
+- OS 1.53: `c6c3a484b8ea2aba9233135dc8f3b4d6138d01988e151db18654fc43138599dd`.
+
+OS 1.53 is build/link/patch checked; complete simulator timing is OS 1.54 only. Physical playback,
+USB level matching and hardware CPU timing remain unverified.
