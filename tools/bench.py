@@ -52,7 +52,7 @@ def run(blocks, voices, setting):
 
 
 print('%-44s %9s %9s %6s %6s %s' % ('setting', 'instr/blk', 'per voice', 'muls', 'divs', '8 voices vs the stock render'))
-for setting, name in ((1, 'default: one saw'), (2, 'both VCOs and subs'), (0, 'worst: + SYNC, XMOD, noise')):
+for setting, name in ((1, 'one saw, other sources off'), (2, 'both VCOs and subs'), (0, 'worst: + SYNC, XMOD, noise')):
     warm = run(WARM, 8, setting)
     full = run(WARM + BLOCKS, 8, setting)
     per = {k: (full[k] - warm.get(k, 0)) / BLOCKS for k in full}

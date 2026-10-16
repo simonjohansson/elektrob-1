@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* The SRC page's knob graphics (#18, the A designs), with no Digitakt dependencies: each is 17 rows, the top
+/* The SRC page's knob graphics, with no Digitakt dependencies: each is 17 rows, the top
  * one first, of 17 columns, bit 16 the leftmost. ob1.c draws them; tools/knobs.c prints them. */
 #ifndef KNOBS_H
 #define KNOBS_H

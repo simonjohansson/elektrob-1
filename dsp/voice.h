@@ -14,7 +14,7 @@ struct ob1_knobs {
 };
 
 struct ob1_voice {
-    struct dsp_osc vco1, vco2;  /* free-running, as the OB-1's VCOs: never reset */
+    struct dsp_osc vco1, vco2;  /* phase retained between notes; paused when rendering is skipped */
     struct dsp_hpf hpf;
     uint32_t noise;             /* the noise's state: never 0 */
 };

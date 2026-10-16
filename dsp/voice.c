@@ -13,8 +13,8 @@ static int32_t wave_g(int32_t w)
 }
 
 /* WAV1 and WAV2 64-127: pulse type, from the narrowest pulse (64) to the square (127), as the OB-1's WAVE pot
- * turned clockwise ends on the square (trimmed to 50 %). The narrowest width is OB-2 by KBPlugs' (6.7 %,
- * measured, #21): the schematic leaves it to unprinted operating points and no OB-1 is at hand (#23). */
+ * turned clockwise ends on the square (trimmed to 50 %). The 6.7 % minimum is provisional;
+ * the schematic leaves it to unprinted operating points. */
 #define PW_MIN  287762809u                         /* 6.7 % of 2^32 */
 static uint32_t wave_width(int32_t w)
 {

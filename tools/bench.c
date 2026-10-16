@@ -9,7 +9,7 @@ static int32_t out[8 * 32];
 
 /* nblocks blocks of `voices` voices in one setting:
  * 0  the worst case: VCO1 pulse type and VCO2 saw type, both with their subs ON, BOTH, noise ON
- * 1  the default sound: VCO1, a saw, FUND ON
+ * 1  one VCO: a saw, FUND ON, other sources OFF (not the default sound)
  * 2  both VCOs and their subs ON, no sync or cross mod, no noise */
 void bench(int nblocks, int voices, int setting)
 {

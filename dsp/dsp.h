@@ -86,7 +86,7 @@ void dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *ou
 /* ---- the two VCOs together --------------------------------------------------------------------------
  * SYNC: VCO1's reset pulse resets VCO2 (R120, Q21; SW17). XMOD: VCO2's ramp moves VCO1's pitch through its
  * exponential converter (R4, R5 into U4; SW18), so by DSP_XMOD_OCT octaves each way at the ramp's ends.
- * DSP_XMOD_OCT from sheet 1342 (#22): the saw reaches U4 through 94K against the key CV's 100K, so 1.06
+ * DSP_XMOD_OCT from sheet 1342: the saw reaches U4 through 94K against the key CV's 100K, so 1.06
  * octaves a volt, and R100 centres OSC 2 SAW at about +-4.8 V. shortcut: the saw's bottom end is inferred
  * from that centring (the reset comparator's reference is illegible); a clearer scan could refine it. */
 #define DSP_SYNC        1
@@ -103,8 +103,9 @@ void dsp_pair(struct dsp_osc *o1, struct dsp_osc *o2, uint32_t inc1, uint32_t in
 uint32_t dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max);
 
 /* ---- the mixer ----------------------------------------------------------------------------------------
- * The OB-1 mixes VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each switched ON, -3 dB or OFF (U13-U15, 4016s
- * into 47K for ON and 100K for -3 dB, which makes it -6.6 dB, not the panel's -3; noise 100K and 220K), each AC-coupled at about 11 Hz (47K, 0.1 uF,
+ * The OB-1 mixes VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each switched ON, -3 dB or OFF through U13-U15 (4016s).
+ * Oscillators are modeled as 47K for ON and 100K for -3 dB: -6.6 dB, not the panel's -3; gate logic is unresolved.
+ * Noise uses 100K and 220K. Each source is AC-coupled at about 11 Hz (47K, 0.1 uF,
  * 100K). Gains against an oscillator at ON: */
 #define DSP_MIX_HIGH        4096            /* 47K, Q12 */
 #define DSP_MIX_LOW         1925            /* 100K: 47 / 100 */
@@ -116,7 +117,7 @@ uint32_t dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max);
 void dsp_noise(uint32_t *state, int32_t *out, int n);
 
 /* The source's level against a VCO's ramp, Q12, for the noise gains: -8 dB, so noise at ON sits 14.5 dB
- * under a full saw. The OB-1's is a selected transistor's, printed nowhere, so it is set by ear (#25). */
+ * under a full saw. The OB-1's is a selected transistor's, printed nowhere, so it is set by ear. */
 #define DSP_NOISE_LEVEL     1631
 
 struct dsp_hpf {

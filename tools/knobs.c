@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
-/* Print the knob graphics (machines/digitakt/knobs.c) as text, side by side at #18's mockups' settings, to check them
- * against the mockups: `mise run knobs`. */
+/* Print the knob graphics as text, side by side at representative settings: `mise run knobs`. */
 #include <stdio.h>
 #include "knobs.h"
 

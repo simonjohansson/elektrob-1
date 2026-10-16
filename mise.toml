@@ -97,19 +97,6 @@ run = [
   "out/knobs",
 ]
 
-[tasks.protocol]
-description = "Render the machine's side of #15's protocol (T1-T8) into out/ours"
-run = [
-  "mkdir -p out",
-  "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c dsp/voice.c tools/render.c -lm -o out/render",
-  "uv run -q --with numpy --with soundfile python tools/protocol.py out/render out/ours",
-]
-
-[tasks.compare]
-description = "Compare #15's captures in DIR with out/ours, test by test"
-usage = 'arg "<dir>" help="The captures, named as in the protocol on issue 15"'
-run = "uv run -q --with numpy --with soundfile python tools/compare.py ${usage_dir} out/ours"
-
 [tasks.bench]
 description = "Count the DSP's ColdFire instructions a block for 8 voices, in Unicorn"
 run = [

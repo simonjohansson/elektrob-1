@@ -7,8 +7,7 @@
  * It names no firmware address: the locations are core 3.0's exports (fw_*), and its page is drawn by the
  * machine-pages mod from the description below. So its mod.json's 1.54 port is empty.
  *
- * Machine 69, claimed as the resource machine:69: kits store it, so it is fixed for good (docs/ADAPTING.md,
- * "SRC machines"). */
+ * Machine 69, claimed as the resource machine:69: kits store it, so it is fixed for good. */
 #include "digitakt-mk1/core3.h"
 #include "../../dsp/voice.h"
 #include "knobs.h"
@@ -190,7 +189,7 @@ static int32_t mix_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
     return 1;
 }
 
-/* ---- the knob graphics (#18): knobs.c's rows, drawn into the box x + 1 to x + 17, y to y + 16
+/* ---- the knob graphics: knobs.c's rows, drawn into the box x + 1 to x + 17, y to y + 16
  * (y = 0 the screen's bottom row), its top row first ---------------------------------------------------- */
 typedef void (*rect_fn)(void *bmp, int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t colour);
 #define FILLRECT ((rect_fn)fw_fillrect)

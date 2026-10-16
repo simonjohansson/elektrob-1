@@ -7,7 +7,7 @@ open an emulator or publish a release, and need no stock firmware or toolchain.
 The unqualified device tasks dispatch to both the Digitakt and Digitone subtasks;
 run a `:digitone` task directly to run only this scaffold's placeholders.
 
-The future Digitone mk1 wrapper will call the shared engine in `../../dsp/`.
+The future Digitone mk1 integration will use the shared oscillator engine.
 It will own:
 
 - Mapping Digitone parameters to the shared voice's knob values.
@@ -18,8 +18,8 @@ It will own:
 
 Start from the pinned Elekloader [machines-dn1 integration](../../vendor/elekloader/mods/machines-dn1/README.md)
 and [dn-sine-machine example](../../vendor/elekloader/examples/dn-sine-machine).
-The Digitakt wrapper in `../digitakt/` is a reference for the OB-1 controls;
-its firmware hooks, parameter slots and graphics belong to Digitakt.
+The [shared architecture](../../docs/architecture.md) defines the OB-1 control meanings and device
+boundaries. Firmware hooks, parameter slots and graphics must be established for Digitone.
 
 This scaffold has no C wrapper or mod manifest. Parameter mappings, machine IDs,
 firmware requirements and hardware behavior remain to be established for the port.
