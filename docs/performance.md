@@ -74,6 +74,11 @@ boot checks encounter the same existing strict read of unmapped address zero at 
 the complete firmware checker therefore does not pass cleanly, despite successful boot/UI/audio.
 This pre-existing diagnostic is separate from the zero-fault loaded render cases.
 
+The matched 4.15-second fresh UI/control script has modeled busy load 63.36% → 63.39%
+and worst deadline margin 35.82% → 35.74%. Total instructions fall from 666,706,347 to
+666,603,636. These small control-path changes are recorded separately from the loaded render
+improvements; the measurements do not establish zero regression in every counter or workload.
+
 The corrected firmware's raw simulated oscillator output rises through nominal MIDI 84/85/96/120
 at approximately 1046.21/1108.26/2092.84/8371.25 Hz and reaches the 12 kHz ceiling at MIDI 127.
 The baseline remains near 1046.21 Hz at MIDI 96. Lower lookup values are unchanged. This verifies
