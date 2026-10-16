@@ -79,14 +79,32 @@ Noise is a deterministic 32-bit xorshift sequence with a nonzero seed, with dist
 track. Its level was set by ear: noise ON is about 14.5 dB below a full saw in RMS level. This is not
 a hardware noise calibration.
 
-After summing, a one-pole high-pass removes DC at about 11 Hz. Its low-pass coefficient is
-`47/32768 ≈ 2π × 11/48000`. A single filter after the sum approximates separate coupling networks;
-their transients need not agree when source levels change.
+Each oscillator fundamental and sub-octave has an independent one-pole coupling filter before its
+mixer gain. On [synthesizer drawing 1342/1, rev. B, 4-2-79](https://www.electrongate.com/obfiles/OB-1-1342a.jpg),
+the 0.1 µF capacitor sees 47 kΩ source resistance and a 100 kΩ shunt loaded by the selected mixer branch.
+Approximating the common mixer node as ground gives
+`τ = 0.1 µF × (47 kΩ + (100 kΩ ∥ selected branch))`. Under the current exclusive-branch assumption,
+this gives corners near 20 Hz at ON and 16.4 Hz in the middle position. The digital coefficients
+approximate these corners at 48 kHz. The switch truth table remains unresolved, so these poles are
+conditional model choices; existing middle/ON gain ratios are retained pending better evidence.
 
-Output is scaled by one quarter, making a single full saw at ON peak around −12 dBFS. That leaves
-room for the two fundamentals and their subs; it is not a guarantee against every combination's
-overshoot or added noise. Output saturates at full scale rather than wrapping. Preserve or reduce
-maximum loudness when changing gains, and compare levels as well as timbre.
+Separate coupling histories prevent one source's DC estimate from carrying into another source.
+A muted fundamental or sub still updates its coupling state while the other output of its VCO is
+mixed in. Completely muted VCOs and skipped voices remain subject to the silent-time approximation
+described in [Architecture](architecture.md#timing-and-state).
+The model ignores the small interaction through the common mixer node: the bounded passive-circuit
+study found about 0.03 dB change in an existing source's contribution when the other branches were enabled
+at 220 Hz. Noise retains a separate provisional 11 Hz high-pass; its coupling has not been calibrated.
+
+Output combines the quarter scale with a fixed −10 dB trim before saturation, for an overall scale
+of approximately 0.079. A single full saw at ON peaks around −22 dBFS. The trim follows a USB measurement
+in which an all-enabled patch was about 9.7 dB louder in RMS than a single-cycle saw on another track;
+it is a practical level adjustment, not a universal match across patches or track settings.
+
+Sources remain additive: adding fundamentals or subs can raise the level, and phase affects how much.
+There is no source-count normalization or automatic limiter. Full-scale saturation remains a final
+numeric guard, rather than a model of analog compression. Preserve or reduce maximum loudness when
+changing gains, and compare levels as well as timbre.
 
 No drift, component mismatch, finite analog reset time or transistor-level noise coloration is
 modeled. See [Architecture](architecture.md#timing-and-state) for the approximation during silent time.

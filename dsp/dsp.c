@@ -293,26 +293,50 @@ void dsp_noise(uint32_t *state, int32_t *out, int n)
     *state = x;
 }
 
-/* dsp_voice_out's loop, compiled with and without the noise, and for VCO1's two sources alone (four: false)
- * or all four: fewer live values, fewer spilled to the stack. */
+/* Quantize the feedback error before multiplying to keep Q15 state and products within 32 bits. */
+HOT int32_t ac_couple(int32_t x, int32_t *lp, int32_t coefficient)
+{
+    *lp += (x - (*lp >> 15)) * coefficient;
+    return x - (*lp >> 15);
+}
+
+HOT int32_t coupling_coefficient(int32_t gain)
+{
+    return gain == DSP_MIX_HIGH ? 86 : gain ? 70 : 47;
+}
+
+/* Separate source passes keep coupling state in registers on the ColdFire. */
+HOT void couple_add(int32_t *state, const int32_t *src, int32_t gain, int32_t *out, int n, int first)
+{
+    int32_t lp = *state, coefficient = coupling_coefficient(gain), i;
+    gain = gain * DSP_OUTPUT_GAIN >> 12;
+    for (i = 0; i < n; i++) {
+        int32_t x = ac_couple(src[i], &lp, coefficient) * gain;
+        out[i] = first ? x : out[i] + x;
+    }
+    *state = lp;
+}
+
 HOT void voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t gain[4], uint32_t *noise,
                    int32_t ng, int32_t *out, int n, int with_noise, int four)
 {
-    const int32_t *a = src[0], *b = src[1], *c = src[2], *d = src[3];
-    int32_t ga = gain[0], gb = gain[1], gc = gain[2], gd = gain[3], lp = h->lp, x, i;
+    int32_t lp = h->lp, x, i;
     uint32_t z = *noise;
+    couple_add(&h->source[0], src[0], gain[0], out, n, 1);
+    couple_add(&h->source[1], src[1], gain[1], out, n, 0);
+    if (four) {
+        couple_add(&h->source[2], src[2], gain[2], out, n, 0);
+        couple_add(&h->source[3], src[3], gain[3], out, n, 0);
+    }
+    ng = ng * DSP_OUTPUT_GAIN >> 12;
     for (i = 0; i < n; i++) {
-        x = a[i] * ga + b[i] * gb;                              /* |src| < 2^16, gain <= 2^12: < 2^30 */
-        if (four)
-            x += c[i] * gc + d[i] * gd;
+        x = out[i];
         if (with_noise) {
             z = noise_next(z);
-            x += ((int32_t)z >> 16) * ng;
+            x += ac_couple((int32_t)z >> 16, &lp, 47) * ng;
         }
         x >>= 14;                               /* Q12 to Q15, and a quarter */
-        lp += (((x << 8) - lp) * 47) >> 15;     /* the low-pass the high-pass takes off: 2 pi 11 / 48000 */
-        x -= lp >> 8;
-        out[i] = x > 32767 ? 0x7fffffff : x < -32768 ? (int32_t)0x80000000 : x << 16;
+        out[i] = x > 32767 ? 0x7fffffff : x < -32768 ? (int32_t)0x80000000 : x * 65536;
     }
     h->lp = lp;
     *noise = z;

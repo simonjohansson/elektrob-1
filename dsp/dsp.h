@@ -105,8 +105,9 @@ uint32_t dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max);
 /* ---- the mixer ----------------------------------------------------------------------------------------
  * The OB-1 mixes VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each switched ON, -3 dB or OFF through U13-U15 (4016s).
  * Oscillators are modeled as 47K for ON and 100K for -3 dB: -6.6 dB, not the panel's -3; gate logic is unresolved.
- * Noise uses 100K and 220K. Each source is AC-coupled at about 11 Hz (47K, 0.1 uF,
- * 100K). Gains against an oscillator at ON: */
+ * Noise uses 100K and 220K. Loaded oscillator coupling is about 20 Hz at ON and 16.4 Hz at -3 dB
+ * under that branch assumption (47K series, 0.1 uF, 100K shunt). Gains against an oscillator at ON: */
+#define DSP_OUTPUT_GAIN     1295            /* Q12: fixed -10 dB trim before saturation */
 #define DSP_MIX_HIGH        4096            /* 47K, Q12 */
 #define DSP_MIX_LOW         1925            /* 100K: 47 / 100 */
 #define DSP_MIX_NOISE_HIGH  1925            /* 100K */
@@ -121,14 +122,14 @@ void dsp_noise(uint32_t *state, int32_t *out, int n);
 #define DSP_NOISE_LEVEL     1631
 
 struct dsp_hpf {
-    int32_t lp;             /* the low-pass the high-pass takes off, Q8 */
+    int32_t lp;             /* noise low-pass state, Q15 */
+    int32_t source[4];      /* oscillator-source low-pass states, Q15 */
 };
 
-/* A voice's output, in one pass: src[0-3] (VCO1, VCO1 OCT, VCO2, VCO2 OCT) at gain[0-3] (Q12: a source at
- * gain 0 may point at anything readable), and noise from *noise at noise_gain (0: none), summed; the 11 Hz
- * high-pass (one for the voice, where the OB-1 has one a source: it only differs at DC); a quarter, so two
- * oscillators and their subs at ON fit, and beyond that clipped at full scale, Q31. A single oscillator
- * at ON peaks at -12 dB. */
+/* A voice's output: src[0-3] (VCO1, VCO1 OCT, VCO2, VCO2 OCT) at gain[0-3] (Q12), and noise
+ * from *noise at noise_gain (0: none). Independent coupling precedes oscillator gains; noise retains
+ * the provisional 11 Hz corner. A quarter scale and fixed -10 dB trim precede full-scale saturation,
+ * Q31. A single full saw at ON peaks around -22 dB. Source magnitudes must be below 2^16. */
 void dsp_voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t gain[4], uint32_t *noise,
                    int32_t noise_gain, int32_t *out, int n);
 

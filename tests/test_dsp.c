@@ -5,7 +5,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "dsp.h"
+#include "voice.h"
 
 #define RATE 48000
 #define N 4800                  /* 0.1 s: 10 Hz bins */
@@ -344,8 +344,7 @@ static void test_mix_gains(void)
     assert(fabs(20 * log10((double)DSP_MIX_NOISE_LOW / DSP_MIX_HIGH) + 13.4) < 0.05);
 }
 
-/* The output: a quarter of a source at ON, DC gone within a second, a source at gain 0 left out, and
- * clipped, never wrapped. */
+/* DC is removed, muted sources do not leak, and the fixed trim leaves headroom. */
 static void test_mix_out(void)
 {
     static int32_t acc[RATE], out[RATE], junk[RATE];
@@ -362,16 +361,137 @@ static void test_mix_out(void)
     for (i = RATE - 4800; i < RATE; i++)
         tail += out[i];
     assert(fabs(tail / 4800 / 2147483648.0) < 0.001);           /* the DC is gone */
-    /* the square's edge at a quarter, less the 11 Hz high-pass's droop over 24 samples (3.4 %) */
-    assert(abs((out[RATE - 1] - out[RATE - 25]) / 65536 - 2 * 5000) < 400);
+    assert(fabs(db((out[RATE - 1] - out[RATE - 25]) / 65536.0 / 10000) + 10) < 0.4);
     for (i = 0; i < RATE; i++)
-        acc[i] = junk[i] = (i & 1) ? 65535 : -65535;          /* four sources at their loudest: too loud */
+        acc[i] = junk[i] = (i & 1) ? 65535 : -65535;          /* deliberately larger than a full saw */
     for (i = 0; i < 4; i++)
         high[i] = DSP_MIX_HIGH;
     src[1] = src[2] = src[3] = junk;
     dsp_voice_out(&h, src, high, &noise, DSP_MIX_NOISE_HIGH, out, 64);
     for (i = 0; i < 64; i++)
         assert((i & 1) ? out[i] > 0 : out[i] < 0);
+    for (i = 0; i < 64; i++)
+        assert(out[i] > INT32_MIN && out[i] < INT32_MAX);
+    /* A full-range DC reversal deliberately exceeds headroom: the final guard must saturate. */
+    for (i = 0; i < RATE; i++)
+        acc[i] = junk[i] = 65535;
+    dsp_voice_out(&h, src, high, &noise, 0, out, RATE);
+    for (i = 0; i < 64; i++)
+        acc[i] = junk[i] = -65535;
+    dsp_voice_out(&h, src, high, &noise, 0, out, 64);
+    assert(out[0] == INT32_MIN);
+}
+
+/* Compare measured response with the loaded 47K / 0.1u / (100K || branch) RC network. */
+static void test_mix_coupling(void)
+{
+    static int32_t input[RATE], out[RATE], zeros[RATE];
+    const int32_t *src[4] = {input, zeros, zeros, zeros};
+    const double frequencies[] = {20, 55, 1000};
+    int level, f, i, settle;
+    for (level = 1; level <= 2; level++)
+        for (f = 0; f < 3; f++) {
+            struct dsp_hpf h = {0};
+            uint32_t noise = 1;
+            int32_t gain[4] = {level == 2 ? DSP_MIX_HIGH : DSP_MIX_LOW, 0, 0, 0};
+            double branch = level == 2 ? 47000 : 100000;
+            double corner = 1 / (2 * M_PI * 1e-7 * (47000 + 1 / (1 / 100000.0 + 1 / branch)));
+            double expected = 0.25 * pow(10, -10.0 / 20) * gain[0] / 4096 /
+                              sqrt(1 + pow(corner / frequencies[f], 2));
+            double in_power = 0, out_power = 0;
+            for (i = 0; i < RATE; i++) {
+                input[i] = (int32_t)(20000 * sin(2 * M_PI * frequencies[f] * i / RATE));
+                in_power += (double)input[i] * input[i];
+            }
+            for (settle = 0; settle < 2; settle++)
+                dsp_voice_out(&h, src, gain, &noise, 0, out, RATE);
+            for (i = 0; i < RATE; i++)
+                out_power += pow(out[i] / 65536.0, 2);
+            assert(fabs(db(sqrt(out_power / in_power) / expected)) < 0.06);
+        }
+    /* A muted, running source still charges its own capacitor; enabling its gain must not restart it. */
+    {
+        struct dsp_hpf h = {0};
+        uint32_t noise = 1;
+        int32_t gain[4] = {0};
+        for (i = 0; i < RATE; i++)
+            input[i] = 20000;
+        dsp_voice_out(&h, src, gain, &noise, 0, out, RATE);
+        gain[0] = DSP_MIX_HIGH;
+        dsp_voice_out(&h, src, gain, &noise, 0, out, 32);
+        assert(abs(out[0]) < 65536);
+        /* A different source has its own, initially uncharged capacitor. */
+        gain[0] = 0;
+        gain[1] = DSP_MIX_HIGH;
+        src[1] = input;
+        dsp_voice_out(&h, src, gain, &noise, 0, out, 32);
+        assert(out[0] > 1000 * 65536);
+    }
+}
+
+/* Coupling and noise state must survive the 32-sample device block boundary unchanged. */
+static void test_mix_blocks(void)
+{
+    struct dsp_hpf whole = {0}, split = {0};
+    int32_t input[4][96], a[96], b[96], gain[4] = {4096, 1925, 0, 4096};
+    const int32_t *src[4];
+    uint32_t noise_a = 1, noise_b = 1;
+    int i, j, block;
+    for (j = 0; j < 4; j++) {
+        for (i = 0; i < 96; i++)
+            input[j][i] = (int32_t)(30000 * sin((i + 13 * j) * 0.13));
+        src[j] = input[j];
+    }
+    dsp_voice_out(&whole, src, gain, &noise_a, 765, a, 96);
+    for (block = 0; block < 3; block++) {
+        for (j = 0; j < 4; j++)
+            src[j] = input[j] + 32 * block;
+        dsp_voice_out(&split, src, gain, &noise_b, 765, b + 32 * block, 32);
+    }
+    for (i = 0; i < 96; i++)
+        assert(a[i] == b[i]);
+    for (j = 0; j < 4; j++)
+        assert(whole.source[j] == split.source[j]);
+    assert(whole.lp == split.lp && noise_a == noise_b);
+}
+
+/* Maximum mixes remain below full scale across bass, midrange, treble and modulation. */
+static void test_voice_headroom(void)
+{
+    const int shapes[] = {0, 32, 63, 64, 100, 127};
+    const double frequencies[] = {27.5, 55, 220, 1900, 12000};
+    int shape, f, mod, variant, block, i;
+    for (shape = 0; shape < 6; shape++)
+        for (f = 0; f < 5; f++)
+            for (mod = 0; mod < 4; mod++)
+                for (variant = 0; variant < 2; variant++) {
+                    struct ob1_voice v;
+                    struct ob1_knobs k = {shapes[shape], shapes[variant ? 5 - shape : shape], 8, 8, mod, 2};
+                    int32_t out[32];
+                    ob1_voice_init(&v, 1);
+                    for (block = 0; block < 1500; block++) {
+                        ob1_voice_render(&v, &k, step(frequencies[f]),
+                                         step(fmin(frequencies[f] * (variant ? 1.5 : 1), 12000)), out);
+                        for (i = 0; i < 32; i++)
+                            assert(out[i] > INT32_MIN && out[i] < INT32_MAX);
+                    }
+                }
+    /* Equal sources add without source-count normalization. */
+    {
+        struct ob1_voice one, two;
+        struct ob1_knobs k = {63, 63, 8, 0, 0, 0};
+        int32_t a[32], b[32];
+        ob1_voice_init(&one, 1);
+        ob1_voice_init(&two, 1);
+        for (block = 0; block < 1000; block++) {
+            k.mix2 = 0;
+            ob1_voice_render(&one, &k, step(220), step(220), a);
+            k.mix2 = 8;
+            ob1_voice_render(&two, &k, step(220), step(220), b);
+            for (i = 0; i < 32; i++)
+                assert(llabs((long long)b[i] - 2LL * a[i]) <= 65536);
+        }
+    }
 }
 
 /* The band-limiting, at 1.9 kHz. The 2-point polyBLEP is weak just above Nyquist (the 13th harmonic,
@@ -421,6 +541,9 @@ int main(void)
     test_noise();
     test_mix_gains();
     test_mix_out();
+    test_mix_coupling();
+    test_voice_headroom();
+    test_mix_blocks();
     puts("dsp: all tests passed");
     return 0;
 }
