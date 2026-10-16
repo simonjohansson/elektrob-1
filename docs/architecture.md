@@ -40,6 +40,13 @@ has reached exactly zero and no trig starts the voice, sound generation is skipp
 cleared. An oscillator mixed off is skipped unless modulation still needs it. Retained phase therefore
 approximates free-running analog oscillators; it does not advance through all silent time.
 
+Live notes on an OB-1 track use last-note priority. Releasing the newest note recalls the most
+recent note still held, with its original velocity and trigger settings, through the stock note-on
+path (including envelope retriggering). Releasing an older held note leaves the current note playing.
+The stock held-note counts handle repeated presses of the same pitch; clearing those counts also
+discards recalled holds. Each track retains up to all 128 MIDI pitches independently. Sequencer playback and
+sample preview retain their stock paths; held-note bookkeeping runs only on live note events.
+
 ## Parameters and saved sounds
 
 Machine ID **69** identifies OB-1 in saved Digitakt sounds. Its identity and the meaning of saved

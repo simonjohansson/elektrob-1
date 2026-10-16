@@ -12,6 +12,7 @@
 #include "../../dsp/voice.h"
 #include "knobs.h"
 #include "pitch.h"
+#include "notes.h"
 
 #define OB1_ID      69
 #define K_TUNE      0                   /* the SRC page's knobs, A-H: SLICE's parameters */
@@ -262,6 +263,7 @@ static void set(uint8_t *sound, int32_t track, int k, int32_t v)
 static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
 {
     (void)from;
+    ob1_notes_clear(track);
     set(sound, track, K_FRQ2, 32);
     set(sound, track, K_WAV1, 63);
     set(sound, track, K_WAV2, 63);
