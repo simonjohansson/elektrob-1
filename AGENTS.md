@@ -21,7 +21,7 @@ Use the `gh` CLI for all issue operations, including opening, updating, and clos
 
 Before implementing a feature or fix, record a plan in a GitHub issue covering the intended outcome, approach, and verification. Create sub-issues from that plan as needed.
 
-Exception: If the user explicitly says `YOLO` for the current task, skip planning and issue creation for a small fix or narrowly scoped change.
+Exception: If the user explicitly says `YOLO` for the current task, skip planning and issue creation for a small fix or narrowly scoped change. Make the change and commit directly on `main`; do not create a worktree or branch.
 
 Every issue body must contain these two sections:
 
