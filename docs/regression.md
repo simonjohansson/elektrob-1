@@ -139,7 +139,8 @@ mise run regression:measure out/regression/candidate --out out/candidate-measure
 mise run regression:assert out/regression/candidate --expectations tests/reference/recorded/assertions.json
 ```
 
-The recorded-reference policy is active for all 315 cases. It checks fixed waveform pitch, signed
+The recorded-reference policy is active for all 315 cases. It checks waveform pitch against standard
+tuning (twelve-tone equal temperament, A4 = 440 Hz), independently of reference detuning, plus signed
 shape and levels, isolated sources and middle-position ratios, noise, phase-aware mixtures and
 modulation spectra. [Reference provenance and budgets](../tests/reference/recorded/README.md) describe
 the output paths, calibration and exact coverage. Reference agreement is not physical OB-1 fidelity.

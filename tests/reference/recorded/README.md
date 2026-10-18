@@ -59,7 +59,7 @@ The limits are engineering comparison budgets, not statistical confidence interv
 | Property | Budget and purpose |
 |---|---|
 | Absolute A3 saw anchor | ±0.1 dB around the frozen output-path calibration. |
-| Isolated-wave pitch | ±1 cent relative to the measured reference. |
+| Isolated-wave pitch | ±1 cent from twelve-tone equal temperament, A4 = 440 Hz. Reference detuning is not a tuning target. |
 | Wave absolute/relative RMS | ±0.2 dB; retains the previous relative-level budget. |
 | Signed unit-RMS cycle | RMSE ≤0.25; retains the previous waveform budget with stricter orientation handling. |
 | Isolated FUND/sub/noise RMS | ±0.2 dB, both absolute and relative to the isolated VCO1 saw. |

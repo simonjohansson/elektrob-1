@@ -269,6 +269,14 @@ class ReferenceAssertionTest(unittest.TestCase):
     def result(self):
         return compare_reference(self.actual, self.profile, self.reference)
 
+    def test_standard_tuning_is_independent_of_reference_detuning(self):
+        key = 'wave-vco1-n57-w63'
+        self.reference['cases'][key]['metrics']['pitch_hz'] = [223., 223.]
+        self.assertEqual(self.result()['status'], 'passed')
+        self.set_actual(key, np.tile(tone(hz=223), 2))
+        row = next(r for r in self.result()['cases'] if r['id'] == key)
+        self.assertEqual(next(c for c in row['checks'] if c['property'] == 'pitch_error_cents')['status'], 'failed')
+
     def test_reference_gain_pitch_signed_shape_and_modulation_failures(self):
         self.assertEqual(self.result()['status'], 'passed')
         original = copy.deepcopy(self.actual)

@@ -301,7 +301,8 @@ def compare_reference(actual, expected, reference):
         if key in (anchor, 'mix-6-0-0'):
             near('absolute_anchor_dbfs', level, ref(key, 'rms_dbfs') + gain, limits['anchor_db'])
         if key.startswith('wave-'):
-            near('pitch_error_cents', 1200 * np.log2(metric(entry, 'pitch_hz') / ref(key, 'pitch_hz')), 0, limits['pitch_cents'])
+            tuned_hz = 440 * 2 ** ((case['note'] - 69) / 12)
+            near('pitch_error_cents', 1200 * np.log2(metric(entry, 'pitch_hz') / tuned_hz), 0, limits['pitch_cents'])
             near('rms_dbfs', level, ref(key, 'rms_dbfs') + gain, limits['wave_level_db'])
             saw = f'wave-vco1-n{case["note"]}-w63'
             near('relative_wave_level_db', level - observed(saw, 'rms_dbfs'),

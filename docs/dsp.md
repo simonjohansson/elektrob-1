@@ -22,6 +22,11 @@ Cross modulation changes VCO1's increment every sample. A scaled reciprocal esti
 without a divide at every crossing. The 12 kHz limit also bounds products used in edge corrections;
 it is a numerical and sound-model constraint, not a measured analog frequency limit.
 
+Pitch follows twelve-tone equal temperament at A4 = 440 Hz; MIDI C3 (note 48) is about
+130.8128 Hz. Reference recordings retain their measured tuning, but do not set oscillator tuning.
+The Digitakt conversion preserves the fractional table values, keeping the checked pitch error
+below 0.6 cents through the 12 kHz ceiling.
+
 ## Oscillators and waveshapes
 
 Both VCOs start from a rising ramp. For a ramp `s` in approximately [−1, +1], the saw-type family is
