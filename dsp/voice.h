@@ -5,7 +5,7 @@
 #define VOICE_H
 #include "dsp.h"
 
-/* The SRC page's knobs, as the machine reads them. */
+/* Decoded sound-engine controls, independent of a device's knob layout. */
 struct ob1_knobs {
     int32_t wav1, wav2;     /* 0-63 saw type, triangle to saw; 64-127 pulse type, narrowest to square */
     int32_t mix1, mix2;     /* 0-8: FUND x OCT, each OFF, -3 dB, ON */
@@ -25,8 +25,8 @@ void ob1_shape(struct dsp_shape *sh, int32_t w);
 /* A voice at rest; seed (not 0) sets its noise apart from other voices'. */
 void ob1_voice_init(struct ob1_voice *v, uint32_t seed);
 
-/* One block of 32 samples into out (Q31): VCO1 at step inc1, VCO2 at inc2 (the caller adds FRQ2 to the
- * pitch: a table on the unit, pow() on the host). */
+/* One block of 32 samples into out (Q31): VCO1 at step inc1, VCO2 at inc2. The caller supplies
+ * pitch increments from a table on the unit or pow() on the host. */
 void ob1_voice_render(struct ob1_voice *v, const struct ob1_knobs *k, uint32_t inc1, uint32_t inc2, int32_t *out);
 
 #endif

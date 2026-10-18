@@ -1,7 +1,5 @@
 # OB-1 for the Digitakt
 
-![OB-1's SRC page on the Digitakt: TUNE, FRQ2, WAV1, WAV2, MOD, MIX1, MIX2 and NOIS](src-page.png)
-
 An Oberheim OB-1 oscillator section as a sample-track machine for the Digitakt mk1. It's an SRC machine,
 added to the OS by [elekloader](https://github.com/irpina/elekloader). Pick OB-1 as a track's machine and
 its SRC page plays two analog-style VCOs instead of a sample. The track's filter, envelopes, LFOs, level
@@ -15,7 +13,7 @@ and sends work on it as they do on a sample.
 - **A noise source.**
 - **The OB-1's mixer:** VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each ON, −3 dB or OFF as on the panel, AC-coupled.
 - **Reduced aliasing** with polyBLEP and polyBLAMP corrections, with [limits at high pitches and under sync](docs/dsp.md#band-limiting).
-- **Knob graphics** that show each setting: the waveform, the interval, the routing, the mix.
+- **Knob graphics** for wave family, coarse tuning, modulation routing and noise, with separate shape and level controls.
 
 Built for OS 1.53 and 1.54. It's machine id 69.
 
@@ -52,28 +50,32 @@ press **TRIG 4** for **OS UPGRADE**, and send the stock file with Transfer's leg
 On a track's SRC page, open the machine menu (**FUNC + SRC**) and pick **OB-1**. A track switched to OB-1
 starts as two sawtooths in unison: VCO1's fundamental ON, VCO2's at −3 dB, everything else OFF.
 
-| Knob | Name | Values | What it does |
-|---|---|---|---|
-| A | TUNE | as a sample's | VCO1's pitch against the trig's note |
-| B | FRQ2 | −32 to +31 | VCO2, in semitones from VCO1 |
-| C | WAV1 | S0–S63, P0–P63 | VCO1's waveshape: S is saw type (S0 triangle, S63 saw); P is pulse type (P0 a 6.7 % pulse, P63 a square) |
-| D | WAV2 | S0–S63, P0–P63 | VCO2's waveshape, as WAV1 |
-| E | MOD | OFF, SYNC, XMOD, BOTH | VCO2 hard-synced to VCO1, VCO1 cross-modulated by VCO2's saw, or both |
-| F | MIX1 | FUND/OCT, each ON, -3 or - (OFF) | VCO1's fundamental and sub-octave in the mix |
-| G | MIX2 | FUND/OCT, each ON, -3 or - (OFF) | VCO2's, as MIX1 |
-| H | NOIS | OFF, -3DB, ON | Noise in the mix |
+The first SRC page puts both oscillators' performance controls together: VCO1 on the top row,
+VCO2 on the bottom row. Press **SRC** for the mixer and routing page.
 
-Press **SRC** to switch between the two pages. Page 1 has the controls above. Page 2 has seven
-placeholders, **MOCK1–MOCK7** (0–127, initially 0), and a blank H knob. They support locks, LFOs and
-saving but do not affect the sound yet.
+| Knob | Page 1 — Oscillators | Page 2 — Mixer / routing |
+|---|---|---|
+| A | **FRQ1** — VCO1 coarse tuning | **FND1** — VCO1 fundamental level |
+| B | **FIN1** — VCO1 fine tuning | **OCT1** — VCO1 sub-octave level |
+| C | **TYP1** — VCO1 saw / pulse family | **XMOD** — cross modulation OFF / ON |
+| D | **WAV1** — VCO1 waveform shape | Blank |
+| E | **FRQ2** — VCO2 coarse tuning | **FND2** — VCO2 fundamental level |
+| F | **FIN2** — VCO2 fine tuning | **OCT2** — VCO2 sub-octave level |
+| G | **TYP2** — VCO2 saw / pulse family | **SYNC** — hard sync OFF / ON |
+| H | **WAV2** — VCO2 waveform shape | **NOIS** — noise level |
 
-Sounds saved with this two-page build use machine-pages' version-4 format and require compatible
-custom firmware to reload; stock firmware and older machine-pages cannot read them correctly.
+Each oscillator tunes independently from the played note: coarse tuning spans −32 to +31 semitones,
+and fine tuning spans −50.0 to +50.0 cents. WAVE spans 0–63 within the selected family: triangle to
+saw for SAW, narrow pulse to square for PULS. Sweeping WAVE never switches family.
+Fundamental, sub-octave and noise levels each have three settings: OFF, −3DB, ON.
+
+The parameter mapping replaces earlier builds without migration. Sounds saved by this build use
+machine-pages' version-4 format and require compatible custom firmware to reload.
 
 Some things to try:
 
-- **Sync sweep:** MOD on SYNC, VCO2 alone, then sweep FRQ2 or put an LFO on it.
-- **Bells and gongs:** MOD on XMOD with VCO2 a few octaves down. That's what the OB-1's manual suggests cross mod for.
+- **Sync sweep:** SYNC ON, VCO2 alone, then sweep FRQ2 or put an LFO on it.
+- **Bells and gongs:** XMOD ON with VCO2 a few octaves down. That's what the OB-1's manual suggests cross mod for.
 - **A fat unison:** both VCOs ON, with FRQ2 at +0 or +12, and the subs added.
 
 Notes do not reset oscillator phase. To save CPU, phases stop advancing while a voice is silent or an

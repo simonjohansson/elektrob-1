@@ -49,37 +49,34 @@ sample preview retain their stock paths; held-note bookkeeping runs only on live
 
 ## Parameters and saved sounds
 
-Machine ID **69** identifies OB-1 in saved Digitakt sounds. Its identity and the meaning of saved
-parameter values are compatibility boundaries. Changing them requires an explicit compatibility plan.
+Machine ID **69** identifies OB-1 in saved Digitakt sounds. This two-page parameter mapping deliberately
+replaces the earlier combined controls; older sounds, locks and LFO assignments are not migrated.
 
-The first page's eight SRC controls use the stock SLICE parameter layout so the existing lock and LFO
-machinery can act on them. Firmware knob values have eight fractional bits (8.8 fixed point); oscillator
-settings use decoded integers. Display labels are not an alternative storage format.
+There are fifteen logical SRC values. The performance page has two rows of coarse tuning, fine tuning,
+wave family and waveform shape, one row per oscillator. The mixer page has independent fundamental and
+sub-octave levels for each oscillator, independent cross-modulation and sync switches, and noise level.
+Its fourth knob is blank. See the [playing controls](../README.md#playing-it) for their positions.
 
 | Control | Meaning at the sound-engine boundary |
 |---|---|
-| TUNE | Applied to the trig's note by the device's pitch conversion. |
-| FRQ2 | Raw integer 0–63 represents −32 to +31 semitones relative to VCO1; 32 is unison. |
-| WAV1/WAV2 | 0–63 is triangle to saw; 64–127 is narrow pulse to square. |
-| MOD | Four equal zones across 0–127 select OFF, SYNC, XMOD, BOTH. |
-| MIX1/MIX2 | Nine equal zones across 0–127 select the FUND/OCT combinations below. |
-| NOIS | Three equal zones across 0–127 select OFF, −3DB, ON. |
+| FRQ1/FRQ2 | Raw integer 0–63 represents −32 to +31 semitones from the played note, independently for each VCO. |
+| FIN1/FIN2 | Raw 8.8 values span −50 to +50 cents, with exact zero at 64 and fractional modulation retained. |
+| TYP1/TYP2 | Raw integer 0–63 selects saw family; 64–127 selects pulse family. |
+| WAV1/WAV2 | Raw integer 0–63 traverses triangle→saw or narrow pulse→square within the selected family. |
+| FND1/FND2, OCT1/OCT2, NOIS | Raw integer 0–42 is OFF, 43–85 is −3 dB, 86–127 is ON. |
+| XMOD, SYNC | Raw integer 0–63 is OFF, 64–127 is ON; the two switches are independent. |
 
-Mixer knob travel follows this order. The decoded mixer value is three times the fundamental's
-level plus the octave's level, with OFF = 0, −3DB = 1 and ON = 2. Host rendering accepts that decoded
-value directly, not the firmware knob position.
+Firmware knob values have eight fractional bits (8.8 fixed point). Fine tuning converts those
+fractions to pitch directly: the distance from 64 divides by 64 below the center and by 63 above
+it, scaled to half a semitone. Both endpoints are therefore exact. Coarse tuning and waveform position
+use decoded integers, retaining the engine's existing calibrated waveform positions.
 
-| Zone, low to high | FUND/OCT | Decoded value |
-|---|---|---|
-| 0 | OFF/OFF | 0 |
-| 1 | −3DB/OFF | 3 |
-| 2 | ON/OFF | 6 |
-| 3 | ON/−3DB | 7 |
-| 4 | ON/ON | 8 |
-| 5 | −3DB/−3DB | 4 |
-| 6 | −3DB/ON | 5 |
-| 7 | OFF/−3DB | 1 |
-| 8 | OFF/ON | 2 |
+The integration translates separate family/shape and fundamental/sub-octave controls to the shared
+engine's compact representations. The engine's wave index remains 0–63 for saw and 64–127 for pulse;
+its oscillator mix remains three times the fundamental level plus the sub-octave level, where OFF,
+−3 dB and ON decode to 0, 1 and 2. Cross modulation and sync remain independent routing bits.
+This translation does not change waveform calibration, source gains or maximum available levels.
+The host renderer and DSP benchmark continue to accept those compact sound-engine controls.
 
 Switching a track to OB-1 sets both saws in unison, VCO1 FUND ON, VCO2 FUND −3DB, subs and noise OFF,
 and modulation OFF. Defaults must reach both the saved sound and the live engine. Updating only one
@@ -87,7 +84,7 @@ can leave the displayed or reloaded sound different from the sound being played.
 
 ## Pitch, pages and dependencies
 
-Digitakt uses its firmware pitch table to preserve the stock relationship between notes and TUNE.
+Digitakt uses its firmware pitch table for both oscillators' independent note and tuning offsets.
 Above the table range, octave scaling extends the device pitch to the shared 12 kHz ceiling.
 The host renderer uses equal-tempered frequencies with A4 = 440 Hz. Both supply oscillator phase
 increments; host pitch calculations do not prove exact device pitch behavior.
@@ -96,10 +93,9 @@ The SRC page borrows the stock parameter machinery while supplying names, text a
 Controls that would otherwise open a sample list or use unsuitable stock ranges need explicit page
 behavior. Page defaults alone do not replace the machine-switch initialization described above.
 
-The second SRC page exposes seven mock values, independent of the sound engine. They occupy the
-additional sound slots supplied by machine-pages and retain locks, LFO modulation and saving. Its
-version-4 saved sounds require compatible custom firmware; older machine-pages and stock firmware
-cannot reload that format correctly.
+Both pages read the native processed values, including locks and LFO modulation. The mixer controls
+occupy the seven additional sound slots supplied by machine-pages. Version-4 saved sounds require
+compatible custom firmware; older machine-pages and stock firmware cannot reload that format correctly.
 
 Digitakt integration requires the Core 3.0 interface and machine-pages 1.2 for the two-page UI.
 Core interface compatibility is distinct from the Core version selected for a build.

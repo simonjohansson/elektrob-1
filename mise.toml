@@ -72,6 +72,8 @@ run = [
   "out/test_digitakt_pitch",
   "cc -std=c99 -O2 -Wall -Wextra -Werror -Ivendor/elekloader/elekloader/sdk/include machines/digitakt/notes.c tests/test_digitakt_notes.c -o out/test_digitakt_notes",
   "out/test_digitakt_notes",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror -Ivendor/elekloader/elekloader/sdk/include -Idsp dsp/dsp.c dsp/voice.c machines/digitakt/knobs.c tests/test_digitakt_controls.c -o out/test_digitakt_controls",
+  "out/test_digitakt_controls",
   "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c dsp/voice.c tests/test_vst_shapes.c -lm -o out/test_vst_shapes",
   "out/test_vst_shapes",
   "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c dsp/voice.c tests/test_vst_noise.c -lm -o out/test_vst_noise",
