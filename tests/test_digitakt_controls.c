@@ -186,10 +186,13 @@ static void reset(void)
     ob1_switch(0, 3, (uint8_t *)sound);
     assert(cleared_track == 0);
     for (int i = 0; i < 81; i++)
-        assert(sound[i] == 0xa5a5);
+        assert(sound[i] == (i == 10 + 22 ? 67 << 8 : 0xa5a5));
+    for (int k = 0; k < K_COUNT; k++)
+        assert(cm_src_value(0, k) == (k == K_FIN2 ? 67 << 8 : 0));
+    assert(ob1_page.base.knob[K_FIN2].def == 64 << 8);
     for (int k = 0; k < K_COUNT; k++) {
         const struct cm_knob *p = k < 8 ? &ob1_page.base.knob[k] : &ob1_page.extra[k - 8];
-        /* Framework defaults are exercised by the compiled-firmware test. */
+        /* Translation checks use neutral defaults; firmware checks cover the fresh patch. */
         param(k, p->def);
     }
     memset(ready, 0, sizeof(ready));
@@ -280,6 +283,7 @@ static void test_layout_and_ranges(void)
     frq_text(buf, 63 << 8, 0, 69); assert(!strcmp(buf, "+31"));
     fine_text(buf, 0, 0, 69); assert(!strcmp(buf, "-50.0"));
     fine_text(buf, 64 << 8, 0, 69); assert(!strcmp(buf, "+0.0"));
+    fine_text(buf, 67 << 8, 0, 69); assert(!strcmp(buf, "+2.4"));
     fine_text(buf, 127 << 8, 0, 69); assert(!strcmp(buf, "+50.0"));
     fine_text(buf, 65 << 8, 0, 69); assert(!strcmp(buf, "+0.8"));
     type_text(buf, 0x100, 0, 69); assert(!strcmp(buf, "PULS"));

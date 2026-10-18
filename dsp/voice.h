@@ -17,6 +17,7 @@ struct ob1_voice {
     struct dsp_osc vco1, vco2;  /* both advance on every rendered block, including muted outputs */
     struct dsp_hpf hpf;
     uint32_t noise;             /* deterministic per-track noise state */
+    int32_t smooth[2];          /* previous two mixer samples, Q15 */
 };
 
 /* WAV1/WAV2's value (0-127) as a waveshape. */

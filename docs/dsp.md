@@ -34,9 +34,23 @@ Both VCOs start from a rising ramp. For a ramp `s` in approximately [−1, +1], 
 triangle to saw. The mean is removed. A measured 64-position control curve selects shaping gain
 and fundamental level, matching the reference's intermediate cycles and relative loudness. The
 triangle's raw half swing is compensated at mixing; sub-octave gain is independent of waveshape.
-All level coefficients include the output trim and are computed as constants, with no per-sample
-waveform normalization. The full saw uses an equivalent path that omits half scaling and the absent
-middle corner.
+Waveform-level coefficients include the output trim and are computed as constants, with no
+per-sample waveform normalization. The full saw uses an equivalent path that omits half scaling
+and the absent middle corner.
+
+Audible oscillator gain also falls with base pitch, following a fixed reference calibration.
+Fourteen source-level measurements define linear amplitude interpolation from unity at about
+220.12 Hz to about −47.24 dB at 10.83 kHz. Below that range gain stays at unity; above it gain stays
+at the final measured attenuation, without inventing a silence threshold. Each VCO uses its own
+unmodulated pitch, once per block. The attenuation affects its fundamental waveform, including all
+of that waveform's harmonics; it leaves sub-octave and noise gains and the raw cross-modulation tap
+unchanged. It is not an additional spectral filter.
+
+Interpolation uses Q15 amplitude and phase-increment keys spaced about 0.183 Hz apart, then rounds
+the existing Q12 source gain to the nearest integer. Products fit in signed 32 bits. Gains never
+exceed their previous values. Near the very quiet upper endpoint, Q12 coefficient rounding can
+produce about 1 dB of relative level error; this is a partial reference match, not a claim of
+accurate final cutoff behavior.
 
 Pulse type compares phase with a width threshold. Width moves linearly from about 6.7 % to 50 % of a
 cycle. Removing its mean avoids a width-dependent DC offset, but does not make every width equally
@@ -94,12 +108,20 @@ After summing, a one-pole high-pass removes DC at about 11 Hz. Its low-pass coef
 their transients need not agree when source levels change.
 
 The voice applies a fixed −10 dB trim to the source gains before mixing, followed by the mixer's
-quarter scale. A single full saw at ON peaks around −22 dBFS. The trim and measured waveform compensation are folded into constant
-source gains, so they add no per-sample or per-block multiplication. Sources remain additive; there
-is no source-count normalization or automatic limiter. Saturation remains a final numeric guard.
+quarter scale. A single full saw at ON in the low/middle register peaks around −22 dBFS. The trim
+and measured waveform compensation are folded into constant source gains; the pitch attenuation
+adds only block-rate gain work. Sources remain additive; there is no source-count normalization
+or automatic limiter. Saturation guards the mixer's numeric range.
 The level adjustment follows a particular device listening/USB comparison, not universal loudness
 calibration. Preserve or reduce maximum loudness when changing gains, and compare levels as well
 as timbre.
+
+A shared three-sample smoothing filter follows the mixer and high-pass, with weights `[1, 2, 1]/4`.
+It approximates additional high-frequency attenuation measured in retained reference saw captures;
+it does not identify a physical OB-1 circuit or exactly reconstruct the reference's open filter.
+Its nonnegative weights sum to one, preserving DC gain and the existing peak bound. Two previous
+Q15 mixer samples carry across blocks and start at zero; the result rounds down to Q15 before Q31
+output. The filter adds one sample of delay and leaves the raw cross-modulation source unchanged.
 
 No drift, component mismatch, finite analog reset time or transistor-level noise generation is
 modeled.

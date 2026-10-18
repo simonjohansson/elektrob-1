@@ -313,8 +313,10 @@ static int32_t draw_level(void *bmp, int32_t x, int32_t y, int32_t value, int32_
 static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
 {
     (void)from;
-    (void)sound;
     ob1_notes_clear(track);
+    /* Detune the fresh patch while retaining zero as the control's neutral default. */
+    *(uint16_t *)(sound + 20 + 2 * 22) = 67 << 8;
+    fw_set_param(67 << 8, track, 22);
 }
 
 static const struct cm_src_page ob1_pages[] = {

@@ -45,12 +45,12 @@ jobs:
           uv run --python "$(mise which python)" --project vendor/digiemu
           python tests/test_digitakt_midi.py --firmware out/Digitakt_custom.syx --os 1.54
           --out out/regression/firmware-midi
-      - name: Full emulator regression capture
+      - name: Emulator reference capture
         id: capture
         if: ${{ !cancelled() && steps.firmware.outcome == 'success' && steps.emulator.outcome == 'success' }}
         run: >-
           uv run --python "$(mise which python)" --project vendor/digiemu
-          python tools/regression.py firmware --suite all
+          python tools/regression.py firmware --suite reference
           --firmware out/Digitakt_custom.syx --os 1.54 --out out/regression/firmware
       - name: Emulator reference assertions
         if: ${{ !cancelled() && steps.capture.outcome == 'success' }}

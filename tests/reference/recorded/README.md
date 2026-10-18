@@ -47,10 +47,36 @@ absolute saw anchor is checked separately, so relative levels cannot hide an ove
 gain change. DSP uses the left reference channel; stereo paths check each channel.
 Only OS 1.54 firmware/device observations are covered by this policy.
 
-Known differences are ordinary failures. There is no automatic polarity inversion,
-time reversal, pitch correction, expected-failure list or threshold widening. In
-particular, the current DSP/device waveform orientation, register-dependent levels,
-noise bandwidth and modulation differences can fail. Passing acquisition does not
+Signed cycles use a fixed `cycle_polarity` calibration when compared with the reference output:
+
+| Capture boundary | Comparison polarity |
+|---|---:|
+| Shared DSP output | −1 |
+| Simulator SSI output | +1 |
+| Device USB output | −1 |
+
+Retained asymmetric waves from both VCOs at A1/A3/A5 establish the reference's falling-saw
+orientation, opposite to DSP and USB. Repeated reference captures and filter, oversampling and
+sample-rate controls retain it. A read-only stock-firmware trace confirms that SSI applies a
+negative main-output gain while the USB handoff preserves the main mix polarity. This establishes
+the measured output conventions, not internal reference-oscillator or physical Oberheim polarity.
+
+For −1, inversion of an already canonicalized cycle includes a half-cycle shift to restore its
+fundamental phase origin. Only the signed-cycle comparison uses this transform; raw recordings,
+exported measurements and all other checks retain their original values. Reports record the fixed
+convention. A new inversion or time reversal still fails. The separate stock 5 Hz high-pass response
+is not compensated.
+
+Routine DSP and emulator CI selects the 311-case `reference` suite. The four combined SYNC+XMOD
+comparisons are omitted because the reference coupling differs from the
+[supported circuit paths](../../../docs/references.md#circuit-constraints-on-sync-and-cross-modulation).
+Strict shared-engine tests protect feedback sign, raw-source routing and reset-event timing instead.
+All 315 numeric reference entries remain available for explicit investigation; checking a full
+capture still applies their original limits.
+
+Supported reference differences are ordinary failures. There is no automatic sign selection,
+time reversal, pitch correction, expected-failure list or threshold widening. Register-dependent levels,
+noise levels and low-frequency waveform/modulation differences can fail. Passing acquisition does not
 mean passing reference assertions, and passing levels does not establish matching
 modulation spectra.
 
@@ -61,11 +87,12 @@ The limits are engineering comparison budgets, not statistical confidence interv
 | Absolute A3 saw anchor | ±0.1 dB around the frozen output-path calibration. |
 | Isolated-wave pitch | ±1 cent from twelve-tone equal temperament, A4 = 440 Hz. Reference detuning is not a tuning target. |
 | Wave absolute/relative RMS | ±0.2 dB; retains the previous relative-level budget. |
-| Signed unit-RMS cycle | RMSE ≤0.25; retains the previous waveform budget with stricter orientation handling. |
+| Signed unit-RMS cycle | RMSE ≤0.25 after fixed output-path polarity calibration. |
 | Isolated FUND/sub/noise RMS | ±0.2 dB, both absolute and relative to the isolated VCO1 saw. |
 | Source middle/ON ratio | ±0.05 dB around the measured ratio. Broader shape/pitch mixer mechanics remain independently tested. |
-| Noise 200–8000 Hz level and middle/ON ratio | ±0.25 dB, allowing finite noise-window variation. |
-| Noise/modulation spectral bands | ±1 dB, after the fixed path calibration. |
+| Noise 200–4000 Hz level and middle/ON ratio | ±0.25 dB, allowing finite noise-window variation. |
+| Isolated noise 20–200 Hz aggregate and 200–1000 / 1000–4000 Hz bands | ±1 dB, using the existing spectral budget. |
+| Modulation spectral bands below 4000 Hz | ±1 dB, after the fixed path calibration. |
 | Modulation RMS | ±0.5 dB. Spectral checks remain independent. |
 | Mixed-source bounds | ±0.5 dB around phase-aware energy bounds, allowing finite-window variation. |
 | All sources OFF | No more than 6 dB above the calibrated reference background RMS. |
@@ -78,6 +105,39 @@ between `max(0, 2*largest − sum)` and `sum`; noise adds in power. The same bou
 apply to spectral-band energy. A single arbitrary unison phase is not an oracle
 for whole-mixture RMS. This bounds check complements the existing engine additivity
 and continuity tests; it does not identify every possible mixture defect.
+
+Noise-bearing mixture spectral bounds propagate the isolated noise's existing ±1 dB
+spectral budget through its power contribution before applying the ±0.5 dB mixture
+allowance. Tonal amplitudes and their coherent bounds are unchanged. Full-band mixture
+levels retain their original bounds; this uncertainty propagation applies only to bands.
+
+Two-second narrow-band noise measurements vary with noise history. Isolated noise
+therefore checks combined 20–200 Hz power, rather than gating its 20–80 and 80–200 Hz
+bands separately. Both individual bands remain diagnostics. Noise-bearing mixtures
+retain 20–80 Hz as diagnostics and check 80–4000 Hz using the propagated bounds.
+Tone-only mixture and modulation band checks remain strict below 4000 Hz.
+
+The host also renders eight disjoint sixteen-second noise windows and checks all four
+bands below 4000 Hz against the same reference and ±1 dB budget. A deliberate 3 dB cut
+below 80 Hz must fail this detailed check. This catches narrow bass coloration without
+lengthening simulator captures. The two-second checks also reject deliberate ±0.5 dB
+noise gain changes, an 80 Hz high-pass and a 4 kHz low-pass in the measured study. A
+64-history study motivates this division of checks; it does not certify a long-term
+false-failure rate for every machine or firmware state.
+
+Direct reference comparisons in 4000–8000, 8000–16000 and 16000–24000 Hz are
+diagnostics. The fully open reference filter remains active, and changing oversampling
+or output sample rate changes these bands across tonal and noise sources. They cannot
+establish an isolated oscillator defect. Modulation, noise and phase-aware mixture
+reports retain their actual values and reference bounds with `status: "diagnostic"`;
+those entries do not affect case/run status. All seven raw bands remain in measurement
+exports for every case. No recorded values, fixed gains or budgets are refitted.
+
+Supported band assertions below 4000 Hz remain strict as described above. The dedicated noise band-level check uses
+200–4000 Hz so it does not gate an excluded band indirectly. Full-band RMS, signed cycles,
+standard pitch, mixer ratios and silence remain checked; levels and cycles are not tests
+of isolated frequency regions. Independent engine aliasing, band-limiting and headroom
+checks, and separate absolute spectral fixtures, retain their existing behavior.
 
 The gains are measured once from the unchanged engine's A3 full-saw recordings and
 recorded with capture hashes. They compensate the declared output paths, including

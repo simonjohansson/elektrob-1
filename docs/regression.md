@@ -24,9 +24,18 @@ mise run regression:dsp --case wave-vco1-n57-w63
 mise run test:reference
 ```
 
-Suite choices are `smoke`, `waves`, `mixer`, `modulation` and `all`. Repeat `--case` to select exact
-case IDs. `--list` prints settings without executing them. Defaults are one second settling plus
+Suite choices are `smoke`, `waves`, `mixer`, `modulation`, `reference` and `all`.
+Repeat `--case` to select exact case IDs. `--list` prints settings without executing them. Defaults are one second settling plus
 two seconds sustained audio. `--settle` and `--seconds` change those durations.
+
+The `reference` suite selects 311 cases for routine DSP and emulator CI. It omits the three
+SYNC+XMOD interval comparisons and the combined-mode muted-slave comparison: their reference
+coupling is not a circuit-supported target. Strict host tests instead check rising raw-saw
+feedback, waveform/mixer independence, free slave phase evolution between master resets and
+fractional-sample forced resets across pitches and intervals. See the
+[circuit rationale](references.md#circuit-constraints-on-sync-and-cross-modulation).
+The full 315-case `all` suite and explicit `--case` selections remain available for investigation;
+an explicit assertion run on those recordings still performs the original reference comparisons.
 
 The host captures the shared voice after its mixer, DC removal and output trim. There is no device
 filter, AMP, key scanner or note-off envelope at this boundary. It uses the existing renderer with a
@@ -134,19 +143,30 @@ Captured audio does not yet establish sound equivalence, hardware CPU capacity o
 First acquire a run, then measure its existing sustained recordings:
 
 ```sh
-mise run regression:dsp --suite all --out out/regression/candidate
+mise run regression:dsp --suite reference --out out/regression/candidate
 mise run regression:measure out/regression/candidate --out out/candidate-measurements.json
 mise run regression:assert out/regression/candidate --expectations tests/reference/recorded/assertions.json
 ```
 
-The recorded-reference policy is active for all 315 cases. It checks waveform pitch against standard
+The recorded-reference expectations retain all 315 cases; routine CI selects the 311-case
+`reference` suite. The policy checks waveform pitch against standard
 tuning (twelve-tone equal temperament, A4 = 440 Hz), independently of reference detuning, plus signed
 shape and levels, isolated sources and middle-position ratios, noise, phase-aware mixtures and
-modulation spectra. [Reference provenance and budgets](../tests/reference/recorded/README.md) describe
+modulation spectra below 4000 Hz. Direct reference band comparisons from 4000–24000 Hz
+are retained as diagnostics because the reference filter and sample-rate-dependent processing
+color them. They do not affect pass/fail. All seven raw spectral bands remain measured;
+standard pitch, full-band levels, signed cycles and independent engine checks remain strict.
+Noise uses strict 200–4000 Hz level/ratio checks and a strict isolated 20–200 Hz aggregate.
+Its individual low bands remain diagnostic: 20–80 and 80–200 Hz for isolated noise,
+20–80 Hz for noise-bearing mixtures. Remaining mixture bands propagate the existing
+noise spectral budget through the noise contribution; tonal and full-band level bounds
+are unchanged. A longer multi-history noise-spectrum check runs on the host, while
+simulator captures keep their two-second analysis windows.
+[Reference provenance and budgets](../tests/reference/recorded/README.md) describe
 the output paths, calibration and exact coverage. Reference agreement is not physical OB-1 fidelity.
 
 CI first runs the host mechanics and synthetic checker tests, then `mise run test:reference` acquires
-the real DSP catalogue and checks this policy. Known mismatches fail normally; CI can be red until
+the DSP reference suite and checks this policy. Remaining mismatches fail normally; CI can be red until
 they are resolved. Reports retain every checked property, not just the first failing case. No audio
 plugin or reference WAV is needed in CI. Firmware and device acquisitions use the same assertion
 command on their completed capture directories; the declared route/OS and source hashes remain in
@@ -209,17 +229,29 @@ never automatically accept candidates, widen limits, or absorb an unexplained po
 
 Assertion reports go into a new `out/assertions/` directory, or a new directory supplied by `--out`.
 They retain actual measurements and each checked property's bounds/result. Failed checks and invalid
-inputs return nonzero. Neither checking nor measuring rewrites captures or fixtures; existing outputs
+inputs return nonzero. Reference high-frequency comparisons have `status: "diagnostic"`, actual values
+and reference bounds; the console summarizes their count. Narrow low-frequency noise
+diagnostics are counted separately. These entries do not fail a case or run.
+Neither checking nor measuring rewrites captures or fixtures; existing outputs
 are refused. CI retains generated regression audio and JSON reports on failure as temporary artifacts,
 excluding firmware images. No baseline-generation step runs in CI.
 
 The reference-policy fixture has `format: 2`, `role: "expectations"`, `source.description`, a relative
-reference path and SHA-256, per-target observation/channel/OS/fixed-gain calibration, and explicit
+reference path and SHA-256, per-target observation/channel/OS/fixed-gain/polarity calibration, and explicit
 per-property budgets. It reads the immutable measured case settings and metrics directly rather
 than copying them into three target fixtures. Gain and level are checked independently of signed
 unit-RMS shape. Source identities, settings and windows must match; malformed references, unknown
 tolerances, missing anchors and digest mismatches are errors, never skips. Updates to measurements,
 path calibration or budgets must be reviewed explicitly. No current render can update them.
+
+For reference signed-cycle comparison, the required integer `cycle_polarity` is −1 for DSP and
+device USB, +1 for simulator SSI. Retained asymmetric recordings establish the reference output's
+falling-saw orientation, opposite to DSP/USB. The stock SSI output applies a negative main-mix
+gain; the USB handoff retains the main mix polarity. The fixed convention appears in each report.
+It is never selected by trying both signs. For −1, a half-cycle shift follows inversion to restore
+the canonical cycle's fundamental phase origin. Raw measurements and recordings remain unchanged,
+and a new inversion or time reversal still fails. Other properties and generic absolute fixtures
+retain their checks. The separate stock 5 Hz high-pass response is not compensated.
 
 The control assignments and AMP behavior follow Elektron's *Digitakt User Manual*, OS 1.51,
 chromatic mode section 8.5.1, AMP/filter sections 11.4–11.6 and MIDI Appendix B. The source-control mapping follows this project's

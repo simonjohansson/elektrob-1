@@ -78,9 +78,11 @@ its oscillator mix remains three times the fundamental level plus the sub-octave
 This translation does not change waveform calibration, source gains or maximum available levels.
 The host renderer and DSP benchmark continue to accept those compact sound-engine controls.
 
-Switching a track to OB-1 sets both saws in unison, VCO1 FUND ON, VCO2 FUND −3DB, subs and noise OFF,
-and modulation OFF. Defaults must reach both the saved sound and the live engine. Updating only one
-can leave the displayed or reloaded sound different from the sound being played.
+Switching a track to OB-1 sets both saws to the played note with FIN1 at zero and FIN2 at +2.4 cents,
+VCO1 FUND ON, VCO2 FUND −3DB, subs and noise OFF, and modulation OFF. This fresh-patch detune leaves
+the fine controls' neutral defaults at zero and does not change loaded sounds. Initial values must
+reach both the saved sound and the live engine. Updating only one can leave the displayed or reloaded
+sound different from the sound being played.
 
 ## Incoming MIDI controls
 
@@ -113,7 +115,7 @@ increments; host pitch calculations do not prove exact device pitch behavior.
 The SRC page borrows the stock parameter machinery while supplying names, text and custom graphics.
 Controls that would otherwise open a sample list or use unsuitable stock ranges need explicit page
 behavior. Machine-pages applies the declared defaults on a machine switch and updates the live engine;
-the OB-1 switch callback only clears its held-note state.
+the OB-1 switch callback clears its held-note state and applies the fresh-patch FIN2 detune.
 
 Both pages read the native processed values, including locks and LFO modulation. The mixer controls
 occupy the seven additional sound slots supplied by machine-pages. Version-4 saved sounds require

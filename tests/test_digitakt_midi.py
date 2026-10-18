@@ -62,27 +62,11 @@ def main():
             values = struct.unpack('>53h', firmware.read('FW_VOICE_PARAMS', 106))
             return list(values[:8] + values[29:36])
 
-        defaults = [value << 8 for value in (32, 64, 0, 63, 32, 64, 0, 63, 106, 0, 0, 64, 0, 0, 0)]
+        defaults = [value << 8 for value in (32, 64, 0, 63, 32, 67, 0, 63, 106, 0, 0, 64, 0, 0, 0)]
         kit = int.from_bytes(firmware.read('FW_KIT', 4), 'big')
         other_sound = bytes(session.m.uc.mem_read(kit + 0x20 + 162, 162))
-        for selection in ('initial', 'switched back'):
-            sound = firmware.sound()
-            assert sound[17:25] + sound[46:53] == defaults, (selection, sound)
-            send([0x90, 57, 100])
-            firmware.wait(1)
-            assert live() == defaults, (selection, live())
-            send([0x80, 57, 0])
-            if selection == 'initial':
-                send([byte for cc in range(16, 31) for byte in (0xb0, cc, 127)])
-                assert firmware.sound()[17:25] + firmware.sound()[46:53] != defaults
-                for direction, machine in (('UP', 0), ('DOWN', 69)):
-                    firmware.chord('FUNC', 'SRC')
-                    for _ in range(4):
-                        firmware.tap(direction)
-                    firmware.tap('YES')
-                    assert bytes(session.m.uc.mem_read(kit + 0x20 + 126, 1)) == bytes([machine])
-                assert bytes(session.m.uc.mem_read(kit + 0x20 + 162, 162)) == other_sound
-        report['checks'].append('machine-pages supplies stored/live defaults on first selection and switching back')
+        sound = firmware.sound()
+        assert sound[17:25] + sound[46:53] == defaults, ('initial', sound)
 
         # Exercise the trampoline's ABI and delegation separately from MIDI routing.
         for track, machine, cc, expected in ((0, 69, 24, 164), (7, 69, 30, 170),
@@ -104,6 +88,7 @@ def main():
                 uc.context_restore(context)
         report['checks'].append('native lookup: OB-1, stock/MIDI fallback and callee-saved registers')
 
+        # Exercise the cold machine before note/reselection warmup can hide an initialization fault.
         for value in (0, 1, 42, 43, 63, 64, 85, 86, 127):
             send([byte for cc in range(16, 31) for byte in (0xb0, cc, value)])
             expected = [min(value, limit) << 8 for limit in (63, 127, 1, 63, 63, 127, 1, 63, *([127] * 7))]
@@ -116,6 +101,22 @@ def main():
             assert int.from_bytes(firmware.read('FW_AMP_ENV', 12)[4:8], 'big') > 0
             send([0x80, 57, 0])
         report['checks'].append('all fifteen stored/live source values: endpoints, zones and range clamps')
+
+        assert firmware.sound()[17:25] + firmware.sound()[46:53] != defaults
+        for direction, machine in (('UP', 0), ('DOWN', 69)):
+            firmware.chord('FUNC', 'SRC')
+            for _ in range(4):
+                firmware.tap(direction)
+            firmware.tap('YES')
+            assert bytes(session.m.uc.mem_read(kit + 0x20 + 126, 1)) == bytes([machine])
+        assert bytes(session.m.uc.mem_read(kit + 0x20 + 162, 162)) == other_sound
+        sound = firmware.sound()
+        assert sound[17:25] + sound[46:53] == defaults, ('switched back', sound)
+        send([0x90, 57, 100])
+        firmware.wait(1)
+        assert live() == defaults, ('switched back', live())
+        send([0x80, 57, 0])
+        report['checks'].append('machine-pages supplies defaults on first selection and stored/live FIN2 detune after reselection')
 
         before = firmware.sound()
         send([0xb1, 24, 64])

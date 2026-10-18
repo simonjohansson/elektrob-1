@@ -39,8 +39,10 @@ the provenance of a regression expectation, not a separate class of test.
 `regression:device` select the shared capture catalogue at their respective boundaries. Device capture
 requires separate firmware installation and manual project/receive-channel preparation. These tasks
 perform acquisition only; a separate `regression:assert` task checks reviewed numeric expectations.
-`mise run test:reference` captures the actual DSP catalogue and checks the committed numeric reference
-policy; CI runs it after the host checks. Known differences fail normally and can keep CI red.
+`mise run test:reference` captures the 311-case DSP reference suite and checks the committed numeric
+reference policy; CI runs it after the host checks. Four combined SYNC+XMOD comparisons use
+circuit-based host checks instead of reference agreement; the full acquisition catalogue remains
+available manually. Remaining differences fail normally and can keep CI red.
 The old embedded waveform table and calibrated broadband-noise-level test have been replaced by this
 shared path. The broader mixer mechanics matrix and output policy remain independent of reference
 agreement. Reusing cases across target boundaries is intentional; avoid copying expected values into
@@ -62,7 +64,7 @@ from merely avoiding full-scale clipping. It is a bounded matrix, not a guarante
 | `mise run test` | Runs host DSP, voice regression, Digitakt logic, capture plumbing and synthetic assertion checks. |
 | `mise run firmware:fetch` | Downloads the latest supported Digitakt mk1 OS from Elektron; refuses an unreviewed OS update. |
 | `mise run test:emulator` | Runs the pinned emulator's self-tests; checks for unrelated firmware or optional platforms may skip. |
-| `mise run test:reference` | Captures all 315 DSP cases and checks the committed reference policy; known mismatches return nonzero. |
+| `mise run test:reference` | Captures 311 DSP reference cases; remaining reference mismatches return nonzero. |
 | `mise run regression:measure RUN --out NEW.json` | Exports compact numeric measurements from a completed capture; does not approve a baseline. |
 | `mise run regression:assert RUN --expectations FILE.json` | Checks reviewed numeric limits and signed cycles; reports failures without reference WAVs. |
 | `mise run test:firmware:midi --firmware IMAGE --os OS --out NEW_DIR` | Builds firmware, then verifies native MIDI setup and routing in an isolated emulator. |
@@ -94,8 +96,9 @@ identifying what a firmware build contains. Do not infer that from the minimum C
 
 ## Rendering controls
 
-The host defaults match switching to OB-1: both saws in unison, VCO1 FUND ON and VCO2 FUND −3DB,
-everything else OFF. Set `mix2=0` explicitly when measuring VCO1 alone.
+The host defaults use both saws in exact unison, VCO1 FUND ON and VCO2 FUND −3DB, everything else OFF.
+The device's fresh init patch adds +2.4 cents on FIN2; the host renderer has no fine-tuning control.
+Set `mix2=0` explicitly when measuring VCO1 alone.
 
 | Setting | Host values |
 |---|---|
@@ -125,8 +128,8 @@ Every invocation starts a fresh voice. It cannot establish device note-to-note p
 | SDK, firmware or release changes | Build each supported OS, inspect artifacts, exercise the complete firmware. | Exact-build hardware qualification. |
 
 CI runs host tests, downloads the current official Digitakt mk1 OS, builds the firmware, runs the
-pinned emulator's self-tests and compiled MIDI integration, then captures all 315 firmware cases.
-Both firmware and DSP captures are checked against the recorded reference. Independent checks still
+pinned emulator's self-tests and compiled MIDI integration, then captures the 311-case firmware
+reference suite. Both firmware and DSP captures are checked against the recorded reference. Independent checks still
 run when an earlier check fails; reference disagreements remain ordinary failures. CI retains capture
 audio, screenshots and reports for seven days, excluding stock/custom firmware and emulator images.
 Physical-device capture and flashing run separately. A passing job does not establish physical UI,

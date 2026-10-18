@@ -3,7 +3,7 @@
 import itertools
 import io
 import json
-from contextlib import contextmanager, redirect_stderr
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 import struct
 import sys
 import tempfile
@@ -50,6 +50,20 @@ class AcquisitionTest(unittest.TestCase):
         for c in select_cases('waves', []):
             self.assertEqual((c['mod'], c['nois'], c['mix1'] + c['mix2']), (0, 0, 6))
             self.assertEqual((c['mix1'] % 3, c['mix2'] % 3), (0, 0))
+
+    def test_reference_selection_preserves_all_other_cases(self):
+        all_cases = {c['id']: c for c in select_cases('all', [])}
+        reference = {c['id']: c for c in select_cases('reference', [])}
+        excluded = {'mod-3-frq2-32', 'mod-3-frq2-39', 'mod-3-frq2-44', 'mod-muted-both'}
+        self.assertEqual(set(all_cases) - set(reference), excluded)
+        self.assertEqual(len(reference), 311)
+        for key, case in reference.items():
+            self.assertEqual(case, all_cases[key])
+        self.assertEqual(select_cases('reference', ['mod-muted-both']), [all_cases['mod-muted-both']])
+        argv = ['regression.py', 'firmware', '--suite', 'reference', '--list']
+        with patch.object(sys, 'argv', argv), redirect_stdout(io.StringIO()) as output:
+            main()
+        self.assertEqual(json.loads(output.getvalue()), list(reference.values()))
 
     def test_musical_settings_reach_firmware_zones(self):
         # Independent OFF / -3 dB / ON control positions for each separate source.
