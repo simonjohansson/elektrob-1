@@ -268,3 +268,28 @@ Diagnostic firmware SHA-256 values:
 
 - Before, OBP0: `ab4f93962d1ea586ead4f4ec07b6d3249dcfda25118f2792df91b4ebd51d792a`.
 - After, OBP1: `1b90152d9bf7880d0ccfec6d0808c174c6c184bb0a9c3cbe23da9ea27d5b2c92`.
+
+## FAST AUDIO on the device
+
+The same physical Digitakt mk1, running the same OBP1 firmware above, was measured with DigiHealth's
+FAST AUDIO OFF and ON. This isolates the setting from firmware layout and source changes. Both
+OB-1 tracks use full saws at unison with fundamentals, subs, noise, sync and cross modulation all ON.
+Six stock tracks are idle, transport is stopped and track 2's mixer page stays visible. Each mode
+collects twenty timer snapshots, about 30,000 renders, with the SYSTEM INFO overlay OFF.
+
+Source values and live filter, AMP and other stock parameters match exactly across the captures.
+Every snapshot confirms the requested FAST AUDIO state, with no FAST AUDIO watchdog fault.
+
+| FAST AUDIO | Mean render | Peak render | Peak margin | Mean CPU |
+|---|---:|---:|---:|---:|
+| OFF | 89.10% | 95.77% | 4.23% | 92.66% |
+| ON | 80.16% | 85.39% | 14.61% | 83.32% |
+
+Average render load falls by 8.93 percentage points and the observed peak margin increases by
+10.39 points. Mean CPU includes control work as well as the render, using DigiHealth's idle-time
+accounting. The reduction is substantial for this workload, so including
+[DigiHealth](https://github.com/irpina/digihealth#install) and enabling FAST AUDIO is recommended.
+
+All mixer sources and both modulation modes ON provide a demanding comparison, not an exhaustive
+worst case: other pitches, shapes, locks, busy sample tracks and sequencer/UI activity can change
+the cost. Audio equivalence was not re-measured in this timing test.

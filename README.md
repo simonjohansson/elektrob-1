@@ -89,18 +89,25 @@ Some things to try:
 - **Bells and gongs:** XMOD ON with VCO2 a few octaves down. That's what the OB-1's manual suggests cross mod for.
 - **A fat unison:** both fundamentals ON, FRQ1 and FRQ2 at +0, then detune FIN2 by a few cents and add the subs to taste.
 
-Notes and mixer switches do not reset oscillator phase. Both VCOs and their sub-octaves keep running
-while the voice is active, including when their outputs are OFF.
+The original OB-1's VCOs run continuously, even between notes and when their mixer outputs are OFF.
+Preserving that phase progression matters for faithful mixer and modulation behavior. Notes and
+mixer switches do not reset this model's oscillator phase: both VCOs and their sub-octaves keep
+running throughout an active voice, including muted sources. Phase continuity through every fully
+silent period is not yet guaranteed.
 
 ### Voices and CPU
 
-Each sounding OB-1 voice costs DSP time on top of the stock engine.
+Computing both oscillators, their subs and selected sync/cross-modulation paths has a substantial
+CPU cost on top of the stock engine, even when their mixer outputs are OFF. Muting a source does
+not reclaim that work. Waveform and routing choices still affect the cost per voice.
 
-Both oscillators run for every active voice, even when one or both mixer outputs are OFF. Selected
-sync and cross modulation also keep running while muted, so muting a source does not reclaim its CPU
-cost. Waveform and routing choices still affect the work per voice.
+We recommend including [DigiHealth](https://github.com/irpina/digihealth#install) when composing your
+firmware in Elekloader, and leaving **SETTINGS → FAST AUDIO** ON. With two demanding OB-1 tracks on a
+Digitakt mk1 running OS 1.54, it reduced average render load from **89.1% to 80.2%** and increased the
+observed peak margin from **4.2% to 14.6%**. See the [matched FAST AUDIO test](docs/performance.md#fast-audio-on-the-device).
 
-See the [matched CPU-cost comparison](docs/performance.md#continuous-muted-oscillators) for measurements.
+See the [two-instance device measurements](docs/performance.md#two-instance-device-timing) and
+[matched CPU-cost comparison](docs/performance.md#continuous-muted-oscillators).
 `mise run bench` counts ColdFire instructions for the DSP alone; it does not measure complete firmware
 timing or establish a safe voice count. Leave headroom and check the intended sound on the device.
 See [benchmark interpretation](docs/development.md#benchmark-interpretation).
