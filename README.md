@@ -13,7 +13,8 @@ and sends work on it as they do on a sample.
 - **A noise source.**
 - **The OB-1's mixer:** VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each ON, −3 dB or OFF as on the panel, AC-coupled.
 - **Reduced aliasing** with polyBLEP and polyBLAMP corrections, with [limits at high pitches and under sync](docs/dsp.md#band-limiting).
-- **Knob graphics** showing each oscillator's waveform, wave family, coarse tuning, routing and noise.
+- **Two SRC pages** with fifteen controls: oscillator tuning and shaping on the first, mixer and routing on the second.
+- **Display graphics** showing waveform shapes, tuning and routing, with vertical three-position switches for output levels.
 
 Built for OS 1.53 and 1.54. It's machine id 69.
 
@@ -51,7 +52,14 @@ On a track's SRC page, open the machine menu (**FUNC + SRC**) and pick **OB-1**.
 starts as two sawtooths in unison: VCO1's fundamental ON, VCO2's at −3 dB, everything else OFF.
 
 The first SRC page puts both oscillators' performance controls together: VCO1 on the top row,
-VCO2 on the bottom row. Press **SRC** for the mixer and routing page.
+VCO2 on the bottom row. Press **SRC** to switch to the mixer and routing page; press it again to return.
+Knobs A–D control the top row and E–H the bottom row. The mixer page leaves knob D unused.
+
+| Page 1 — Oscillators | Page 2 — Mixer and routing |
+|---|---|
+| ![Digitakt oscillator page with independent tuning, wave family and shape controls for both VCOs](src-page.png) | ![Digitakt mixer page with three-position level switches, cross modulation and sync controls](src-mixer-page.png) |
+
+Captured directly from a Digitakt mk1 running OB-1. The settings shown are examples, not the defaults.
 
 | Knob | Page 1 — Oscillators | Page 2 — Mixer / routing |
 |---|---|---|
@@ -65,9 +73,10 @@ VCO2 on the bottom row. Press **SRC** for the mixer and routing page.
 | H | **WAV2** — VCO2 waveform shape | **NOIS** — noise level |
 
 Each oscillator tunes independently from the played note: coarse tuning spans −32 to +31 semitones,
-and fine tuning spans −50.0 to +50.0 cents. TYPE is a two-position SAW/PULS selector.
-WAVE spans 0–63 within the selected family: triangle to saw for SAW, narrow pulse to square for PULS. Sweeping WAVE never switches family.
-WAV1 and WAV2 show the resulting waveforms, including the values shown while editing held-step locks.
+and fine tuning spans −50.0 to +50.0 cents. **TYP1/TYP2** select **SAW** or **PULS** independently.
+**WAV1/WAV2** span 0–63 within the selected family: triangle to saw for SAW, narrow pulse to square
+for PULS. Sweeping WAV never switches family. The waveform pictures follow both the family and shape,
+including the values shown while editing held-step locks.
 Fundamental, sub-octave and noise levels use vertical three-position switches: ON at the top,
 −3DB in the middle, OFF at the bottom.
 
@@ -78,7 +87,7 @@ Some things to try:
 
 - **Sync sweep:** SYNC ON, VCO2 alone, then sweep FRQ2 or put an LFO on it.
 - **Bells and gongs:** XMOD ON with VCO2 a few octaves down. That's what the OB-1's manual suggests cross mod for.
-- **A fat unison:** both VCOs ON, with FRQ2 at +0 or +12, and the subs added.
+- **A fat unison:** both fundamentals ON, FRQ1 and FRQ2 at +0, then detune FIN2 by a few cents and add the subs to taste.
 
 Notes do not reset oscillator phase. To save CPU, phases stop advancing while a voice is silent or an
 oscillator is neither audible nor needed for modulation; this approximates the OB-1's free-running VCOs.
