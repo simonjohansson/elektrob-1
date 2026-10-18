@@ -46,9 +46,15 @@ static int32_t fine(int32_t value)
     return v <= 0 ? v * 2 : v * 128 / 63;
 }
 
+/* TYPE spans 0–1; fractional modulation switches at the midpoint. */
+static int32_t family(int32_t value)
+{
+    return value >= 0x80;
+}
+
 static int32_t wave(int32_t type, int32_t position)
 {
-    return zone(type, 2) * 64 + knob(position, 63);
+    return family(type) * 64 + knob(position, 63);
 }
 
 /* A voice the AMP envelope has silenced and no trig starts: inaudible after the AMP page, so it is not
@@ -142,7 +148,7 @@ static int32_t type_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
 {
     (void)ctx;
     (void)machine;
-    return text(buf, zone(value, 2) ? "PULS" : "SAW");
+    return text(buf, family(value) ? "PULS" : "SAW");
 }
 
 static int32_t switch_text(char *buf, int32_t value, int32_t ctx, int32_t machine)
@@ -186,7 +192,7 @@ static int32_t draw_type(void *bmp, int32_t x, int32_t y, int32_t value, int32_t
 {
     uint32_t rows[KNOB_PX];
     (void)flag;
-    knob_wave(zone(value, 2) ? 127 : 63, rows);
+    knob_wave(family(value) ? 127 : 63, rows);
     return draw_rows(bmp, x, y, rows);
 }
 
@@ -317,11 +323,11 @@ static const struct cm_ui32 ob1_page = {
         .knob = {
             CONTROL("FRQ1", "VCO1 frequency", 63, 32, frq_text, draw_frq, CM_DRAW),
             CONTROL("FIN1", "VCO1 fine tune", 127, 64, fine_text, 0, 0),
-            CONTROL("TYP1", "VCO1 family", 127, 0, type_text, draw_type, CM_DRAW),
+            CONTROL("TYP1", "VCO1 family", 1, 0, type_text, draw_type, CM_DRAW),
             CONTROL("WAV1", "VCO1 shape", 63, 63, 0, draw_wave, CM_NOT_SAMPLE | CM_DRAW),
             CONTROL("FRQ2", "VCO2 frequency", 63, 32, frq_text, draw_frq, CM_DRAW),
             CONTROL("FIN2", "VCO2 fine tune", 127, 64, fine_text, 0, 0),
-            CONTROL("TYP2", "VCO2 family", 127, 0, type_text, draw_type, CM_DRAW),
+            CONTROL("TYP2", "VCO2 family", 1, 0, type_text, draw_type, CM_DRAW),
             CONTROL("WAV2", "VCO2 shape", 63, 63, 0, draw_wave, CM_DRAW),
         },
     },

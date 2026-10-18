@@ -65,8 +65,8 @@ VCO2 on the bottom row. Press **SRC** for the mixer and routing page.
 | H | **WAV2** — VCO2 waveform shape | **NOIS** — noise level |
 
 Each oscillator tunes independently from the played note: coarse tuning spans −32 to +31 semitones,
-and fine tuning spans −50.0 to +50.0 cents. WAVE spans 0–63 within the selected family: triangle to
-saw for SAW, narrow pulse to square for PULS. Sweeping WAVE never switches family.
+and fine tuning spans −50.0 to +50.0 cents. TYPE is a two-position SAW/PULS selector.
+WAVE spans 0–63 within the selected family: triangle to saw for SAW, narrow pulse to square for PULS. Sweeping WAVE never switches family.
 WAV1 and WAV2 show the resulting waveforms, including the values shown while editing held-step locks.
 Fundamental, sub-octave and noise levels each have three settings: OFF, −3DB, ON.
 

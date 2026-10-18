@@ -107,8 +107,8 @@ static void test_waveform_graphics(void)
     assert(ob1_page.base.knob[K_WAV2].flags & CM_DRAW);
     for (int first = 0; first < 2; first++) for (int second = 0; second < 2; second++)
         for (int position = 0; position < 64; position++) {
-            ui_values[K_TYP1] = first << 14;
-            ui_values[K_TYP2] = second << 14;
+            ui_values[K_TYP1] = first << 8;
+            ui_values[K_TYP2] = second << 8;
             ui_values[K_WAV1] = position << 8;
             ui_values[K_WAV2] = (63 - position) << 8;
             memset(pixels, 0, sizeof(pixels));
@@ -210,6 +210,10 @@ int main(void)
         else
             assert(p->min == 0 && p->max == 0x7f00);
     }
+    assert(ob1_page.base.knob[K_TYP1].max == 0x100);
+    assert(ob1_page.base.knob[K_TYP2].max == 0x100);
+    assert(family(-1) == 0 && family(0) == 0 && family(0x7f) == 0);
+    assert(family(0x80) == 1 && family(0x100) == 1 && family(0x7f00) == 1);
     for (int raw = 0; raw <= 0x7f00; raw++) {
         int v = raw >> 8;
         assert(zone(raw, 2) == (v >= 64));
@@ -225,7 +229,7 @@ int main(void)
     assert(knob(-1, 63) == 0 && knob(0x7f00, 63) == 63);
     for (int position = 0; position < 64; position++) {
         assert(wave(0, position << 8) == position);
-        assert(wave(0x7f00, position << 8) == 64 + position);
+        assert(wave(0x100, position << 8) == 64 + position);
     }
     frq_text(buf, 0, 0, 69); assert(!strcmp(buf, "-32"));
     frq_text(buf, 32 << 8, 0, 69); assert(!strcmp(buf, "+0"));
@@ -234,7 +238,7 @@ int main(void)
     fine_text(buf, 64 << 8, 0, 69); assert(!strcmp(buf, "+0.0"));
     fine_text(buf, 127 << 8, 0, 69); assert(!strcmp(buf, "+50.0"));
     fine_text(buf, 65 << 8, 0, 69); assert(!strcmp(buf, "+0.8"));
-    type_text(buf, 0x7f00, 0, 69); assert(!strcmp(buf, "PULS"));
+    type_text(buf, 0x100, 0, 69); assert(!strcmp(buf, "PULS"));
     level_text(buf, 64 << 8, 0, 69); assert(!strcmp(buf, "-3DB"));
     switch_text(buf, 64 << 8, 0, 69); assert(!strcmp(buf, "ON"));
     reset();
@@ -247,9 +251,9 @@ int main(void)
     param(K_FIN1, 64 << 8); param(K_FIN2, 63 << 8); parity(&knobs, 0, 0, 0, -512);
     param(K_FIN2, (64 << 8) + 200); parity(&knobs, 0, 0, 0, 406);
     reset();
-    param(K_TYP1, 0x7f00); knobs.wav1 = 127; parity(&knobs, 0, 0, 0, 0);
+    param(K_TYP1, 0x100); knobs.wav1 = 127; parity(&knobs, 0, 0, 0, 0);
     param(K_WAV1, 0); knobs.wav1 = 64; parity(&knobs, 0, 0, 0, 0);
-    param(K_TYP2, 0x7f00); param(K_WAV2, 0); knobs.wav2 = 64; parity(&knobs, 0, 0, 0, 0);
+    param(K_TYP2, 0x100); param(K_WAV2, 0); knobs.wav2 = 64; parity(&knobs, 0, 0, 0, 0);
     for (int mix1 = 0; mix1 < 9; mix1++) for (int mix2 = 0; mix2 < 9; mix2++)
         for (int mod = 0; mod < 4; mod++) {
             param(K_FND1, ZONE_AT(mix1 / 3, 3) << 8);

@@ -61,7 +61,7 @@ Its fourth knob is blank. See the [playing controls](../README.md#playing-it) fo
 |---|---|
 | FRQ1/FRQ2 | Raw integer 0–63 represents −32 to +31 semitones from the played note, independently for each VCO. |
 | FIN1/FIN2 | Raw 8.8 values span −50 to +50 cents, with exact zero at 64 and fractional modulation retained. |
-| TYP1/TYP2 | Raw integer 0–63 selects saw family; 64–127 selects pulse family. |
+| TYP1/TYP2 | Raw integer 0 selects saw family; 1 selects pulse family. Fractional modulation switches at 0.5. |
 | WAV1/WAV2 | Raw integer 0–63 traverses triangle→saw or narrow pulse→square within the selected family. |
 | FND1/FND2, OCT1/OCT2, NOIS | Raw integer 0–42 is OFF, 43–85 is −3 dB, 86–127 is ON. |
 | XMOD, SYNC | Raw integer 0–63 is OFF, 64–127 is ON; the two switches are independent. |
