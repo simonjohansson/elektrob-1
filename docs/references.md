@@ -80,3 +80,18 @@ modulation spectra therefore retain residual differences. The calibrated model d
 every aspect of the reference, including its variation features, beyond-square pulse travel or
 near-silent synced square. Capture manifests, raw audio and analysis stay local; compact measured
 coefficients and regression anchors preserve the chosen calibration in the source.
+
+Retained saw recordings across both VCOs separate source level from common output coloration by
+comparing harmonics at the same absolute frequencies. Three independent low-register saws give
+nearly the same inferred source attenuation. Fourteen VCO1 measurements between about 220 Hz and
+10.83 kHz define a fixed amplitude curve. Twenty-four withheld saw recordings, including VCO2,
+agree within 0.074 dB before integer gain rounding; fourteen triangle/square checks agree within
+0.143 dB. Fine-detuned VCO2 follows the frequency-dependent attenuation, supporting a per-oscillator
+correction. This inference assumes a saw-like source and common linear output response; it does
+not identify a physical oscillator's amplitude or prove the reference's internal implementation.
+
+The source attenuation is about 0.27 dB at 440 Hz, 0.84 dB at 882 Hz, 2.09 dB at 1.77 kHz,
+7.15 dB at 4.50 kHz and 47.24 dB at 10.83 kHz, relative to A3. The model interpolates in amplitude
+and clamps beyond the measured range. Weak/non-tonal higher captures do not establish a silence
+threshold. This scalar correction leaves the shared coupling approximation and raw XMOD depth
+unchanged; their remaining reference differences require separate evidence and decisions.

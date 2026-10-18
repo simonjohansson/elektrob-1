@@ -5,7 +5,8 @@ Measurements use the same compiler, dependencies and workloads before and after 
 Firmware, source snapshots, executable benchmarks, stimulus scripts and raw reports are retained
 locally under `capture-local/performance-20261017/`; they are not distributed with the firmware.
 The initial-correction sections record firmware `0ff0295d…`. The later reference calibration below
-records the current sound model against both that correction and the original baseline.
+records the reference-calibrated sound model against both that correction and the original baseline.
+The later pitch-gain section measures the additional source attenuation separately.
 
 ## Initial correction: sound-engine instructions
 
@@ -136,7 +137,7 @@ stated band, with about 1.28 dB binwise PSD fit residual; it does not reproduce 
 The XMOD depth is ±3.921875 octaves; 16 held-out cases have median normalized spectral-band RMSE
 0.07177 → 0.05465, with 11 improving. Higher-register modulation spectra retain differences.
 
-Waveform gain and output trim are folded into constant mixer coefficients. Full saws omit half
+At that calibration, waveform gain and output trim were folded into constant mixer coefficients. Full saws omit half
 scaling and nonexistent middle-corner corrections; the paired optimization matches 4,096,000
 frozen generic outputs and oscillator states exactly, with 12 persisted golden checks. A full-period
 32-bit generator supplies the high 16 noise bits, followed by the fitted noise-only filter. Eight
@@ -292,3 +293,41 @@ accounting. The reduction is substantial for this workload, so including
 All mixer sources and both modulation modes ON provide a demanding comparison, not an exhaustive
 worst case: other pitches, shapes, locks, busy sample tracks and sequencer/UI activity can change
 the cost. Audio equivalence was not re-measured in this timing test.
+
+## Pitch-dependent oscillator gain
+
+The 18 October 2026 gain correction is measured against revision `3226151`, using the same
+GCC 16.2.0 options, eight voices and 32-sample blocks. A fixed amplitude curve attenuates audible
+oscillator fundamentals at block rate; oscillator evolution, modulation taps and audio-rate
+processing are unchanged. The existing three benchmark workloads give:
+
+| Eight-voice workload | Before instructions/block | After instructions/block | Before modeled cycles/block | After modeled cycles/block |
+|---|---:|---:|---:|---:|
+| One saw | 18,782 | 19,006 | 23,968.69 | 24,696.69 |
+| Both VCOs/subs | 20,366 | 20,782 | 27,064.69 | 28,325.31 |
+| Selected SYNC/XMOD/noise | 39,292.88 | 39,708.88 | 53,607.00 | 54,819.38 |
+
+Instruction increases are 1.19%, 2.04% and 1.06%; modeled cycle increases are 3.04%, 4.66%
+and 2.26%. An additional 32-workload matrix spans about 55 Hz to 12 kHz, all modulation modes,
+both fundamentals/subs and noise. Its largest instruction increase is 3.74% and largest modeled
+cycle increase is 4.15%, both near 7.19 kHz without modulation. The cycle model includes branch
+prediction and address stalls with zero-wait memory; every decoded block matches the emulator's
+reported length. These are isolated DSP costs, excluding stock processing and wrapper work.
+They do not establish complete-firmware deadlines or physical CPU reserve for the changed image.
+
+The existing host limits pass unchanged. An expanded 1,008-case maximum-mix matrix covers six
+shapes, 21 pitches including the gain anchors, all modulation modes and aligned/mixed sources.
+Its peak is exactly −4.280151 dBFS before and after, with zero rail samples. Oscillator and noise
+state remain identical; 2,048 changing-pitch/shape/modulation blocks with only subs/noise audible
+also produce identical output. The new 216-case gain check covers both VCOs, triangle/saw/square,
+independent pitches and every modulation mode; the uncorrected engine fails it.
+
+Over 12.58 million integer gain evaluations are monotonic and attenuation-only, with less than
+0.614 Q12 gain units of error against floating-point interpolation and no undefined arithmetic.
+The quiet upper range retains up to about 1.04 dB of relative coefficient rounding error.
+Thirty-two eight-voice pitch/modulation workloads produce identical final output samples and
+complete voice states on the host and emulated ColdFire after 32 blocks each.
+Host suites, voice sanitizers and the available OS 1.54 build pass. A fresh 315-case host catalogue
+against the unchanged retained reference improves from 257 to 269 passes, with no lost passes;
+46 strict failures remain. Recordings and assertion limits are unchanged. No new device test
+or complete-firmware timing run accompanies this correction.

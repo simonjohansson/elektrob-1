@@ -29,6 +29,31 @@ static const struct { int32_t g, fund[3]; } saw_shape[64] = {
 };
 #undef SAW
 
+/* Reference source attenuation: phase increment >> 14 (0.183 Hz/step), amplitude Q15. */
+static const struct { int32_t pitch, gain; } pitch_gain[] = {
+    {1202, 32768}, {9675, 25775}, {24588, 14391}, {29301, 11270},
+    {32936, 9061}, {37025, 6836}, {39256, 5737}, {41623, 4669},
+    {44132, 3650}, {46794, 2697}, {49617, 1838}, {52610, 1103},
+    {55785, 525}, {59153, 142},
+};
+
+static inline __attribute__((always_inline)) int32_t fundamental_gain(int32_t gain, uint32_t inc)
+{
+    int32_t pitch = inc >> 14, scale = pitch_gain[sizeof pitch_gain / sizeof *pitch_gain - 1].gain;
+    if (!gain || pitch <= pitch_gain[0].pitch)
+        return gain;
+    if (pitch < pitch_gain[sizeof pitch_gain / sizeof *pitch_gain - 1].pitch) {
+        unsigned i = 1;
+        while (pitch >= pitch_gain[i].pitch) i++;
+        int32_t span = pitch_gain[i].pitch - pitch_gain[i - 1].pitch;
+        scale = pitch_gain[i - 1].gain -
+            (pitch_gain[i - 1].gain - pitch_gain[i].gain) *
+            (pitch - pitch_gain[i - 1].pitch) / span;
+    }
+    /* shortcut: clamp above the last measured pitch; extend only with verified reference data. */
+    return (gain * scale + 16384) >> 15;
+}
+
 /* WAV1 and WAV2 64-127: pulse type, from the narrowest pulse (64) to the square (127), as the OB-1's WAVE pot
  * turned clockwise ends on the square (trimmed to 50 %). The 6.7 % minimum is provisional;
  * the schematic leaves it to unprinted operating points. */
@@ -87,5 +112,7 @@ void ob1_voice_render(struct ob1_voice *v, const struct ob1_knobs *k, uint32_t i
     gain[1] = mix_gain[mix1 % 3];
     gain[2] = k->wav2 < 64 ? saw_shape[k->wav2].fund[mix2 / 3] : mix_gain[mix2 / 3];
     gain[3] = mix_gain[mix2 % 3];
+    gain[0] = fundamental_gain(gain[0], inc1);
+    gain[2] = fundamental_gain(gain[2], inc2);
     dsp_voice_out(&v->hpf, src, gain, &v->noise, noise_gain[k->nois], out, 32);
 }

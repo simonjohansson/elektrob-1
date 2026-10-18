@@ -64,6 +64,55 @@ static void test_mix_levels(void)
     printf("Mixer: %d oscillator/sub cases and noise match -3 dB, worst error %.4f dB\n", cases, worst);
 }
 
+/* Independent source-level measurements, including withheld A4/A5 pitches and the upper clamp. */
+static void test_pitch_gain(void)
+{
+    const double hz[] = {55, 220, 440, 880, 1771.521389, 4502.277746, 7188.007958, 10831.212292, 12000};
+    const double level[] = {1, 1, .969393, .908247, .786590, .439169, .175093, .004348, .004348};
+    const int waves[] = {0, 63, 127}, gains[] = {2595, 1295, 1295};
+    double worst = 0;
+    for (int oscillator = 0; oscillator < 2; oscillator++)
+        for (int wave = 0; wave < 3; wave++)
+            for (int pitch = 0; pitch < 9; pitch++)
+                for (int mod = 0; mod < 4; mod++) {
+                    struct ob1_voice v, raw;
+                    struct ob1_knobs k = {waves[wave], waves[wave], oscillator ? 0 : 6, oscillator ? 6 : 0, mod, 0};
+                    struct dsp_shape sh;
+                    int32_t f1[32], s1[32], f2[32], s2[32], out[32], reference[32];
+                    const int32_t *src[] = {f1, s1, f2, s2};
+                    int32_t gain[4] = {0};
+                    uint32_t inc1 = step(oscillator ? 330 : hz[pitch]);
+                    uint32_t inc2 = step(oscillator ? hz[pitch] : 660);
+                    double dot = 0, power = 0;
+                    gain[2 * oscillator] = gains[wave];
+                    ob1_voice_init(&v, 1);
+                    ob1_voice_init(&raw, 1);
+                    ob1_shape(&sh, waves[wave]);
+                    for (int block = 0; block < 400; block++) {
+                        ob1_voice_render(&v, &k, inc1, inc2, out);
+                        if (mod)
+                            dsp_pair(&raw.vco1, &raw.vco2, inc1, inc2, &sh, &sh, mod, f1, s1, f2, s2, 32);
+                        else {
+                            dsp_osc_block(&raw.vco1, inc1, &sh, f1, s1, 32);
+                            dsp_osc_block(&raw.vco2, inc2, &sh, f2, s2, 32);
+                        }
+                        assert(!memcmp(&v.vco1, &raw.vco1, sizeof v.vco1));
+                        assert(!memcmp(&v.vco2, &raw.vco2, sizeof v.vco2));
+                        dsp_voice_out(&raw.hpf, src, gain, &raw.noise, 0, reference, 32);
+                        if (block < 100) continue;
+                        for (int i = 0; i < 32; i++) {
+                            dot += (double)out[i] * reference[i];
+                            power += (double)reference[i] * reference[i];
+                            if (pitch < 2) assert(out[i] == reference[i]);
+                        }
+                    }
+                    /* Project onto the raw output so the existing HPF's integer DC residue is not gain. */
+                    assert(power > 0 && fabs(dot / power - level[pitch]) < .0015);
+                    worst = fmax(worst, fabs(dot / power - level[pitch]));
+                }
+    printf("Pitch gain: 216 waveform/pitch/modulation cases passed, maximum gain error %.6f\n", worst);
+}
+
 static void test_noise_output(void)
 {
     struct ob1_voice v, split;
@@ -292,6 +341,7 @@ static void test_mixer_phase_continuity(void)
 int main(void)
 {
     test_mix_levels();
+    test_pitch_gain();
     test_noise_output();
     test_headroom_and_additivity();
     test_mix_out();
