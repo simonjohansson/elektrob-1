@@ -56,6 +56,9 @@ def select_cases(suite, names):
         wanted = {'wave-vco1-n57-w63', 'wave-vco2-n57-w127',
                   'mix-0-0-0', 'mix-8-8-2', 'mod-muted-both'}
         return [c for c in available if c['id'] in wanted]
+    if suite == 'reference':
+        # Combined-mode reference coupling differs from the circuit's reset/raw-saw paths.
+        return [c for c in available if c['mod'] != 3]
     prefix = {'waves': 'wave-', 'mixer': 'mix-', 'modulation': 'mod-'}
     return [c for c in available if suite == 'all' or c['id'].startswith(prefix[suite])]
 
@@ -220,7 +223,7 @@ class Device:
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('target', choices=('dsp', 'firmware', 'device'))
-    ap.add_argument('--suite', choices=('smoke', 'waves', 'mixer', 'modulation', 'all'), default='smoke')
+    ap.add_argument('--suite', choices=('smoke', 'waves', 'mixer', 'modulation', 'reference', 'all'), default='smoke')
     ap.add_argument('--case', action='append', default=[], help='exact case ID; repeatable')
     ap.add_argument('--list', action='store_true', help='list selected cases without running')
     ap.add_argument('--ports', action='store_true', help='list physical MIDI/audio ports without sending')

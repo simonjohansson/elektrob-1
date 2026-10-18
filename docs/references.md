@@ -42,6 +42,54 @@ with their sources; the local archive is not required to understand this documen
 | Noise | Performance sheet 1340 specifies a selected transistor and frequency-shaping network, without output amplitude. | The white output level and gentle rolloff match reference recordings in the 200–8000 Hz band. The reference filter/amplifier remains in that path; no physical transistor spectrum or absolute unit amplitude is inferred. |
 | Analog variation | Temperature compensation is present, but its existence does not quantify residual drift, mismatch or reset behavior. | No controlled evidence establishes an audible variation model; these effects are omitted. |
 
+## Circuit constraints on sync and cross modulation
+
+The [synthesizer drawing, 1342/1, revision B, revised 4-2-79](https://www.electrongate.com/obfiles/OB-1-1342a.jpg)
+establishes routing more firmly than it establishes calibrated sound. The
+[original owner's manual, printed pp. 2–3](https://www.synthxl.com/wp-content/uploads/2020/10/oberheim-ob1-user-manual.pdf)
+also describes VCO2 slaved to VCO1 and increasing keyboard control voltage with increasing pitch.
+
+### Feedback source and direction
+
+The labelled OSC 2 SAW node is U18's output, before the selectable saw/pulse shaping and mixer.
+It reaches U4's inverting pitch summer through R4 and R5, both 47 kΩ. Q1, controlled by SW18,
+shunts their junction to disable cross modulation. The KEY CV input reaches the same summer
+through R13, 100 kΩ. There is no extra inversion or coupling capacitor in the saw input branch.
+These are direct readings of the drawing: audible waveform selection and source muting do not
+select or silence this modulation tap.
+
+The feedback direction follows from the core and buffer polarities. The exponential converter
+draws current from the C10 ramp node; Q17 restores that node toward the +15 V side during reset.
+Q14 and the PNP emitter follower Q16 preserve the intervening falling ramp's direction. U18 is
+an inverting amplifier, making OSC 2 SAW rise between resets and fall at reset. Since the saw and
+KEY CV enter the same pitch summer with the same sign, a more positive raw saw moves VCO1 toward
+higher frequency. This is a circuit inference supporting rising-ramp exponential feedback, not
+a polarity choice inferred from the final audio waveform.
+
+### Event sync rather than continuous phase rescaling
+
+OSC 1 SYNC OUT reaches VCO2's Q19 reset/comparator network through R120; Q21, controlled by SW17,
+shunts the incoming sync signal. The slave reset network acts on the C10/Q17 ramp core. This path
+does not enter the VCO2 pitch summer U16 and contains no continuous master/slave frequency-ratio
+calculation. In an ideal event model, the slave keeps its own charging current between resets;
+changing the master frequency changes future reset times, without rescaling the stored slave
+ramp voltage between those events. Immediate resets are still an approximation: pulse width,
+thresholds, transistor recovery and coincident natural resets remain analog questions.
+
+### What this does and does not establish
+
+The supported topology is raw rising-saw feedback with reset-event sync. Selectable-waveform
+feedback or continuous phase-ratio sync in a reference is insufficient reason to add either to
+the hardware model. A reference disagreement does not by itself identify an engine defect.
+
+The drawing does not specify a calibrated raw-saw swing or mean voltage, absolute exponential
+depth, or complete reset timing. In particular, the feedback branch is DC-coupled: assuming a
+centered saw is a separate model choice. Thus the topology and feedback sign do not establish
+an exact combined-mode frequency or level. Those quantitative targets need a calibrated circuit
+model with stated operating points or physical measurements; a single reference fit cannot
+supply them. Output polarity, standard unmodulated tuning and audible output gain are separate
+from this internal feedback sign.
+
 ## Mixer ambiguity and output level
 
 With separate 47 kΩ and 100 kΩ paths, choosing the latter instead of the former gives

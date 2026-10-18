@@ -288,7 +288,7 @@ static void test_wave_mapping_and_xmod_source(void)
     struct dsp_shape shape, carrier;
     int32_t f1[32], s1[32], f2[32], s2[32], reference[32 * 32];
     uint32_t previous = 0;
-    int wave, block, i;
+    int mode, wave, block, i;
     dsp_shape_saw(&carrier, 32768);
     for (wave = 64; wave < 128; wave++) {
         ob1_shape(&shape, wave);
@@ -298,20 +298,21 @@ static void test_wave_mapping_and_xmod_source(void)
     ob1_shape(&shape, 64);
     assert(fabs(shape.width / 4294967296.0 - 0.067) < 1e-8);
     assert(fabs(previous / 4294967296.0 - 0.5) < 1e-7);
-    for (wave = 0; wave < 128; wave++) {
-        struct dsp_osc a = {{0}, 0, 32767, 32767}, b = a;
-        ob1_shape(&shape, wave);
-        for (block = 0; block < 32; block++) {
-            dsp_pair(&a, &b, step(200), step(2), &carrier, &shape, DSP_XMOD,
-                     f1, s1, f2, s2, 32);
-            for (i = 0; i < 32; i++) {
-                if (!wave)
-                    reference[block * 32 + i] = f1[i];
-                else
-                    assert(f1[i] == reference[block * 32 + i]);
+    for (mode = DSP_XMOD; mode <= (DSP_SYNC | DSP_XMOD); mode++)
+        for (wave = 0; wave < 128; wave++) {
+            struct dsp_osc a = {{0}, 0, 32767, 32767}, b = a;
+            ob1_shape(&shape, wave);
+            for (block = 0; block < 32; block++) {
+                dsp_pair(&a, &b, step(200), step(2), &carrier, &shape, mode,
+                         f1, s1, f2, s2, 32);
+                for (i = 0; i < 32; i++) {
+                    if (!wave)
+                        reference[block * 32 + i] = f1[i];
+                    else
+                        assert(f1[i] == reference[block * 32 + i]);
+                }
             }
         }
-    }
 }
 
 /* Mixer levels must not affect oscillator clocks, sub-octaves or modulation history. */

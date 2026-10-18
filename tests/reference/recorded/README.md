@@ -67,6 +67,13 @@ exported measurements and all other checks retain their original values. Reports
 convention. A new inversion or time reversal still fails. The separate stock 5 Hz high-pass response
 is not compensated.
 
+Routine DSP and emulator CI selects the 311-case `reference` suite. The four combined SYNC+XMOD
+comparisons are omitted because the reference coupling differs from the
+[supported circuit paths](../../../docs/references.md#circuit-constraints-on-sync-and-cross-modulation).
+Strict shared-engine tests protect feedback sign, raw-source routing and reset-event timing instead.
+All 315 numeric reference entries remain available for explicit investigation; checking a full
+capture still applies their original limits.
+
 Supported reference differences are ordinary failures. There is no automatic sign selection,
 time reversal, pitch correction, expected-failure list or threshold widening. Register-dependent levels,
 noise levels and low-frequency waveform/modulation differences can fail. Passing acquisition does not

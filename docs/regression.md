@@ -24,9 +24,18 @@ mise run regression:dsp --case wave-vco1-n57-w63
 mise run test:reference
 ```
 
-Suite choices are `smoke`, `waves`, `mixer`, `modulation` and `all`. Repeat `--case` to select exact
-case IDs. `--list` prints settings without executing them. Defaults are one second settling plus
+Suite choices are `smoke`, `waves`, `mixer`, `modulation`, `reference` and `all`.
+Repeat `--case` to select exact case IDs. `--list` prints settings without executing them. Defaults are one second settling plus
 two seconds sustained audio. `--settle` and `--seconds` change those durations.
+
+The `reference` suite selects 311 cases for routine DSP and emulator CI. It omits the three
+SYNC+XMOD interval comparisons and the combined-mode muted-slave comparison: their reference
+coupling is not a circuit-supported target. Strict host tests instead check rising raw-saw
+feedback, waveform/mixer independence, free slave phase evolution between master resets and
+fractional-sample forced resets across pitches and intervals. See the
+[circuit rationale](references.md#circuit-constraints-on-sync-and-cross-modulation).
+The full 315-case `all` suite and explicit `--case` selections remain available for investigation;
+an explicit assertion run on those recordings still performs the original reference comparisons.
 
 The host captures the shared voice after its mixer, DC removal and output trim. There is no device
 filter, AMP, key scanner or note-off envelope at this boundary. It uses the existing renderer with a
@@ -134,12 +143,13 @@ Captured audio does not yet establish sound equivalence, hardware CPU capacity o
 First acquire a run, then measure its existing sustained recordings:
 
 ```sh
-mise run regression:dsp --suite all --out out/regression/candidate
+mise run regression:dsp --suite reference --out out/regression/candidate
 mise run regression:measure out/regression/candidate --out out/candidate-measurements.json
 mise run regression:assert out/regression/candidate --expectations tests/reference/recorded/assertions.json
 ```
 
-The recorded-reference policy is active for all 315 cases. It checks waveform pitch against standard
+The recorded-reference expectations retain all 315 cases; routine CI selects the 311-case
+`reference` suite. The policy checks waveform pitch against standard
 tuning (twelve-tone equal temperament, A4 = 440 Hz), independently of reference detuning, plus signed
 shape and levels, isolated sources and middle-position ratios, noise, phase-aware mixtures and
 modulation spectra below 4000 Hz. Direct reference band comparisons from 4000–24000 Hz
@@ -156,7 +166,7 @@ simulator captures keep their two-second analysis windows.
 the output paths, calibration and exact coverage. Reference agreement is not physical OB-1 fidelity.
 
 CI first runs the host mechanics and synthetic checker tests, then `mise run test:reference` acquires
-the real DSP catalogue and checks this policy. Known mismatches fail normally; CI can be red until
+the DSP reference suite and checks this policy. Remaining mismatches fail normally; CI can be red until
 they are resolved. Reports retain every checked property, not just the first failing case. No audio
 plugin or reference WAV is needed in CI. Firmware and device acquisitions use the same assertion
 command on their completed capture directories; the declared route/OS and source hashes remain in

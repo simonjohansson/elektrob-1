@@ -287,6 +287,69 @@ static void test_xmod_scale(void)
     assert(dsp_xmod_scale(65535, 32767, 0, DSP_INC_MAX) == DSP_INC_MAX);
 }
 
+/* OSC 2 SAW rises into the same pitch summer as KEY CV, so it must raise VCO1's rate. */
+static void test_xmod_circuit_direction(void)
+{
+    static const double notes[] = {55, 220, 880};
+    struct dsp_shape saw;
+    int note, phase;
+    dsp_shape_saw(&saw, 32768);
+    for (note = 0; note < 3; note++) {
+        uint32_t previous = 0;
+        for (phase = 0; phase < 8; phase++) {
+            struct dsp_osc a = {{0}, 0, 32767, 32767}, b = a;
+            int32_t f1, s1, f2, s2;
+            b.vco.phase = (uint32_t)phase << 29;
+            dsp_pair(&a, &b, step(notes[note]), step(notes[note]), &saw, &saw,
+                     DSP_SYNC | DSP_XMOD, &f1, &s1, &f2, &s2, 1);
+            assert(a.vco.phase > previous);
+            if (!phase) assert(a.vco.phase < step(notes[note]));
+            if (phase == 7) assert(a.vco.phase > step(notes[note]));
+            previous = a.vco.phase;
+        }
+    }
+}
+
+/* Sync injects reset events; changing master pitch must not rescale the slave between them. */
+static void test_sync_circuit_timing(void)
+{
+    static const double notes[] = {55, 220, 880};
+    static const double ratios[] = {1, 1.4983070768766815, 2, 4};
+    struct dsp_shape saw;
+    int note, ratio, mode, i;
+    dsp_shape_saw(&saw, 32768);
+    for (note = 0; note < 3; note++)
+        for (ratio = 0; ratio < 4; ratio++)
+            for (mode = DSP_SYNC; mode <= (DSP_SYNC | DSP_XMOD); mode++) {
+                struct dsp_osc a = {{0}, 0, 32767, 32767}, b = a;
+                uint32_t slave_inc = step(notes[note] * ratios[ratio]);
+                int forced = 0, free_steps = 0;
+                a.vco.phase = 0x12345678u;
+                b.vco.phase = 0x98765432u;
+                for (i = 0; i < 4800; i++) {
+                    uint32_t old_master = a.vco.phase, old_slave = b.vco.phase;
+                    int32_t f1, s1, f2, s2;
+                    uint32_t master_inc = step(notes[note] * ((i / 32) & 1 ? 1.5 : 1));
+                    dsp_pair(&a, &b, master_inc, slave_inc, &saw, &saw, mode,
+                             &f1, &s1, &f2, &s2, 1);
+                    if ((mode & DSP_SYNC) && a.vco.phase < old_master) {
+                        uint32_t advance = a.vco.phase - old_master;
+                        double expected = (double)slave_inc * a.vco.phase / advance;
+                        /* XMOD truncates 14 base bits before scaling; its reciprocal uses the full base. */
+                        double base_rounding = (mode & DSP_XMOD) ? (master_inc & 16383u) / (double)master_inc : 0;
+                        double sample_error = 1.0 / 1024 + base_rounding;
+                        assert(fabs((double)b.vco.phase - expected) <= slave_inc * sample_error + 2);
+                        forced++;
+                    } else {
+                        assert(b.vco.phase == old_slave + slave_inc);
+                        free_steps++;
+                    }
+                }
+                assert(free_steps > 0);
+                assert((mode & DSP_SYNC) ? forced > 0 : forced == 0);
+            }
+}
+
 /* The reference's slow-ramp full-depth mean reset ratio is 2.78; test without the pitch clamp. */
 static void test_xmod_pitch(void)
 {
@@ -472,6 +535,8 @@ int main(void)
     test_sync_whole_multiple();
     test_sync_ratio_boundaries();
     test_xmod_scale();
+    test_xmod_circuit_direction();
+    test_sync_circuit_timing();
     test_xmod_pitch();
     test_xmod_clamp();
     test_noise();

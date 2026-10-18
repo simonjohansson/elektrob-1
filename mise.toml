@@ -99,12 +99,12 @@ description = "Check captured audio against reviewed numeric expectations"
 run = 'uv run --python "$(mise which python)" --with numpy python tools/regression_assert.py check "$@"'
 
 [tasks."test:reference"]
-description = "Capture the DSP catalogue and assert the recorded reference; known mismatches fail"
+description = "Capture circuit-compatible DSP cases and assert the recorded reference; remaining mismatches fail"
 run = '''
 set -eu
 mkdir -p out/regression
 capture=$(mktemp -d "$PWD/out/regression/reference.XXXXXX")/capture
-python tools/regression.py dsp --suite all --out "$capture"
+python tools/regression.py dsp --suite reference --out "$capture"
 uv run --python "$(mise which python)" --with numpy python tools/regression_assert.py check "$capture" --expectations tests/reference/recorded/assertions.json
 '''
 
