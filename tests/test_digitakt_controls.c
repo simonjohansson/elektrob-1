@@ -14,10 +14,17 @@ const uint32_t fw_pitch_tab[14849] = {
 };
 const char fw_bitmap_vt[1], cm_ui_v32[1];
 static int cleared_track, writes;
+static void *expected_view;
+static int32_t ui_values[8];
+static int ui_page, ui_reads;
 
 void fw_fillrect(void *bmp, int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t colour)
 {
-    (void)bmp; (void)x0; (void)y0; (void)x1; (void)y1; (void)colour;
+    uint8_t (*pixels)[128] = bmp;
+    assert(x0 >= 0 && x1 < 128 && y0 >= 0 && y1 < 64);
+    for (int y = y0; y <= y1; y++)
+        for (int x = x0; x <= x1; x++)
+            pixels[y][x] = (uint8_t)colour;
 }
 
 void ob1_notes_clear(int32_t track)
@@ -35,6 +42,108 @@ void fw_set_param(int32_t value, int32_t track, int32_t slot)
 {
     fw_voice_params[53 * track + slot - 17] = value;
     writes++;
+}
+
+int32_t ob1_view_value(void *view, int32_t parameter, uint8_t *locked)
+{
+    assert(view == expected_view && parameter >= 132 && parameter < 140);
+    *locked = 1;
+    ui_reads++;
+    return ui_values[parameter - 132];
+}
+
+static uint8_t ui_sound[162], parameter_object[32], sound_reference[32];
+
+static int32_t view_knob(void *view, int32_t index)
+{
+    assert(view == expected_view && (index == 2 || index == 3 || index == 6 || index == 7));
+    return (ui_page ? 164 : 132) + index;
+}
+
+static uintptr_t view_parameter(void *view, int32_t id, int32_t track)
+{
+    assert(view == expected_view && id == 135 && track == -1);
+    return (uintptr_t)parameter_object;
+}
+
+static void put_pointer(void *object, int offset, const void *pointer)
+{
+    memcpy((uint8_t *)object + offset, &pointer, sizeof pointer);
+}
+
+static void waveform_pixels(uint8_t pixels[64][128], int oscillator, int shape)
+{
+    uint32_t rows[KNOB_PX];
+    knob_wave(shape, rows);
+    for (int r = 0; r < KNOB_PX; r++)
+        for (int c = 0; c < KNOB_PX; c++)
+            assert(pixels[34 - 27 * oscillator + 16 - r][103 + c] == ((rows[r] >> (16 - c)) & 1));
+}
+
+static void test_waveform_graphics(void)
+{
+    uint8_t controller[40] = {0}, view[32] = {0}, node[16] = {0};
+    uint8_t modal[32] = {0}, modal_node[16] = {0};
+    uintptr_t storage[43] = {0}, modal_storage[2];
+    const char *typeinfo[] = {0, "14SamplePageView"};
+    const char *modal_typeinfo[] = {0, "15MachineListView"};
+    uintptr_t *vt = storage + 1;
+    uint8_t pixels[64][128], untouched[64][128];
+    storage[0] = (uintptr_t)typeinfo;
+    vt[39] = (uintptr_t)view_knob;
+    vt[41] = (uintptr_t)view_parameter;
+    put_pointer(parameter_object, 16, sound_reference);
+    put_pointer(sound_reference, 16, ui_sound);
+    put_pointer(view, 0, vt);
+    view[21] = 1;
+    put_pointer(controller, 28, node);
+    put_pointer(node, 0, controller + 20);
+    put_pointer(node, 8, view);
+    ui_sound[126] = 69;
+    expected_view = view;
+    assert(ob1_page.base.knob[K_WAV1].draw == draw_wave);
+    assert(ob1_page.base.knob[K_WAV2].draw == draw_wave);
+    assert(ob1_page.base.knob[K_WAV1].flags & CM_DRAW);
+    assert(ob1_page.base.knob[K_WAV2].flags & CM_DRAW);
+    for (int first = 0; first < 2; first++) for (int second = 0; second < 2; second++)
+        for (int position = 0; position < 64; position++) {
+            ui_values[K_TYP1] = first << 14;
+            ui_values[K_TYP2] = second << 14;
+            ui_values[K_WAV1] = position << 8;
+            ui_values[K_WAV2] = (63 - position) << 8;
+            memset(pixels, 0, sizeof(pixels));
+            ui_reads = 0;
+            ob1_draw(pixels, controller);
+            assert(ui_reads == 4);
+            waveform_pixels(pixels, 0, first * 64 + position);
+            waveform_pixels(pixels, 1, second * 64 + 63 - position);
+        }
+    memset(pixels, 0xa5, sizeof(pixels));
+    memcpy(untouched, pixels, sizeof(pixels));
+    ui_page = 1;
+    ob1_draw(pixels, controller);
+    assert(!memcmp(pixels, untouched, sizeof(pixels)));
+    ui_page = 0;
+    ui_sound[126] = 3;
+    ob1_draw(pixels, controller);
+    assert(!memcmp(pixels, untouched, sizeof(pixels)));
+    ui_sound[126] = 69;
+    view[21] = 0;
+    ob1_draw(pixels, controller);
+    assert(!memcmp(pixels, untouched, sizeof(pixels)));
+    view[21] = 1;
+    modal_storage[0] = (uintptr_t)modal_typeinfo;
+    put_pointer(modal, 0, modal_storage + 1);
+    modal[21] = 1;
+    put_pointer(node, 0, modal_node);
+    put_pointer(modal_node, 8, modal);
+    put_pointer(modal_node, 0, controller + 20);
+    ob1_draw(pixels, controller);
+    assert(!memcmp(pixels, untouched, sizeof(pixels)));
+    /* A corrupt/cyclic view list must stop without painting. */
+    put_pointer(node, 0, node);
+    ob1_draw(pixels, controller);
+    assert(!memcmp(pixels, untouched, sizeof(pixels)));
 }
 
 static void param(int k, int value)
@@ -153,6 +262,7 @@ int main(void)
             knobs.mix1 = mix1; knobs.mix2 = mix2; knobs.mod = mod; knobs.nois = mod % 3;
             parity(&knobs, 0, 0, 0, 0);
         }
+    test_waveform_graphics();
     puts("Digitakt controls: layout, defaults, ranges, independent pitch and 324 mixer/routing audio cases passed");
     return 0;
 }

@@ -13,7 +13,7 @@ and sends work on it as they do on a sample.
 - **A noise source.**
 - **The OB-1's mixer:** VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each ON, −3 dB or OFF as on the panel, AC-coupled.
 - **Reduced aliasing** with polyBLEP and polyBLAMP corrections, with [limits at high pitches and under sync](docs/dsp.md#band-limiting).
-- **Knob graphics** for wave family, coarse tuning, modulation routing and noise, with separate shape and level controls.
+- **Knob graphics** showing each oscillator's waveform, wave family, coarse tuning, routing and noise.
 
 Built for OS 1.53 and 1.54. It's machine id 69.
 
@@ -67,6 +67,7 @@ VCO2 on the bottom row. Press **SRC** for the mixer and routing page.
 Each oscillator tunes independently from the played note: coarse tuning spans −32 to +31 semitones,
 and fine tuning spans −50.0 to +50.0 cents. WAVE spans 0–63 within the selected family: triangle to
 saw for SAW, narrow pulse to square for PULS. Sweeping WAVE never switches family.
+WAV1 and WAV2 show the resulting waveforms, including the values shown while editing held-step locks.
 Fundamental, sub-octave and noise levels each have three settings: OFF, −3DB, ON.
 
 The parameter mapping replaces earlier builds without migration. Sounds saved by this build use

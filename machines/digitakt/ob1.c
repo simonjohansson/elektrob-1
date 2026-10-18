@@ -190,6 +190,71 @@ static int32_t draw_type(void *bmp, int32_t x, int32_t y, int32_t value, int32_t
     return draw_rows(bmp, x, y, rows);
 }
 
+static int32_t draw_wave(void *bmp, int32_t x, int32_t y, int32_t value, int32_t flag)
+{
+    uint32_t rows[KNOB_PX];
+    (void)flag;
+    /* The frame callback supplies the family from the displayed sound, including held-step locks. */
+    knob_wave(wave(0, value), rows);
+    return draw_rows(bmp, x, y, rows);
+}
+
+static void *pointer_at(const void *object, int offset)
+{
+    return *(void *const *)((const uint8_t *)object + offset);
+}
+
+static int named(const void *view, const char *expected)
+{
+    void *const *vt = pointer_at(view, 0);
+    const char *name = ((const char *const *)vt[-1])[1];
+    while (*expected && *name == *expected)
+        name++, expected++;
+    return !*expected && !*name;
+}
+
+extern int32_t ob1_view_value(void *view, int32_t parameter, uint8_t *locked);
+
+void ob1_draw(void *bmp, void *ctrl)
+{
+    void *view = 0, *end = (uint8_t *)ctrl + 20;
+    void *node = pointer_at(ctrl, 28);
+    /* A later modal view must retain the composed frame. */
+    for (int count = 0; node != end && count < 32; count++, node = pointer_at(node, 0)) {
+        void *candidate = pointer_at(node, 8);
+        if (!((const uint8_t *)candidate)[21])
+            continue;
+        if (named(candidate, "14SamplePageView"))
+            view = candidate;
+        else if (view && !named(candidate, "14SamplerLedView") && !named(candidate, "12TempoLedView") &&
+                 !named(candidate, "15PatternGridView") && !named(candidate, "12KeyboardView") &&
+                 !named(candidate, "14HelpBubbleView"))
+            return;
+    }
+    if (node != end || !view)
+        return;
+    uintptr_t *vt = pointer_at(view, 0);
+    int32_t (*knob_id)(void *, int32_t) = (int32_t (*)(void *, int32_t))vt[39];
+    if (knob_id(view, 2) != 134 || knob_id(view, 3) != 135 ||
+        knob_id(view, 6) != 138 || knob_id(view, 7) != 139)
+        return;
+    void *parameter = (void *)((uintptr_t (*)(void *, int32_t, int32_t))vt[41])(view, 135, -1);
+    if (!parameter)
+        return;
+    void *reference = pointer_at(parameter, 16);
+    uint8_t *sound = reference ? pointer_at(reference, 16) : 0;
+    if (!sound || sound[FW_SOUND_MACHINE] != OB1_ID)
+        return;
+    for (int oscillator = 0; oscillator < 2; oscillator++) {
+        uint8_t locked;
+        int32_t family = ob1_view_value(view, 134 + 4 * oscillator, &locked);
+        int32_t position = ob1_view_value(view, 135 + 4 * oscillator, &locked);
+        uint32_t rows[KNOB_PX];
+        knob_wave(wave(family, position), rows);
+        draw_rows(bmp, 102, 34 - 27 * oscillator, rows);
+    }
+}
+
 static int32_t draw_frq(void *bmp, int32_t x, int32_t y, int32_t value, int32_t flag)
 {
     uint32_t rows[KNOB_PX];
@@ -253,11 +318,11 @@ static const struct cm_ui32 ob1_page = {
             CONTROL("FRQ1", "VCO1 frequency", 63, 32, frq_text, draw_frq, CM_DRAW),
             CONTROL("FIN1", "VCO1 fine tune", 127, 64, fine_text, 0, 0),
             CONTROL("TYP1", "VCO1 family", 127, 0, type_text, draw_type, CM_DRAW),
-            CONTROL("WAV1", "VCO1 shape", 63, 63, 0, 0, CM_NOT_SAMPLE),
+            CONTROL("WAV1", "VCO1 shape", 63, 63, 0, draw_wave, CM_NOT_SAMPLE | CM_DRAW),
             CONTROL("FRQ2", "VCO2 frequency", 63, 32, frq_text, draw_frq, CM_DRAW),
             CONTROL("FIN2", "VCO2 fine tune", 127, 64, fine_text, 0, 0),
             CONTROL("TYP2", "VCO2 family", 127, 0, type_text, draw_type, CM_DRAW),
-            CONTROL("WAV2", "VCO2 shape", 63, 63, 0, 0, 0),
+            CONTROL("WAV2", "VCO2 shape", 63, 63, 0, draw_wave, CM_DRAW),
         },
     },
     .extra = {

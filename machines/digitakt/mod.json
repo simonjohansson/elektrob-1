@@ -8,21 +8,24 @@
  "description": "OB-1, an SRC machine after the Oberheim OB-1's oscillator section. Work in progress: two VCOs, each with saw type (triangle to saw) and pulse type (narrow pulse to square) and a sub-octave, sync and cross mod, and noise, each mixed ON, -3 dB or OFF. Machine id 69.",
  "device": "digitakt-mk1",
  "os": "1.53",
- "sources": ["ob1.c", "notes.c", "notes-fw.s", "../../dsp/voice.c", "knobs.c", "../../dsp/dsp.c"],
- "defsym": {"OB1_NOTE_SUBMIT": "0x40076b3c", "OB1_HELD_COUNTS": "0x4219c0e0"},
+ "sources": ["ob1.c", "notes.c", "notes-fw.s", "ui.s", "../../dsp/voice.c", "knobs.c", "../../dsp/dsp.c"],
+ "defsym": {"OB1_NOTE_SUBMIT": "0x40076b3c", "OB1_VIEW_VALUE": "0x4003171c", "OB1_HELD_COUNTS": "0x4219c0e0"},
  "sites": [
   {"addr": "0x400d55fe", "stock": "4eb940076b3c", "op": "jsr", "target": "ob1_live_note"},
   {"addr": "0x400d5816", "stock": "4eb940076b3c", "op": "jsr", "target": "ob1_live_note"}
  ],
  "ports": {"1.54": {
-  "defsym": {"OB1_NOTE_SUBMIT": "0x40076b3c", "OB1_HELD_COUNTS": "0x4219d0e0"},
+  "defsym": {"OB1_NOTE_SUBMIT": "0x40076b3c", "OB1_VIEW_VALUE": "0x4003171c", "OB1_HELD_COUNTS": "0x4219d0e0"},
   "sites": [
    {"addr": "0x400d5826", "stock": "4eb940076b3c", "op": "jsr", "target": "ob1_live_note"},
    {"addr": "0x400d5a3e", "stock": "4eb940076b3c", "op": "jsr", "target": "ob1_live_note"}
   ]
  }},
  "machines": [{"id": 69, "descriptor": "ob1_machine"}],
- "subscribe": [{"event": "ev_render_voices", "fn": "ob1_render", "order": 20}],
+ "subscribe": [
+  {"event": "ev_render_voices", "fn": "ob1_render", "order": 20},
+  {"event": "ev_draw", "fn": "ob1_draw", "order": 60}
+ ],
  "requires": ["core", "machine-pages"],
  "resources": {"core": "3.0", "names": ["machine:69"]}
 }
