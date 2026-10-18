@@ -111,10 +111,17 @@ The voice applies a fixed −10 dB trim to the source gains before mixing, follo
 quarter scale. A single full saw at ON in the low/middle register peaks around −22 dBFS. The trim
 and measured waveform compensation are folded into constant source gains; the pitch attenuation
 adds only block-rate gain work. Sources remain additive; there is no source-count normalization
-or automatic limiter. Saturation remains a final numeric guard.
+or automatic limiter. Saturation guards the mixer's numeric range.
 The level adjustment follows a particular device listening/USB comparison, not universal loudness
 calibration. Preserve or reduce maximum loudness when changing gains, and compare levels as well
 as timbre.
+
+A shared three-sample smoothing filter follows the mixer and high-pass, with weights `[1, 2, 1]/4`.
+It approximates additional high-frequency attenuation measured in retained reference saw captures;
+it does not identify a physical OB-1 circuit or exactly reconstruct the reference's open filter.
+Its nonnegative weights sum to one, preserving DC gain and the existing peak bound. Two previous
+Q15 mixer samples carry across blocks and start at zero; the result rounds down to Q15 before Q31
+output. The filter adds one sample of delay and leaves the raw cross-modulation source unchanged.
 
 No drift, component mismatch, finite analog reset time or transistor-level noise generation is
 modeled.

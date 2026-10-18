@@ -84,6 +84,7 @@ static void test_pitch_gain(void)
                     uint32_t inc1 = step(oscillator ? 330 : hz[pitch]);
                     uint32_t inc2 = step(oscillator ? hz[pitch] : 660);
                     double dot = 0, power = 0;
+                    double history[2] = {0};
                     gain[2 * oscillator] = gains[wave];
                     ob1_voice_init(&v, 1);
                     ob1_voice_init(&raw, 1);
@@ -99,6 +100,12 @@ static void test_pitch_gain(void)
                         assert(!memcmp(&v.vco1, &raw.vco1, sizeof v.vco1));
                         assert(!memcmp(&v.vco2, &raw.vco2, sizeof v.vco2));
                         dsp_voice_out(&raw.hpf, src, gain, &raw.noise, 0, reference, 32);
+                        for (int i = 0; i < 32; i++) {
+                            double x = reference[i] / 65536.0;
+                            reference[i] = (int32_t)(floor((x + 2 * history[0] + history[1]) / 4) * 65536);
+                            history[1] = history[0];
+                            history[0] = x;
+                        }
                         if (block < 100) continue;
                         for (int i = 0; i < 32; i++) {
                             dot += (double)out[i] * reference[i];
@@ -106,11 +113,60 @@ static void test_pitch_gain(void)
                             if (pitch < 2) assert(out[i] == reference[i]);
                         }
                     }
-                    /* Project onto the raw output so the existing HPF's integer DC residue is not gain. */
+                    /* Project onto the filtered reference so integer DC residue is not gain. */
                     assert(power > 0 && fabs(dot / power - level[pitch]) < .0015);
                     worst = fmax(worst, fabs(dot / power - level[pitch]));
                 }
     printf("Pitch gain: 216 waveform/pitch/modulation cases passed, maximum gain error %.6f\n", worst);
+}
+
+/* Compare streaming output against a whole-buffer convolution, including signed rounding and reset. */
+static void test_output_smoothing(void)
+{
+    const int history[][2] = {{0, 0}, {-32768, -32768}, {32767, 32767}, {-32768, 32767}};
+    for (int mod = 0; mod < 4; mod++)
+        for (int trial = 0; trial < 4; trial++) {
+            struct ob1_voice v, raw;
+            struct ob1_knobs k = {63, 127, 8, 8, mod, 2};
+            struct dsp_shape sh1, sh2;
+            int32_t f1[32], s1[32], f2[32], s2[32], input[98], output[96];
+            const int32_t *src[] = {f1, s1, f2, s2};
+            const int32_t gain[] = {1295, 1295, 1295, 1295};
+            const int32_t ng = ((DSP_MIX_NOISE_HIGH * DSP_NOISE_LEVEL) >> 12) * DSP_OUTPUT_GAIN >> 12;
+            memset(&v, 0x55, sizeof v);
+            ob1_voice_init(&v, 12345);
+            ob1_voice_init(&raw, 12345);
+            assert(v.smooth[0] == 0 && v.smooth[1] == 0);
+            for (int i = 0; i < 2; i++) {
+                v.smooth[i] = history[trial][i];
+                input[1 - i] = history[trial][i] * 65536;
+            }
+            ob1_shape(&sh1, k.wav1);
+            ob1_shape(&sh2, k.wav2);
+            for (int block = 0; block < 3; block++) {
+                ob1_voice_render(&v, &k, step(55), step(220), output + 32 * block);
+                if (mod)
+                    dsp_pair(&raw.vco1, &raw.vco2, step(55), step(220), &sh1, &sh2, mod,
+                             f1, s1, f2, s2, 32);
+                else {
+                    dsp_osc_block(&raw.vco1, step(55), &sh1, f1, s1, 32);
+                    dsp_osc_block(&raw.vco2, step(220), &sh2, f2, s2, 32);
+                }
+                dsp_voice_out(&raw.hpf, src, gain, &raw.noise, ng, input + 2 + 32 * block, 32);
+                assert(!memcmp(&v.vco1, &raw.vco1, sizeof v.vco1));
+                assert(!memcmp(&v.vco2, &raw.vco2, sizeof v.vco2));
+                assert(v.noise == raw.noise && v.hpf.lp == raw.hpf.lp && v.hpf.noise_lp == raw.hpf.noise_lp);
+            }
+            for (int i = 0; i < 96; i++) {
+                double sum = input[i] / 65536.0 + 2 * (input[i + 1] / 65536.0) + input[i + 2] / 65536.0;
+                assert(output[i] == (int32_t)(floor(sum / 4) * 65536));
+            }
+            ob1_voice_init(&v, 12345);
+            ob1_voice_init(&raw, 12345);
+            ob1_voice_render(&v, &k, step(55), step(220), output);
+            ob1_voice_render(&raw, &k, step(55), step(220), input);
+            assert(!memcmp(input, output, 32 * sizeof *input));
+        }
 }
 
 static void test_noise_output(void)
@@ -342,6 +398,7 @@ int main(void)
 {
     test_mix_levels();
     test_pitch_gain();
+    test_output_smoothing();
     test_noise_output();
     test_headroom_and_additivity();
     test_mix_out();

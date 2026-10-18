@@ -87,6 +87,7 @@ void ob1_voice_init(struct ob1_voice *v, uint32_t seed)
     v->hpf.lp = 0;
     v->hpf.noise_lp = 0;
     v->noise = seed ? seed : 1;
+    v->smooth[0] = v->smooth[1] = 0;
 }
 
 void ob1_voice_render(struct ob1_voice *v, const struct ob1_knobs *k, uint32_t inc1, uint32_t inc2, int32_t *out)
@@ -115,4 +116,14 @@ void ob1_voice_render(struct ob1_voice *v, const struct ob1_knobs *k, uint32_t i
     gain[0] = fundamental_gain(gain[0], inc1);
     gain[2] = fundamental_gain(gain[2], inc2);
     dsp_voice_out(&v->hpf, src, gain, &v->noise, noise_gain[k->nois], out, 32);
+    /* Shared reference rolloff: a convex average preserves the mixer's peak bound. */
+    int32_t a = v->smooth[0], b = v->smooth[1];
+    for (int i = 0; i < 32; i++) {
+        int32_t x = out[i] >> 16;
+        out[i] = ((x + 2 * a + b) >> 2) * 65536;
+        b = a;
+        a = x;
+    }
+    v->smooth[0] = a;
+    v->smooth[1] = b;
 }
