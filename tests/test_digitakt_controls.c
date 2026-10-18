@@ -13,7 +13,7 @@ const uint32_t fw_pitch_tab[14849] = {
     [10750] = 536507626, [10752] = 1u << 29, [10753] = 537052647, [12800] = 1u << 30
 };
 const char fw_bitmap_vt[1], cm_ui_v32[1];
-static int cleared_track, writes;
+static int cleared_track;
 static void *expected_view;
 static int32_t ui_values[8];
 static int ui_page, ui_reads;
@@ -41,7 +41,6 @@ int32_t cm_src_value(int32_t track, int32_t parameter)
 void fw_set_param(int32_t value, int32_t track, int32_t slot)
 {
     fw_voice_params[53 * track + slot - 17] = value;
-    writes++;
 }
 
 int32_t ob1_view_value(void *view, int32_t parameter, uint8_t *locked)
@@ -183,17 +182,16 @@ static void reset(void)
     uint16_t sound[81];
     memset(sound, 0xa5, sizeof(sound));
     memset((void *)fw_voice_params, 0, sizeof(fw_voice_params));
-    writes = 0;
     cleared_track = -1;
     ob1_switch(0, 3, (uint8_t *)sound);
-    assert(cleared_track == 0 && writes == K_COUNT);
+    assert(cleared_track == 0);
+    for (int i = 0; i < 81; i++)
+        assert(sound[i] == 0xa5a5);
     for (int k = 0; k < K_COUNT; k++) {
         const struct cm_knob *p = k < 8 ? &ob1_page.base.knob[k] : &ob1_page.extra[k - 8];
-        int slot = k < 8 ? 17 + k : 46 + k - 8;
-        assert(sound[10 + slot] == p->def);
-        assert(cm_src_value(0, k) == p->def);
+        /* Framework defaults are exercised by the compiled-firmware test. */
+        param(k, p->def);
     }
-    assert(sound[10] == 0xa5a5);  /* Reserved slot 0 is untouched. */
     memset(ready, 0, sizeof(ready));
     memset((void *)fw_render_machine, 0, sizeof(fw_render_machine));
     fw_render_machine[0] = OB1_ID;
