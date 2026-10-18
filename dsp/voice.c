@@ -5,7 +5,6 @@
 static const int32_t mix_gain[3] = {0, DSP_MIX_LOW * DSP_OUTPUT_GAIN >> 12, DSP_MIX_HIGH * DSP_OUTPUT_GAIN >> 12};
 static const int32_t noise_gain[3] = {0, ((DSP_MIX_NOISE_LOW * DSP_NOISE_LEVEL) >> 12) * DSP_OUTPUT_GAIN >> 12,
                                       ((DSP_MIX_NOISE_HIGH * DSP_NOISE_LEVEL) >> 12) * DSP_OUTPUT_GAIN >> 12};
-static const int32_t zero[32];                 /* a source not rendered */
 
 /* OB-2 by KBPlugs dense control captures: ramp-half gain and relative level, Q15/Q12. */
 #define SAW(g, level) {g, {0, ((DSP_MIX_LOW * DSP_OUTPUT_GAIN >> 12) * (level)) >> 12, \
@@ -73,22 +72,17 @@ void ob1_voice_render(struct ob1_voice *v, const struct ob1_knobs *k, uint32_t i
     struct dsp_shape sh1, sh2;
     ob1_shape(&sh1, k->wav1);
     ob1_shape(&sh2, k->wav2);
-    if (!(mod & DSP_XMOD) || !mix1)
-        mod &= ~DSP_XMOD;                                          /* moves only VCO1 */
-    if (!mix2 && !(mod & DSP_XMOD))
-        mod &= ~DSP_SYNC;                                          /* VCO2 may still feed XMOD */
+    /* Mixer switches gate audio, not the oscillator clocks or modulation paths. */
     if (mod)
         dsp_pair(&v->vco1, &v->vco2, inc1, inc2, &sh1, &sh2, mod, f1, s1, f2, s2, 32);
-    else {                                                         /* each alone, or not at all */
-        if (mix1)
-            dsp_osc_block(&v->vco1, inc1, &sh1, f1, s1, 32);
-        if (mix2)
-            dsp_osc_block(&v->vco2, inc2, &sh2, f2, s2, 32);
+    else {
+        dsp_osc_block(&v->vco1, inc1, &sh1, f1, s1, 32);
+        dsp_osc_block(&v->vco2, inc2, &sh2, f2, s2, 32);
     }
-    src[0] = mix1 ? f1 : zero;                                     /* FUND and OCT, each VCO */
-    src[1] = mix1 ? s1 : zero;
-    src[2] = mix2 ? f2 : zero;
-    src[3] = mix2 ? s2 : zero;
+    src[0] = f1;                                                   /* FUND and OCT, each VCO */
+    src[1] = s1;
+    src[2] = f2;
+    src[3] = s2;
     gain[0] = k->wav1 < 64 ? saw_shape[k->wav1].fund[mix1 / 3] : mix_gain[mix1 / 3];
     gain[1] = mix_gain[mix1 % 3];
     gain[2] = k->wav2 < 64 ? saw_shape[k->wav2].fund[mix2 / 3] : mix_gain[mix2 / 3];

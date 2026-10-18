@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "voice.h"
 
 #define RATE 48000
@@ -429,7 +430,7 @@ static void test_wave_mapping_and_xmod_source(void)
     }
 }
 
-/* Mixer audibility must not change a modulation source that still feeds an audible destination. */
+/* Mixer levels must not affect oscillator clocks, sub-octaves or modulation history. */
 static void test_modulation_routing(void)
 {
     int mode, mix, block, i, different = 0;
@@ -445,12 +446,8 @@ static void test_modulation_routing(void)
         for (block = 0; block < 200; block++) {
             ob1_voice_render(&muted, &k, step(220), step(330), out);
             ob1_voice_render(&audible, &a, step(220), step(330), other);
-            assert(muted.vco1.vco.phase == audible.vco1.vco.phase);
-            if (mode & DSP_XMOD) {
-                assert(muted.vco2.vco.phase == audible.vco2.vco.phase);
-                assert(muted.vco2.sub == audible.vco2.sub);
-            } else
-                assert(muted.vco2.vco.phase == 0);
+            assert(!memcmp(&muted.vco1, &audible.vco1, sizeof muted.vco1));
+            assert(!memcmp(&muted.vco2, &audible.vco2, sizeof muted.vco2));
         }
     }
     ob1_voice_init(&muted, 1);
@@ -464,20 +461,53 @@ static void test_modulation_routing(void)
             different |= out[i] != other[i];
     }
     assert(different);
-    for (mix = 0; mix <= 8; mix++) {
-        ob1_voice_init(&muted, 1);
-        k.mix1 = 0;
-        k.mix2 = mix;
-        for (mode = 0; mode < 4; mode++) {
-            uint32_t previous = muted.vco1.vco.phase;
-            k.mod = mode;
-            ob1_voice_render(&muted, &k, step(220), step(330), out);
-            if (!mix)
-                assert(muted.vco1.vco.phase == 0 && muted.vco2.vco.phase == 0);
-            else if (!(mode & DSP_SYNC))
-                assert(muted.vco1.vco.phase == previous);
-        }
+    ob1_voice_init(&muted, 1);
+    ob1_voice_init(&audible, 1);
+    for (block = 0; block < 400; block++) {
+        uint32_t inc1 = step(block < 200 ? 220 : 330), inc2 = step(261.625565);
+        mix = block % 9;
+        mode = block / 100;
+        k.mix1 = mix;
+        k.mix2 = (block / 9) % 9;
+        k.mod = mode;
+        k.wav1 = block % 128;
+        k.wav2 = 127 - k.wav1;
+        a = k;
+        a.mix1 = a.mix2 = 8;
+        ob1_voice_render(&muted, &k, inc1, inc2, out);
+        ob1_voice_render(&audible, &a, inc1, inc2, other);
+        assert(!memcmp(&muted.vco1, &audible.vco1, sizeof muted.vco1));
+        assert(!memcmp(&muted.vco2, &audible.vco2, sizeof muted.vco2));
     }
+}
+
+static void test_mixer_phase_continuity(void)
+{
+    struct ob1_voice v;
+    struct ob1_knobs k = {0, 0, 6, 3, 0, 0};
+    const uint32_t inc = step(261.625565);
+    int32_t out[32];
+    double low = 1e100, high = 0;
+    ob1_voice_init(&v, 1);
+    for (int repeat = 0; repeat < 6; repeat++) {
+        k.mix2 = 0;
+        for (int block = 0; block < 997 + 137 * repeat; block++) {
+            ob1_voice_render(&v, &k, inc, inc, out);
+            assert(v.vco1.vco.phase == v.vco2.vco.phase);
+            assert(v.vco1.sub == v.vco2.sub);
+        }
+        k.mix2 = 3;
+        double power = 0;
+        for (int block = 0; block < 900; block++) {
+            ob1_voice_render(&v, &k, inc, inc, out);
+            if (block >= 150)
+                for (int i = 0; i < 32; i++)
+                    power += (double)out[i] * out[i];
+        }
+        low = fmin(low, power);
+        high = fmax(high, power);
+    }
+    assert(10 * log10(high / low) < 0.02);
 }
 
 /* Immediate reset clocks one sub event per natural/forced reset, merging coincident events. */
@@ -540,6 +570,7 @@ int main(void)
     test_sync_whole_multiple();
     test_sync_ratio_boundaries();
     test_modulation_routing();
+    test_mixer_phase_continuity();
     test_wave_mapping_and_xmod_source();
     test_xmod_scale();
     test_xmod_pitch();

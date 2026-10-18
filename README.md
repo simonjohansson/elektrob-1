@@ -89,24 +89,23 @@ Some things to try:
 - **Bells and gongs:** XMOD ON with VCO2 a few octaves down. That's what the OB-1's manual suggests cross mod for.
 - **A fat unison:** both fundamentals ON, FRQ1 and FRQ2 at +0, then detune FIN2 by a few cents and add the subs to taste.
 
-Notes do not reset oscillator phase. To save CPU, phases stop advancing while a voice is silent or an
-oscillator is neither audible nor needed for modulation; this approximates the OB-1's free-running VCOs.
+Notes and mixer switches do not reset oscillator phase. Both VCOs and their sub-octaves keep running
+while the voice is active, including when their outputs are OFF. A fully silent voice stops advancing
+until it sounds again.
 
 ### Voices and CPU
 
 Each sounding OB-1 voice costs DSP time on top of the stock engine. A voice whose amp envelope has finished
 skips sound generation, with a small check and buffer-clearing cost remaining.
 
-| Benchmark sound | Estimated simultaneous voices |
-|---|---|
-| One VCO, full saw, other sources off | about 8 voices |
-| Both VCOs and their subs | about 6 voices |
-| Heavy: both VCOs with sync, cross mod and noise | **about 4 voices** |
+Both oscillators run for every active voice, even when one or both mixer outputs are OFF. Selected
+sync and cross modulation also keep running while muted, so muting a source does not reclaim its CPU
+cost. Waveform and routing choices still affect the work per voice.
 
-These are planning estimates from `mise run bench`, not verified hardware limits. The benchmark counts
-ColdFire instructions for the DSP alone and extrapolates from a fixed stock-engine baseline. It does not
-measure complete firmware timing. The actual default enables both VCOs and is not the one-VCO benchmark.
-Leave headroom and check the intended sound on the device. See [benchmark interpretation](docs/development.md#benchmark-interpretation).
+See the [matched CPU-cost comparison](docs/performance.md#continuous-muted-oscillators) for measurements.
+`mise run bench` counts ColdFire instructions for the DSP alone; it does not measure complete firmware
+timing or establish a safe voice count. Leave headroom and check the intended sound on the device.
+See [benchmark interpretation](docs/development.md#benchmark-interpretation).
 
 ## How faithful it is
 

@@ -65,10 +65,11 @@ the 12 kHz oscillator limit. Changing VCO2's audible waveshape does not change t
 The exponential is approximated with a table and interpolation. Both sync and cross modulation can
 operate together, so the two oscillators must be advanced as an interacting pair.
 
-An inaudible modulator can still be required: VCO2 must run for audible VCO1 cross modulation, and
-VCO1 must run for audible VCO2 sync. With both modes enabled, sync remains active on a muted VCO2
-because its reset ramp still modulates audible VCO1. When no audible destination needs a routing, that routing is
-skipped. Oscillator and noise state are retained while skipped, rather than advanced through silence.
+Both VCOs and their sub-octave flip-flops advance on every rendered block, even with their mixer
+outputs OFF. Selected sync and cross modulation also remain active regardless of output levels.
+This preserves phase, reset timing and band-limiting history when a source returns to the mix.
+The device may skip an entire voice once its amplitude envelope is fully silent. Noise state
+advances only while noise contributes to the output.
 
 ## Mixer, noise and headroom
 

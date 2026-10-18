@@ -91,8 +91,9 @@ those boundaries, rather than treating every task as requiring every check.
 
 The instruction benchmark uses eight voices at fixed pitches, after warm-up. Its cases are one saw
 with other sources OFF, both VCOs and their subs, and a heavy combination with sync, cross modulation
-and noise. The one-saw case is not the default sound. The heavy case is a selected workload, not an
-exhaustive search across notes, controls and simultaneous device activity.
+and noise. The one-saw case is not the default sound. Both oscillators still advance in that case;
+only one contributes to the output. The heavy case is a selected workload, not an exhaustive search
+across notes, controls and simultaneous device activity.
 
 The displayed block percentages assume stock rendering costs 84,000 instructions and uses 80 % of
 a block, giving an inferred full-block budget of 105,000 instructions. They estimate added load from

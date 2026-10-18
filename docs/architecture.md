@@ -37,8 +37,10 @@ I/O or wait for UI work. Tracks using another machine retain their stock audio b
 
 Voice state is initialized on first use. Trigs do not restart oscillator phase. Once the AMP envelope
 has reached exactly zero and no trig starts the voice, sound generation is skipped and its block is
-cleared. An oscillator mixed off is skipped unless modulation still needs it. Retained phase therefore
-approximates free-running analog oscillators; it does not advance through all silent time.
+cleared. Within an active voice, both oscillators and sub-octaves advance continuously, including
+while their mixer outputs are OFF. Selected sync and cross modulation keep running independently
+of output levels. Mixer changes therefore preserve oscillator phase and band-limiting history.
+The fully silent voice optimization still pauses all oscillator state until rendering resumes.
 
 Live notes on an OB-1 track use last-note priority. Releasing the newest note recalls the most
 recent note still held, with its original velocity and trigger settings, through the stock note-on

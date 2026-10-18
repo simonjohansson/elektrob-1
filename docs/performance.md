@@ -188,3 +188,49 @@ Final firmware SHA-256 values:
 
 OS 1.53 is build/link/patch checked; complete simulator timing is OS 1.54 only. Physical playback,
 USB level matching and hardware CPU timing remain unverified.
+
+## Continuous muted oscillators
+
+The 18 October 2026 correction makes mixer settings affect output gains only. Both oscillators,
+their sub-octave flip-flops and selected modulation paths continue advancing throughout an active
+voice. The fully silent voice path is unchanged. The matched baseline is revision `3398672`, whose
+sound engine is identical to the previously flashed `cde5e99` build.
+
+The linked Digitakt renderer was measured with eight voices at MIDI 60, four warm-up blocks and
+sixteen measured blocks, using m68k-elf GCC 16.2.0, `-mcpu=54455 -O2`, the same dependency revisions,
+and OS 1.54. These counts include parameter decoding and pitch lookup. The corrected OS 1.53
+renderer gives the same counts.
+
+| Eight-voice workload | Before instructions/block | After instructions/block | Change |
+|---|---:|---:|---:|
+| One audible full saw, other outputs OFF | 18,152 | 23,065 | +4,913 (+27.1%) |
+| Default two saws | 24,777 | 24,649 | −128 (−0.5%) |
+| Both sources/subs, SYNC, XMOD and noise | 43,715 | 43,627 | −88 (−0.2%) |
+| Fully silent AMP envelopes | 958 | 958 | 0 |
+
+The extra cost is concentrated in previously skipped oscillators or routing. A separate engine-only
+comparison at fixed C4/G4-area pitches measures +35.9% for one audible full saw, +45.0% for one audible
+triangle, and +78.7% for noise alone with both VCO outputs OFF. These percentages exclude the integration
+and stock track processing. Selected routing continues even if both VCO outputs are muted. Removing
+branches slightly reduces instruction counts when the same work was already running.
+
+A matched complete-firmware simulation on OS 1.54 imposes eight sustained voices while stock track
+processing, scheduling and interrupts continue. Each case covers 100 ms and 149 render periods,
+with the same fresh-boot track state. Timing uses the emulator's 250 MHz MCF54418 cycle model.
+
+| Eight-voice workload | Before modeled busy | After modeled busy | Before worst margin | After worst margin |
+|---|---:|---:|---:|---:|
+| One audible full saw | 76.80% | 80.19% | 24.10% | 20.39% |
+| Default two saws | 81.90% | 81.97% | 18.64% | 18.59% |
+| Selected heavy sound | 97.82% | 97.88% | 2.17% | 2.11% |
+
+All six runs have zero late renders and zero strict violations. The heavy case still has only about
+2% modeled reserve; this does not qualify eight heavy voices for hardware. Instruction counts and
+modeled cycles are distinct: fewer instructions do not guarantee less modeled busy time. These short
+runs are comparisons, not physical CPU measurements, cache/memory timing validation or safe voice limits.
+
+The 240-case maximum-mix headroom suite retains its −4.28 dBFS peak. Six matched static renders
+(one VCO1, one VCO2, default, all sources, heavy and noise-only) are sample-identical before/after.
+Repeated OFF/−3 dB transitions at equal oscillator pitches preserve phase and sub-octave alignment;
+steady mixed levels remain within 0.02 dB across the tested mute durations. Intentional detuning can
+still produce beating and changing cancellation as the oscillator phases evolve.

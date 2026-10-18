@@ -217,6 +217,25 @@ static void parity(const struct ob1_knobs *knobs, int semitones1, int semitones2
         assert(blocks[i] == 0x5a5a5a5a);  /* Other machines retain their audio. */
 }
 
+static void test_silent_voice(void)
+{
+    int32_t blocks[8 * 32];
+    reset();
+    ob1_render(blocks);
+    struct ob1_voice before = voice[0];
+    fw_voice_start = 0;
+    fw_amp_env[1] = 0;
+    memset(blocks, 0x5a, sizeof blocks);
+    ob1_render(blocks);
+    assert(!memcmp(&before, &voice[0], sizeof before));
+    for (int i = 0; i < 32; i++)
+        assert(blocks[i] == 0);
+    fw_voice_start = 1;
+    ob1_render(blocks);
+    assert(voice[0].vco1.vco.phase != before.vco1.vco.phase);
+    assert(voice[0].vco2.vco.phase != before.vco2.vco.phase);
+}
+
 int main(void)
 {
     static const uint8_t mixer_page[8] = {8, 9, 10, CM_SRC_BLANK, 11, 12, 13, 14};
@@ -295,6 +314,7 @@ int main(void)
         }
     test_waveform_graphics();
     test_level_graphics();
+    test_silent_voice();
     puts("Digitakt controls: layout, defaults, ranges, independent pitch and 324 mixer/routing audio cases passed");
     return 0;
 }
