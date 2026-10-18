@@ -5,7 +5,7 @@
  * hot loop has no calls and no branch on the shape. */
 #define HOT static inline __attribute__((always_inline))
 
-void dsp_vco_set(struct dsp_vco *v, uint32_t inc)
+void ob1_dsp_vco_set(struct dsp_vco *v, uint32_t inc)
 {
     uint32_t i = inc, k = 0;
     while (i >= 1u << 16) {                     /* at most 16 shifts, once a block */
@@ -39,12 +39,12 @@ HOT void blep(int32_t *prev, int32_t *cur, int32_t t, int32_t h, int32_t m)
     }
 }
 
-void dsp_blep(int32_t *prev, int32_t *cur, int32_t t, int32_t h, int32_t m)
+void ob1_dsp_blep(int32_t *prev, int32_t *cur, int32_t t, int32_t h, int32_t m)
 {
     blep(prev, cur, t, h, m);
 }
 
-void dsp_shape_saw(struct dsp_shape *sh, int32_t g)
+void ob1_dsp_shape_saw(struct dsp_shape *sh, int32_t g)
 {
     sh->pulse = 0;
     sh->g = g;
@@ -53,7 +53,7 @@ void dsp_shape_saw(struct dsp_shape *sh, int32_t g)
     sh->dc = (g - 32768) >> 2;                  /* the mean, (g - 1) / 4 */
 }
 
-void dsp_shape_pulse(struct dsp_shape *sh, uint32_t width)
+void ob1_dsp_shape_pulse(struct dsp_shape *sh, uint32_t width)
 {
     sh->pulse = 1;
     sh->g = 0;
@@ -171,14 +171,14 @@ HOT int32_t tick(struct dsp_osc *o, const struct dsp_shape *sh, int pulse, int32
     return reset;
 }
 
-void dsp_osc_block(struct dsp_osc *o, uint32_t inc, const struct dsp_shape *sh, int32_t *out, int32_t *sub,
+void ob1_dsp_osc_block(struct dsp_osc *o, uint32_t inc, const struct dsp_shape *sh, int32_t *out, int32_t *sub,
                    int n)
 {
     struct dsp_osc a;                           /* a local copy: out and sub cannot alias it, so it stays in
                                                    registers through the loop */
     struct dsp_shape h = *sh;
     int i;
-    dsp_vco_set(&o->vco, inc > DSP_INC_MAX ? DSP_INC_MAX : inc);
+    ob1_dsp_vco_set(&o->vco, inc > DSP_INC_MAX ? DSP_INC_MAX : inc);
     a = *o;
     if (h.pulse)
         for (i = 0; i < n; i++)
@@ -192,18 +192,18 @@ void dsp_osc_block(struct dsp_osc *o, uint32_t inc, const struct dsp_shape *sh, 
     *o = a;
 }
 
-void dsp_saw_type(struct dsp_osc *o, uint32_t inc, int32_t g, int32_t *out, int32_t *sub, int n)
+void ob1_dsp_saw_type(struct dsp_osc *o, uint32_t inc, int32_t g, int32_t *out, int32_t *sub, int n)
 {
     struct dsp_shape sh;
-    dsp_shape_saw(&sh, g);
-    dsp_osc_block(o, inc, &sh, out, sub, n);
+    ob1_dsp_shape_saw(&sh, g);
+    ob1_dsp_osc_block(o, inc, &sh, out, sub, n);
 }
 
-void dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *out, int32_t *sub, int n)
+void ob1_dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *out, int32_t *sub, int n)
 {
     struct dsp_shape sh;
-    dsp_shape_pulse(&sh, width);
-    dsp_osc_block(o, inc, &sh, out, sub, n);
+    ob1_dsp_shape_pulse(&sh, width);
+    ob1_dsp_osc_block(o, inc, &sh, out, sub, n);
 }
 
 /* 2^((k - 32) / 32), Q14, k 0-64: round(16384 * 2 ** ((k - 32) / 32)). The cross mod uses k 32-64. */
@@ -241,16 +241,16 @@ HOT uint32_t xmod_scale(uint32_t v, uint32_t u, int32_t sh, uint32_t max)
 #define XMOD_U(x)   ((((uint32_t)((x) + 32768) * DSP_XMOD_DEPTH_Q6) >> 5) + \
                      (DSP_XMOD_OCT * 65536u - DSP_XMOD_DEPTH_Q6 * 1024u))
 
-uint32_t dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max)
+uint32_t ob1_dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max)
 {
     return xmod_scale(v, XMOD_U(x), sh, max);
 }
 
-/* dsp_pair's loop, compiled once for each pair of waveshapes. */
+/* ob1_dsp_pair's loop, compiled once for each pair of waveshapes. */
 HOT void pair(struct dsp_osc *o1, struct dsp_osc *o2, const struct dsp_shape *sh1, const struct dsp_shape *sh2,
               int p1, int p2, int mod, int32_t *f1, int32_t *s1, int32_t *f2, int32_t *s2, int n)
 {
-    struct dsp_osc a = *o1, b = *o2;            /* local copies, as in dsp_osc_block */
+    struct dsp_osc a = *o1, b = *o2;            /* local copies, as in ob1_dsp_osc_block */
     struct dsp_shape h1 = *sh1, h2 = *sh2;
     uint32_t base = a.vco.inc >> 14, rbase = a.vco.rinc;
     int32_t reset;
@@ -278,11 +278,11 @@ HOT void pair(struct dsp_osc *o1, struct dsp_osc *o2, const struct dsp_shape *sh
     *o2 = b;
 }
 
-void dsp_pair(struct dsp_osc *o1, struct dsp_osc *o2, uint32_t inc1, uint32_t inc2, const struct dsp_shape *sh1,
+void ob1_dsp_pair(struct dsp_osc *o1, struct dsp_osc *o2, uint32_t inc1, uint32_t inc2, const struct dsp_shape *sh1,
               const struct dsp_shape *sh2, int mod, int32_t *f1, int32_t *s1, int32_t *f2, int32_t *s2, int n)
 {
-    dsp_vco_set(&o1->vco, inc1 > DSP_INC_MAX ? DSP_INC_MAX : inc1);
-    dsp_vco_set(&o2->vco, inc2 > DSP_INC_MAX ? DSP_INC_MAX : inc2);
+    ob1_dsp_vco_set(&o1->vco, inc1 > DSP_INC_MAX ? DSP_INC_MAX : inc1);
+    ob1_dsp_vco_set(&o2->vco, inc2 > DSP_INC_MAX ? DSP_INC_MAX : inc2);
     if (!sh1->pulse && sh1->g == 32768) {
         if (sh2->pulse)
             pair(o1, o2, sh1, sh2, 2, 1, mod, f1, s1, f2, s2, n);
@@ -303,7 +303,7 @@ HOT uint32_t noise_next(uint32_t x)
     return x * 1664525u + 1013904223u;
 }
 
-void dsp_noise(uint32_t *state, int32_t *out, int n)
+void ob1_dsp_noise(uint32_t *state, int32_t *out, int n)
 {
     uint32_t x = *state;
     int i;
@@ -312,7 +312,7 @@ void dsp_noise(uint32_t *state, int32_t *out, int n)
     *state = x;
 }
 
-/* dsp_voice_out's loop, compiled with and without the noise, and for VCO1's two sources alone (four: false)
+/* ob1_dsp_voice_out's loop, compiled with and without the noise, and for VCO1's two sources alone (four: false)
  * or all four: fewer live values, fewer spilled to the stack. */
 HOT void voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t gain[4], uint32_t *noise,
                    int32_t ng, int32_t *out, int n, int with_noise, int four)
@@ -342,7 +342,7 @@ HOT void voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t
     *noise = z;
 }
 
-void dsp_voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t gain[4], uint32_t *noise,
+void ob1_dsp_voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t gain[4], uint32_t *noise,
                    int32_t noise_gain, int32_t *out, int n)
 {
     int four = gain[2] || gain[3];

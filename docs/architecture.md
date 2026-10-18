@@ -112,7 +112,8 @@ increments; host pitch calculations do not prove exact device pitch behavior.
 
 The SRC page borrows the stock parameter machinery while supplying names, text and custom graphics.
 Controls that would otherwise open a sample list or use unsuitable stock ranges need explicit page
-behavior. Page defaults alone do not replace the machine-switch initialization described above.
+behavior. Machine-pages applies the declared defaults on a machine switch and updates the live engine;
+the OB-1 switch callback only clears its held-note state.
 
 Both pages read the native processed values, including locks and LFO modulation. The mixer controls
 occupy the seven additional sound slots supplied by machine-pages. Version-4 saved sounds require

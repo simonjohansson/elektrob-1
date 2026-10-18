@@ -57,8 +57,8 @@ static double render(int32_t g, int32_t *x)
     int32_t settle[RATE];
     double mean = 0;
     int i;
-    dsp_saw_type(&o, step(F0), g, settle, sub, RATE);
-    dsp_saw_type(&o, step(F0), g, x, sub, N);
+    ob1_dsp_saw_type(&o, step(F0), g, settle, sub, RATE);
+    ob1_dsp_saw_type(&o, step(F0), g, x, sub, N);
     for (i = 0; i < N; i++)
         mean += x[i];
     return mean / N / 32768;
@@ -69,7 +69,7 @@ static void test_vco_resets(void)
     struct dsp_vco v = {0};
     uint32_t inc = step(1000);
     int i, resets = 0;
-    dsp_vco_set(&v, inc);
+    ob1_dsp_vco_set(&v, inc);
     for (i = 0; i < RATE; i++) {
         int32_t t = dsp_vco_step(&v);
         if (t >= 0) {
@@ -89,7 +89,7 @@ static void test_vco_crossing_position(void)
         struct dsp_vco v = {0};
         uint32_t inc = step(f);
         int i;
-        dsp_vco_set(&v, inc);
+        ob1_dsp_vco_set(&v, inc);
         for (i = 0; i < 1000; i++) {
             int32_t t;
             seed = seed * 1664525u + 1013904223u;
@@ -152,8 +152,8 @@ static double render_pulse(uint32_t width, int32_t *x)
     int32_t settle[RATE];
     double mean = 0;
     int i;
-    dsp_pulse_type(&o, step(F0), width, settle, sub, RATE);
-    dsp_pulse_type(&o, step(F0), width, x, sub, N);
+    ob1_dsp_pulse_type(&o, step(F0), width, settle, sub, RATE);
+    ob1_dsp_pulse_type(&o, step(F0), width, x, sub, N);
     for (i = 0; i < N; i++)
         mean += x[i];
     return mean / N / 32768;
@@ -214,7 +214,7 @@ static void test_sub_follows_resets(void)
     struct dsp_osc o = {{0}, 0, 32767, 32767};
     int32_t x[RATE];
     int i, flips = 0;
-    dsp_saw_type(&o, step(1000), 32768, x, sub, RATE);
+    ob1_dsp_saw_type(&o, step(1000), 32768, x, sub, RATE);
     for (i = 1; i < RATE; i++)
         if ((sub[i] > 0) != (sub[i - 1] > 0))
             flips++;
@@ -229,14 +229,14 @@ static void test_sync(void)
     struct dsp_shape saw;
     static int32_t f1[RATE], s1[RATE], f2[RATE], s2[RATE];
     double floor_sync;
-    dsp_shape_saw(&saw, 32768);
-    dsp_pair(&o1, &o2, step(F0), step(1.5 * F0), &saw, &saw, DSP_SYNC, f1, s1, f2, s2, RATE);
-    dsp_pair(&o1, &o2, step(F0), step(1.5 * F0), &saw, &saw, DSP_SYNC, f1, s1, f2, s2, N);
+    ob1_dsp_shape_saw(&saw, 32768);
+    ob1_dsp_pair(&o1, &o2, step(F0), step(1.5 * F0), &saw, &saw, DSP_SYNC, f1, s1, f2, s2, RATE);
+    ob1_dsp_pair(&o1, &o2, step(F0), step(1.5 * F0), &saw, &saw, DSP_SYNC, f1, s1, f2, s2, N);
     spectrum(f2);
     floor_sync = alias_floor(10000);
     printf("sync at %d Hz, VCO2 at 1.5x: aliases below 10 kHz %.1f dB\n", F0, floor_sync);
     assert(floor_sync < -40);
-    dsp_pair(&o1, &o2, step(F0), step(1.5 * F0), &saw, &saw, 0, f1, s1, f2, s2, N);
+    ob1_dsp_pair(&o1, &o2, step(F0), step(1.5 * F0), &saw, &saw, 0, f1, s1, f2, s2, N);
     spectrum(f2);
     assert(alias_floor(10000) > -6);            /* 2850 Hz, between F0's harmonics */
 }
@@ -248,8 +248,8 @@ static void test_sync_clocks_sub(void)
     struct dsp_shape saw;
     static int32_t f1[RATE], s1[RATE], f2[RATE], s2[RATE];
     int i, flips = 0, resets = 0;
-    dsp_shape_saw(&saw, 32768);
-    dsp_pair(&o1, &o2, step(1000), step(750), &saw, &saw, DSP_SYNC, f1, s1, f2, s2, RATE);
+    ob1_dsp_shape_saw(&saw, 32768);
+    ob1_dsp_pair(&o1, &o2, step(1000), step(750), &saw, &saw, DSP_SYNC, f1, s1, f2, s2, RATE);
     for (i = 1; i < RATE; i++) {
         flips += (s2[i] > 0) != (s2[i - 1] > 0);
         resets += (s1[i] > 0) != (s1[i - 1] > 0);  /* VCO1's sub flips at each VCO1 reset */
@@ -265,10 +265,10 @@ static void test_sync_whole_multiple(void)
     static int32_t f1[RATE], s1[RATE], f2[RATE], s2[RATE];
     struct dsp_shape saw;
     int m, i, flips, resets;
-    dsp_shape_saw(&saw, 32768);
+    ob1_dsp_shape_saw(&saw, 32768);
     for (m = 1; m <= 2; m++) {
         struct dsp_osc o1 = {{0}, 0, 32767, 32767}, o2 = {{0}, 0, 32767, 32767};
-        dsp_pair(&o1, &o2, step(440), step(440) * m, &saw, &saw, DSP_SYNC, f1, s1, f2, s2, RATE);
+        ob1_dsp_pair(&o1, &o2, step(440), step(440) * m, &saw, &saw, DSP_SYNC, f1, s1, f2, s2, RATE);
         for (i = 1, flips = resets = 0; i < RATE; i++) {
             flips += (s2[i] > 0) != (s2[i - 1] > 0);
             resets += (s1[i] > 0) != (s1[i - 1] > 0);
@@ -282,9 +282,9 @@ static void test_xmod_scale(void)
 {
     int32_t x;
     for (x = -32768; x < 32768; x += 97)
-        assert(fabs(dsp_xmod_scale(65535, x, -14, 0xffffffffu) / (65535 / 16384.0 * 16384 *
+        assert(fabs(ob1_dsp_xmod_scale(65535, x, -14, 0xffffffffu) / (65535 / 16384.0 * 16384 *
                     pow(2, (DSP_XMOD_DEPTH_Q6 / 64.0) * (double)x / 32768)) - 1) < 0.001);
-    assert(dsp_xmod_scale(65535, 32767, 0, DSP_INC_MAX) == DSP_INC_MAX);
+    assert(ob1_dsp_xmod_scale(65535, 32767, 0, DSP_INC_MAX) == DSP_INC_MAX);
 }
 
 /* The reference's slow-ramp full-depth mean reset ratio is 2.78; test without the pitch clamp. */
@@ -294,8 +294,8 @@ static void test_xmod_pitch(void)
     struct dsp_shape saw;
     static int32_t f1[RATE], s1[RATE], f2[RATE], s2[RATE];
     int i, flips = 0;
-    dsp_shape_saw(&saw, 32768);
-    dsp_pair(&o1, &o2, step(200), step(2), &saw, &saw, DSP_XMOD, f1, s1, f2, s2, RATE);
+    ob1_dsp_shape_saw(&saw, 32768);
+    ob1_dsp_pair(&o1, &o2, step(200), step(2), &saw, &saw, DSP_XMOD, f1, s1, f2, s2, RATE);
     for (i = 1; i < RATE; i++)
         flips += (s1[i] > 0) != (s1[i - 1] > 0);    /* VCO1's resets */
     printf("xmod: VCO1 at %d resets a second, against 556\n", flips);
@@ -310,8 +310,8 @@ static void test_xmod_clamp(void)
     struct dsp_shape saw;
     static int32_t f1[RATE / 10], s1[RATE / 10], f2[RATE / 10], s2[RATE / 10];
     int i;
-    dsp_shape_saw(&saw, 32768);
-    dsp_pair(&o1, &o2, step(2000), step(50), &saw, &saw, DSP_XMOD, f1, s1, f2, s2, RATE / 10);
+    ob1_dsp_shape_saw(&saw, 32768);
+    ob1_dsp_pair(&o1, &o2, step(2000), step(50), &saw, &saw, DSP_XMOD, f1, s1, f2, s2, RATE / 10);
     for (i = 0; i < RATE / 10; i++)
         assert(abs(f1[i]) < 49152 && abs(s1[i]) < 49152);
 }
@@ -323,7 +323,7 @@ static void test_noise(void)
     uint32_t state = 1;
     double mean = 0, power = 0, corr = 0;
     int i;
-    dsp_noise(&state, x, RATE);
+    ob1_dsp_noise(&state, x, RATE);
     for (i = 0; i < RATE; i++) {
         mean += x[i] / 32768.0;
         power += pow(x[i] / 32768.0, 2);
@@ -347,7 +347,7 @@ static void test_saw_type_aliasing(void)
     spectrum(x);
     blep = alias_floor(10000);
     blep_all = alias_floor(RATE / 2);
-    dsp_vco_set(&v, step(F0));
+    ob1_dsp_vco_set(&v, step(F0));
     for (i = 0; i < N; i++) {
         dsp_vco_step(&v);
         x[i] = dsp_saw(v.phase);
@@ -367,8 +367,8 @@ static void test_sync_ratio_boundaries(void)
     int multiple, side, shape, i, resets;
     int32_t f1, s1, f2, s2;
     struct dsp_shape saw, square;
-    dsp_shape_saw(&saw, 32768);
-    dsp_shape_pulse(&square, 0x80000000u);
+    ob1_dsp_shape_saw(&saw, 32768);
+    ob1_dsp_shape_pulse(&square, 0x80000000u);
     for (multiple = 1; multiple <= 2; multiple++)
         for (side = -1; side <= 1; side++)
             for (shape = 0; shape < 2; shape++) {
@@ -377,7 +377,7 @@ static void test_sync_ratio_boundaries(void)
                 double energy = 0;
                 resets = 0;
                 for (i = 0; i < 128 * 200; i++) {
-                    dsp_pair(&a, &b, inc, inc * multiple + side * (int32_t)(inc / 512),
+                    ob1_dsp_pair(&a, &b, inc, inc * multiple + side * (int32_t)(inc / 512),
                              &saw, shape ? &square : &saw, DSP_SYNC, &f1, &s1, &f2, &s2, 1);
                     resets += a.sub != previous1;
                     previous1 = a.sub;
@@ -393,11 +393,11 @@ static void test_sync_ratio_boundaries(void)
 static void test_blep_full_jump(void)
 {
     int32_t prev = 0, cur = 32767;
-    dsp_blep(&prev, &cur, 0, 65536, 0);
+    ob1_dsp_blep(&prev, &cur, 0, 65536, 0);
     assert(prev == 0 && cur == -1);
     prev = 0;
     cur = -32768;
-    dsp_blep(&prev, &cur, 0, -65536, 0);
+    ob1_dsp_blep(&prev, &cur, 0, -65536, 0);
     assert(prev == 0 && cur == 0);
 }
 
@@ -412,10 +412,10 @@ static void test_full_saw_fast_path(void)
         struct dsp_osc other_vco = a;
         int32_t fast[32], fs[32], generic[32], gs[32], other[32], os[32];
         int block, i;
-        dsp_shape_saw(&saw, 32768);
+        ob1_dsp_shape_saw(&saw, 32768);
         for (block = 0; block < 100; block++) {
-            dsp_osc_block(&a, increments[k], &saw, fast, fs, 32);
-            dsp_pair(&b, &other_vco, increments[k], increments[k], &saw, &saw,
+            ob1_dsp_osc_block(&a, increments[k], &saw, fast, fs, 32);
+            ob1_dsp_pair(&b, &other_vco, increments[k], increments[k], &saw, &saw,
                      0, generic, gs, other, os, 32);
             for (i = 0; i < 32; i++) { assert(fast[i] == generic[i]); assert(fs[i] == gs[i]); }
         }
@@ -431,17 +431,17 @@ static void test_full_saw_pair_golden(void)
     static const uint32_t expected[4][3] = {{0x8f88db6au,0xc1f19a2cu,0xeeb379dau},{0x6b86055fu,0x6486e294u,0x56779a0bu},{0xe7713475u,0xbfc48d35u,0x88efe863u},{0xec36dd62u,0x4fb6060cu,0x39bb8b30u}};
     struct dsp_shape carrier, source;
     int mod, shape, block, i, j;
-    dsp_shape_saw(&carrier, 32768);
+    ob1_dsp_shape_saw(&carrier, 32768);
     for (mod = 0; mod < 4; mod++)
         for (shape = 0; shape < 3; shape++) {
             struct dsp_osc a = {{0}, 0, 32767, 32767}, b = a;
             int32_t output[4][32];
             uint32_t hash = 2166136261u;
             a.vco.phase = 0x12345678u; b.vco.phase = 0x98765432u;
-            if (!shape) dsp_shape_saw(&source, -12343);
-            else dsp_shape_pulse(&source, shape == 1 ? 0x80000000u : 287762809u);
+            if (!shape) ob1_dsp_shape_saw(&source, -12343);
+            else ob1_dsp_shape_pulse(&source, shape == 1 ? 0x80000000u : 287762809u);
             for (block = 0; block < 100; block++) {
-                dsp_pair(&a, &b, increments[shape][0], increments[shape][1], &carrier, &source,
+                ob1_dsp_pair(&a, &b, increments[shape][0], increments[shape][1], &carrier, &source,
                          mod, output[0], output[1], output[2], output[3], 32);
                 for (i = 0; i < 32; i++)
                     for (j = 0; j < 4; j++)

@@ -1,11 +1,11 @@
 """Download the current supported Digitakt mk1 OS from Elektron."""
-import io
 import re
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 from urllib.request import Request, urlopen
-from zipfile import ZipFile
+
+from elekloader import formats
 
 
 PAGE = 'https://www.elektron.se/support-downloads/digitakt'
@@ -50,12 +50,10 @@ def fetch(url):
 
 
 def firmware_payload(archive, version):
-    filename = f'Digitakt_OS{version}.syx'
-    with ZipFile(io.BytesIO(archive)) as zipped:
-        files = [p for p in zipped.namelist() if Path(p).name == filename and not p.startswith('__MACOSX/')]
-        if len(files) != 1:
-            raise ValueError(f'Expected exactly one {filename} in official archive')
-        return zipped.read(files[0])
+    stock, device, release = formats.load(archive)
+    if device.key != 'digitakt-mk1' or release.version != version:
+        raise ValueError(f'Expected Digitakt mk1 OS {version}; found {device.name} OS {release.version}')
+    return stock.raw
 
 
 def main():

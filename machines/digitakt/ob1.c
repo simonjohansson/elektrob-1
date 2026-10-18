@@ -199,7 +199,7 @@ static int32_t draw_type(void *bmp, int32_t x, int32_t y, int32_t value, int32_t
 {
     uint32_t rows[KNOB_PX];
     (void)flag;
-    knob_wave(family(value) ? 127 : 63, rows);
+    ob1_knob_wave(family(value) ? 127 : 63, rows);
     return draw_rows(bmp, x, y, rows);
 }
 
@@ -208,7 +208,7 @@ static int32_t draw_wave(void *bmp, int32_t x, int32_t y, int32_t value, int32_t
     uint32_t rows[KNOB_PX];
     (void)flag;
     /* The frame callback supplies the family from the displayed sound, including held-step locks. */
-    knob_wave(wave(0, value), rows);
+    ob1_knob_wave(wave(0, value), rows);
     return draw_rows(bmp, x, y, rows);
 }
 
@@ -263,7 +263,7 @@ void ob1_draw(void *bmp, void *ctrl)
         int32_t family = ob1_view_value(view, 134 + 4 * oscillator, &locked);
         int32_t position = ob1_view_value(view, 135 + 4 * oscillator, &locked);
         uint32_t rows[KNOB_PX];
-        knob_wave(wave(family, position), rows);
+        ob1_knob_wave(wave(family, position), rows);
         draw_rows(bmp, 102, 34 - 27 * oscillator, rows);
     }
 }
@@ -273,7 +273,7 @@ static int32_t draw_frq(void *bmp, int32_t x, int32_t y, int32_t value, int32_t 
     uint32_t rows[KNOB_PX];
     int32_t v = value >> 8;
     (void)flag;
-    knob_frq(v < 0 ? 0 : v > 63 ? 63 : v, rows);
+    ob1_knob_frq(v < 0 ? 0 : v > 63 ? 63 : v, rows);
     return draw_rows(bmp, x, y, rows);
 }
 
@@ -281,7 +281,7 @@ static int32_t draw_xmod(void *bmp, int32_t x, int32_t y, int32_t value, int32_t
 {
     uint32_t rows[KNOB_PX];
     (void)flag;
-    knob_mod(zone(value, 2) * DSP_XMOD, rows);
+    ob1_knob_mod(zone(value, 2) * DSP_XMOD, rows);
     return draw_rows(bmp, x, y, rows);
 }
 
@@ -289,7 +289,7 @@ static int32_t draw_sync(void *bmp, int32_t x, int32_t y, int32_t value, int32_t
 {
     uint32_t rows[KNOB_PX];
     (void)flag;
-    knob_mod(zone(value, 2) * DSP_SYNC, rows);
+    ob1_knob_mod(zone(value, 2) * DSP_SYNC, rows);
     return draw_rows(bmp, x, y, rows);
 }
 
@@ -310,17 +310,11 @@ static int32_t draw_level(void *bmp, int32_t x, int32_t y, int32_t value, int32_
     return draw_rows(bmp, x, y, rows);
 }
 
-/* Defaults must reach both saved sound words and the live engine on a machine switch. */
 static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
 {
     (void)from;
+    (void)sound;
     ob1_notes_clear(track);
-    for (int k = 0; k < K_COUNT; k++) {
-        const struct cm_knob *p = k < 8 ? &ob1_page.base.knob[k] : &ob1_page.extra[k - 8];
-        int slot = k < 8 ? 17 + k : 46 + k - 8;
-        *(uint16_t *)(sound + 20 + 2 * slot) = (uint16_t)p->def;
-        fw_set_param(p->def, track, slot);
-    }
 }
 
 static const struct cm_src_page ob1_pages[] = {

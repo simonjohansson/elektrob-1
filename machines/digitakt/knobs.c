@@ -32,7 +32,7 @@ static int32_t shape_at(const struct dsp_shape *sh, int32_t p)
     return s > 0 ? s : (sh->g * s) >> 15;
 }
 
-void knob_wave(int32_t w, uint32_t *rows)
+void ob1_knob_wave(int32_t w, uint32_t *rows)
 {
     struct dsp_shape sh;
     int32_t v[KNOB_PX], lo = 32767, hi = -32768, c, r, prev = 0;
@@ -52,7 +52,7 @@ void knob_wave(int32_t w, uint32_t *rows)
     }
 }
 
-void knob_frq(int32_t f, uint32_t *rows)
+void ob1_knob_frq(int32_t f, uint32_t *rows)
 {
     int32_t st = f - 32, x = 8 + (st * 8 + (st < 0 ? -16 : 16)) / 32, c, k;   /* -32 to +31 over columns 0-16 */
     x = x < 0 ? 0 : x > 16 ? 16 : x;
@@ -82,7 +82,7 @@ static const uint32_t noise_px[3][KNOB_PX] = {
     {0x00000, 0x00600, 0x00e00, 0x00a03, 0x18ac3, 0x08bc3, 0x0eb43, 0x0eb43, 0x0eb7f, 0x0fb7f, 0x01b7f, 0x00378, 0x00378, 0x00378, 0x00060, 0x00060, 0x00000},   /* HI */
 };
 
-void knob_mod(int32_t m, uint32_t *rows)
+void ob1_knob_mod(int32_t m, uint32_t *rows)
 {
     int r;
     m = m < 0 ? 0 : m > 3 ? 3 : m;
@@ -90,7 +90,7 @@ void knob_mod(int32_t m, uint32_t *rows)
         rows[r] = mod_px[m][r];
 }
 
-void knob_noise(int32_t n, uint32_t *rows)
+void ob1_knob_noise(int32_t n, uint32_t *rows)
 {
     int r;
     n = n < 0 ? 0 : n > 2 ? 2 : n;
@@ -98,7 +98,7 @@ void knob_noise(int32_t n, uint32_t *rows)
         rows[r] = noise_px[n][r];
 }
 
-void knob_mix(int32_t m, uint32_t *rows)
+void ob1_knob_mix(int32_t m, uint32_t *rows)
 {
     static const uint32_t letters[5] = {0x07038, 0x04028, 0x06028, 0x04028, 0x04038};   /* F and O */
     static const int top[3] = {10, 6, 1};       /* each fader's top row: OFF, -3 dB, ON */
