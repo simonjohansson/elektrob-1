@@ -146,6 +146,33 @@ static void test_waveform_graphics(void)
     assert(!memcmp(pixels, untouched, sizeof(pixels)));
 }
 
+static void test_level_graphics(void)
+{
+    static const int controls[] = {K_FND1, K_OCT1, K_FND2, K_OCT2, K_NOIS};
+    uint8_t pixels[64][128];
+    char buf[16];
+    static const char *const labels[] = {"OFF", "-3DB", "ON"};
+    for (unsigned k = 0; k < sizeof(controls) / sizeof(controls[0]); k++) {
+        const struct cm_knob *p = &ob1_page.extra[controls[k] - 8];
+        assert(p->draw == draw_level && (p->flags & CM_DRAW));
+        for (int value = 0; value <= 127; value++) {
+            int state = (value >= 43) + (value >= 86);
+            int top = 12 - 6 * state;
+            memset(pixels, 0, sizeof pixels);
+            p->draw(pixels, 20, 20, value << 8, 0);
+            p->fmt(buf, value << 8, 0, 69);
+            assert(!strcmp(buf, labels[state]));
+            for (int r = 0; r < KNOB_PX; r++) {
+                /* The handle extends beyond the slot only at its selected position. */
+                assert(pixels[20 + 16 - r][25] == (r >= top && r < top + 5));
+                assert(pixels[20 + 16 - r][29] ==
+                       (r == 0 || r == 16 || (r >= top && r < top + 5 && r != top + 2)));
+                assert(pixels[20 + 16 - r][37] == (r == 2 || r == 8 || r == 14));
+            }
+        }
+    }
+}
+
 static void param(int k, int value)
 {
     fw_set_param(value, 0, k < 8 ? 17 + k : 46 + k - 8);
@@ -267,6 +294,7 @@ int main(void)
             parity(&knobs, 0, 0, 0, 0);
         }
     test_waveform_graphics();
+    test_level_graphics();
     puts("Digitakt controls: layout, defaults, ranges, independent pitch and 324 mixer/routing audio cases passed");
     return 0;
 }

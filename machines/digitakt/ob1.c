@@ -286,11 +286,20 @@ static int32_t draw_sync(void *bmp, int32_t x, int32_t y, int32_t value, int32_t
     return draw_rows(bmp, x, y, rows);
 }
 
-static int32_t draw_noise(void *bmp, int32_t x, int32_t y, int32_t value, int32_t flag)
+static int32_t draw_level(void *bmp, int32_t x, int32_t y, int32_t value, int32_t flag)
 {
     uint32_t rows[KNOB_PX];
     (void)flag;
-    knob_noise(zone(value, 3), rows);
+    int32_t top = 12 - 6 * zone(value, 3);
+    /* A vertical slot, with ON above the centre -3 dB position and OFF below it. */
+    for (int r = 0; r < KNOB_PX; r++)
+        rows[r] = r == 0 || r == 16 ? 0x00fe0 : 0x00820;
+    for (int r = top; r < top + 5; r++)
+        rows[r] |= 0x01ff0;
+    rows[top + 2] &= ~0x00fe0u;               /* the handle's grip */
+    rows[2] |= 7;
+    rows[8] |= 7;
+    rows[14] |= 7;
     return draw_rows(bmp, x, y, rows);
 }
 
@@ -332,13 +341,13 @@ static const struct cm_ui32 ob1_page = {
         },
     },
     .extra = {
-        CONTROL("FND1", "VCO1 fund level", 127, ZONE_AT(2, 3), level_text, 0, 0),
-        CONTROL("OCT1", "VCO1 sub octave", 127, 0, level_text, 0, 0),
+        CONTROL("FND1", "VCO1 fund level", 127, ZONE_AT(2, 3), level_text, draw_level, CM_DRAW),
+        CONTROL("OCT1", "VCO1 sub octave", 127, 0, level_text, draw_level, CM_DRAW),
         CONTROL("XMOD", "Cross mod", 127, 0, switch_text, draw_xmod, CM_DRAW),
-        CONTROL("FND2", "VCO2 fund level", 127, ZONE_AT(1, 3), level_text, 0, 0),
-        CONTROL("OCT2", "VCO2 sub octave", 127, 0, level_text, 0, 0),
+        CONTROL("FND2", "VCO2 fund level", 127, ZONE_AT(1, 3), level_text, draw_level, CM_DRAW),
+        CONTROL("OCT2", "VCO2 sub octave", 127, 0, level_text, draw_level, CM_DRAW),
         CONTROL("SYNC", "VCO2 sync", 127, 0, switch_text, draw_sync, CM_DRAW),
-        CONTROL("NOIS", "Noise level", 127, 0, level_text, draw_noise, CM_DRAW),
+        CONTROL("NOIS", "Noise level", 127, 0, level_text, draw_level, CM_DRAW),
     },
     .page_count = 2,
     .pages = ob1_pages,
