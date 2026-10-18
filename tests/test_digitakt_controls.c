@@ -74,7 +74,7 @@ static void put_pointer(void *object, int offset, const void *pointer)
 static void waveform_pixels(uint8_t pixels[64][128], int oscillator, int shape)
 {
     uint32_t rows[KNOB_PX];
-    knob_wave(shape, rows);
+    ob1_knob_wave(shape, rows);
     for (int r = 0; r < KNOB_PX; r++)
         for (int c = 0; c < KNOB_PX; c++)
             assert(pixels[34 - 27 * oscillator + 16 - r][103 + c] == ((rows[r] >> (16 - c)) & 1));

@@ -77,9 +77,9 @@ static void test_noise_output(void)
     ob1_voice_init(&v, 12345);
     ob1_voice_init(&split, 12345);
     for (block = 0; block < 4096; block++) {
-        dsp_voice_out(&v.hpf, src, gain, &v.noise, 512, out, 32);
-        dsp_voice_out(&split.hpf, src, gain, &split.noise, 512, twice, 16);
-        dsp_voice_out(&split.hpf, src, gain, &split.noise, 512, twice + 16, 16);
+        ob1_dsp_voice_out(&v.hpf, src, gain, &v.noise, 512, out, 32);
+        ob1_dsp_voice_out(&split.hpf, src, gain, &split.noise, 512, twice, 16);
+        ob1_dsp_voice_out(&split.hpf, src, gain, &split.noise, 512, twice + 16, 16);
         for (i = 0; i < 32; i++) {
             double x = out[i] / 65536.0;
             assert(out[i] == twice[i]);
@@ -91,7 +91,7 @@ static void test_noise_output(void)
     /* The reference's gentle high-frequency rolloff requires correlated white output. */
     assert(lag / energy > 0.28 && lag / energy < 0.34);
     i = v.hpf.noise_lp;
-    dsp_voice_out(&v.hpf, src, gain, &v.noise, 0, out, 32);
+    ob1_dsp_voice_out(&v.hpf, src, gain, &v.noise, 0, out, 32);
     assert(v.hpf.noise_lp == i);
     ob1_voice_render(&v, &k, 0, 0, out);
     assert(v.hpf.noise_lp != i);
@@ -161,7 +161,7 @@ static void test_mix_out(void)
         acc[i] = 10000 + ((i / 24) & 1 ? 20000 : -20000);   /* 1 kHz square riding on DC */
         junk[i] = 65535;
     }
-    dsp_voice_out(&h, src, high, &noise, 0, out, RATE);
+    ob1_dsp_voice_out(&h, src, high, &noise, 0, out, RATE);
     for (i = RATE - 4800; i < RATE; i++)
         tail += out[i];
     assert(fabs(tail / 4800 / 2147483648.0) < 0.001);           /* the DC is gone */
@@ -172,7 +172,7 @@ static void test_mix_out(void)
     for (i = 0; i < 4; i++)
         high[i] = DSP_MIX_HIGH;
     src[1] = src[2] = src[3] = junk;
-    dsp_voice_out(&h, src, high, &noise, DSP_MIX_NOISE_HIGH, out, 64);
+    ob1_dsp_voice_out(&h, src, high, &noise, DSP_MIX_NOISE_HIGH, out, 64);
     for (i = 0; i < 64; i++)
         assert(out[i] == ((i & 1) ? INT32_MAX : INT32_MIN));
 }
@@ -184,7 +184,7 @@ static void test_wave_mapping_and_xmod_source(void)
     int32_t f1[32], s1[32], f2[32], s2[32], reference[32 * 32];
     uint32_t previous = 0;
     int wave, block, i;
-    dsp_shape_saw(&carrier, 32768);
+    ob1_dsp_shape_saw(&carrier, 32768);
     for (wave = 64; wave < 128; wave++) {
         ob1_shape(&shape, wave);
         assert(shape.pulse && shape.width > previous && shape.width <= 0x80000000u);
@@ -197,7 +197,7 @@ static void test_wave_mapping_and_xmod_source(void)
         struct dsp_osc a = {{0}, 0, 32767, 32767}, b = a;
         ob1_shape(&shape, wave);
         for (block = 0; block < 32; block++) {
-            dsp_pair(&a, &b, step(200), step(2), &carrier, &shape, DSP_XMOD,
+            ob1_dsp_pair(&a, &b, step(200), step(2), &carrier, &shape, DSP_XMOD,
                      f1, s1, f2, s2, 32);
             for (i = 0; i < 32; i++) {
                 if (!wave)
