@@ -1,17 +1,79 @@
 name: test
 
-# The DSP's host tests. Building the .elemod needs the stock OS, which stays off GitHub:
-# `mise run release` builds and releases it where that file is.
 on:
   push:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-      - run: git submodule update --init vendor/elekloader
+        with:
+          submodules: true
       - uses: jdx/mise-action@v2
-      - run: mise run test
+      - name: Host tests
+        id: host
+        run: mise run test
+      - name: Fetch current Digitakt mk1 OS
+        run: mise run firmware:fetch
+      - name: Install cross-toolchain
+        run: mise bootstrap --only packages
+      - name: Build firmware
+        id: firmware
+        run: mise run firmware
+      - name: Prepare emulator
+        id: emulator
+        if: ${{ !cancelled() && steps.host.outcome == 'success' }}
+        run: mise run bootstrap
+      - name: Emulator self-tests
+        if: ${{ !cancelled() && steps.emulator.outcome == 'success' }}
+        run: mise run test:emulator
+      # The image is already built; call the harnesses directly to avoid rebuilding per check.
+      - name: Compiled firmware MIDI integration
+        if: ${{ !cancelled() && steps.firmware.outcome == 'success' && steps.emulator.outcome == 'success' }}
+        run: >-
+          uv run --python "$(mise which python)" --project vendor/digiemu
+          python tests/test_digitakt_midi.py --firmware out/Digitakt_custom.syx --os 1.54
+          --out out/regression/firmware-midi
+      - name: Full emulator regression capture
+        id: capture
+        if: ${{ !cancelled() && steps.firmware.outcome == 'success' && steps.emulator.outcome == 'success' }}
+        run: >-
+          uv run --python "$(mise which python)" --project vendor/digiemu
+          python tools/regression.py firmware --suite all
+          --firmware out/Digitakt_custom.syx --os 1.54 --out out/regression/firmware
+      - name: Emulator reference assertions
+        if: ${{ !cancelled() && steps.capture.outcome == 'success' }}
+        run: >-
+          mise run regression:assert out/regression/firmware
+          --expectations tests/reference/recorded/assertions.json
+      - name: DSP reference regression
+        if: ${{ !cancelled() && steps.host.outcome == 'success' }}
+        run: mise run test:reference
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: regression-results
+          path: |
+            out/regression/**/audio.wav
+            out/regression/**/capture.json
+            out/regression/**/run.json
+            out/regression/**/events.json
+            out/regression/**/setup.json
+            out/regression/**/report.json
+            out/regression/**/midi.json
+            out/regression/**/firmware.log
+            out/regression/**/*.png
+            out/assertions/**/*.json
+          if-no-files-found: ignore
+          retention-days: 7

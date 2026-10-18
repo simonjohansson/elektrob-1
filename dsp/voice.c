@@ -6,7 +6,7 @@ static const int32_t mix_gain[3] = {0, DSP_MIX_LOW * DSP_OUTPUT_GAIN >> 12, DSP_
 static const int32_t noise_gain[3] = {0, ((DSP_MIX_NOISE_LOW * DSP_NOISE_LEVEL) >> 12) * DSP_OUTPUT_GAIN >> 12,
                                       ((DSP_MIX_NOISE_HIGH * DSP_NOISE_LEVEL) >> 12) * DSP_OUTPUT_GAIN >> 12};
 
-/* OB-2 by KBPlugs dense control captures: ramp-half gain and relative level, Q15/Q12. */
+/* Reference dense control captures: ramp-half gain and relative level, Q15/Q12. */
 #define SAW(g, level) {g, {0, ((DSP_MIX_LOW * DSP_OUTPUT_GAIN >> 12) * (level)) >> 12, \
                           ((DSP_MIX_HIGH * DSP_OUTPUT_GAIN >> 12) * (level)) >> 12}}
 static const struct { int32_t g, fund[3]; } saw_shape[64] = {

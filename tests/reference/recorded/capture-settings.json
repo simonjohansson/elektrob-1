@@ -1,0 +1,5062 @@
+{
+  "reference": "reference",
+  "reference_version": {
+    "CFBundleIdentifier": "reference",
+    "CFBundleShortVersionString": "1.0",
+    "CFBundleVersion": "1.0"
+  },
+  "block_size": null,
+  "settle_seconds": 1,
+  "latency_samples": 0,
+  "pilot_passed": true,
+  "baseline": [
+    {
+      "index": 0,
+      "name": "Osc1 Waveform",
+      "value": 0.0,
+      "text": "Triangle / Saw"
+    },
+    {
+      "index": 1,
+      "name": "Osc1 Freq Mod Source",
+      "value": 0.0,
+      "text": "LFO"
+    },
+    {
+      "index": 2,
+      "name": "Osc1 Wave Mod Source",
+      "value": 0.0,
+      "text": "LFO"
+    },
+    {
+      "index": 3,
+      "name": "Osc2 Waveform",
+      "value": 0.0,
+      "text": "Triangle / Saw"
+    },
+    {
+      "index": 4,
+      "name": "Osc2 Freq Mod Source",
+      "value": 0.0,
+      "text": "LFO"
+    },
+    {
+      "index": 5,
+      "name": "Osc2 Wave Mod Source",
+      "value": 0.0,
+      "text": "LFO"
+    },
+    {
+      "index": 6,
+      "name": "VCO Sync",
+      "value": 0.0,
+      "text": "Off"
+    },
+    {
+      "index": 7,
+      "name": "Osc1 Freq",
+      "value": 0.5,
+      "text": "0 ST"
+    },
+    {
+      "index": 8,
+      "name": "Osc1 Freq LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 9,
+      "name": "Osc1 Freq LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 10,
+      "name": "Osc1 Freq LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 11,
+      "name": "Osc1 Freq LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 12,
+      "name": "Osc1 Freq LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 13,
+      "name": "Osc1 Freq LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 14,
+      "name": "Osc1 Freq LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 15,
+      "name": "Osc1 Freq Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 16,
+      "name": "Osc1 Freq Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 17,
+      "name": "Osc1 Freq Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 18,
+      "name": "Osc1 Freq Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 19,
+      "name": "Osc1 Freq Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 20,
+      "name": "Osc1 Freq Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 21,
+      "name": "Osc1 Freq Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 22,
+      "name": "Osc1 Waveform Morph",
+      "value": 1.0,
+      "text": "100/0 %"
+    },
+    {
+      "index": 23,
+      "name": "Osc1 Waveform Morph LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 24,
+      "name": "Osc1 Waveform Morph LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 25,
+      "name": "Osc1 Waveform Morph LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 26,
+      "name": "Osc1 Waveform Morph LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 27,
+      "name": "Osc1 Waveform Morph LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 28,
+      "name": "Osc1 Waveform Morph LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 29,
+      "name": "Osc1 Waveform Morph LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 30,
+      "name": "Osc1 Waveform Morph Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 31,
+      "name": "Osc1 Waveform Morph Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 32,
+      "name": "Osc1 Waveform Morph Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 33,
+      "name": "Osc1 Waveform Morph Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 34,
+      "name": "Osc1 Waveform Morph Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 35,
+      "name": "Osc1 Waveform Morph Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 36,
+      "name": "Osc1 Waveform Morph Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 37,
+      "name": "Osc1 Fine Tune",
+      "value": 0.5,
+      "text": "0 ST"
+    },
+    {
+      "index": 38,
+      "name": "Osc1 Fine Tune LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 39,
+      "name": "Osc1 Fine Tune LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 40,
+      "name": "Osc1 Fine Tune LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 41,
+      "name": "Osc1 Fine Tune LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 42,
+      "name": "Osc1 Fine Tune LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 43,
+      "name": "Osc1 Fine Tune LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 44,
+      "name": "Osc1 Fine Tune LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 45,
+      "name": "Osc1 Fine Tune Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 46,
+      "name": "Osc1 Fine Tune Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 47,
+      "name": "Osc1 Fine Tune Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 48,
+      "name": "Osc1 Fine Tune Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 49,
+      "name": "Osc1 Fine Tune Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 50,
+      "name": "Osc1 Fine Tune Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 51,
+      "name": "Osc1 Fine Tune Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 52,
+      "name": "Osc1 Freq Mod",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 53,
+      "name": "Osc1 Freq Mod LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 54,
+      "name": "Osc1 Freq Mod LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 55,
+      "name": "Osc1 Freq Mod LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 56,
+      "name": "Osc1 Freq Mod LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 57,
+      "name": "Osc1 Freq Mod LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 58,
+      "name": "Osc1 Freq Mod LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 59,
+      "name": "Osc1 Freq Mod LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 60,
+      "name": "Osc1 Freq Mod Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 61,
+      "name": "Osc1 Freq Mod Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 62,
+      "name": "Osc1 Freq Mod Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 63,
+      "name": "Osc1 Freq Mod Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 64,
+      "name": "Osc1 Freq Mod Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 65,
+      "name": "Osc1 Freq Mod Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 66,
+      "name": "Osc1 Freq Mod Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 67,
+      "name": "Osc1 Wave Mod",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 68,
+      "name": "Osc1 Wave Mod LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 69,
+      "name": "Osc1 Wave Mod LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 70,
+      "name": "Osc1 Wave Mod LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 71,
+      "name": "Osc1 Wave Mod LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 72,
+      "name": "Osc1 Wave Mod LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 73,
+      "name": "Osc1 Wave Mod LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 74,
+      "name": "Osc1 Wave Mod LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 75,
+      "name": "Osc1 Wave Mod Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 76,
+      "name": "Osc1 Wave Mod Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 77,
+      "name": "Osc1 Wave Mod Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 78,
+      "name": "Osc1 Wave Mod Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 79,
+      "name": "Osc1 Wave Mod Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 80,
+      "name": "Osc1 Wave Mod Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 81,
+      "name": "Osc1 Wave Mod Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 82,
+      "name": "Osc2 Freq",
+      "value": 0.5,
+      "text": "0 ST"
+    },
+    {
+      "index": 83,
+      "name": "Osc2 Freq LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 84,
+      "name": "Osc2 Freq LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 85,
+      "name": "Osc2 Freq LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 86,
+      "name": "Osc2 Freq LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 87,
+      "name": "Osc2 Freq LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 88,
+      "name": "Osc2 Freq LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 89,
+      "name": "Osc2 Freq LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 90,
+      "name": "Osc2 Freq Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 91,
+      "name": "Osc2 Freq Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 92,
+      "name": "Osc2 Freq Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 93,
+      "name": "Osc2 Freq Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 94,
+      "name": "Osc2 Freq Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 95,
+      "name": "Osc2 Freq Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 96,
+      "name": "Osc2 Freq Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 97,
+      "name": "Osc2 Waveform Morph",
+      "value": 1.0,
+      "text": "100/0 %"
+    },
+    {
+      "index": 98,
+      "name": "Osc2 Waveform Morph LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 99,
+      "name": "Osc2 Waveform Morph LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 100,
+      "name": "Osc2 Waveform Morph LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 101,
+      "name": "Osc2 Waveform Morph LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 102,
+      "name": "Osc2 Waveform Morph LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 103,
+      "name": "Osc2 Waveform Morph LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 104,
+      "name": "Osc2 Waveform Morph LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 105,
+      "name": "Osc2 Waveform Morph Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 106,
+      "name": "Osc2 Waveform Morph Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 107,
+      "name": "Osc2 Waveform Morph Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 108,
+      "name": "Osc2 Waveform Morph Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 109,
+      "name": "Osc2 Waveform Morph Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 110,
+      "name": "Osc2 Waveform Morph Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 111,
+      "name": "Osc2 Waveform Morph Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 112,
+      "name": "Osc2 Fine Tune",
+      "value": 0.49970779064265897,
+      "text": "Calibrated relative unison from current pilot; raw readbacks retained"
+    },
+    {
+      "index": 113,
+      "name": "Osc2 Fine Tune LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 114,
+      "name": "Osc2 Fine Tune LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 115,
+      "name": "Osc2 Fine Tune LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 116,
+      "name": "Osc2 Fine Tune LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 117,
+      "name": "Osc2 Fine Tune LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 118,
+      "name": "Osc2 Fine Tune LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 119,
+      "name": "Osc2 Fine Tune LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 120,
+      "name": "Osc2 Fine Tune Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 121,
+      "name": "Osc2 Fine Tune Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 122,
+      "name": "Osc2 Fine Tune Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 123,
+      "name": "Osc2 Fine Tune Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 124,
+      "name": "Osc2 Fine Tune Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 125,
+      "name": "Osc2 Fine Tune Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 126,
+      "name": "Osc2 Fine Tune Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 127,
+      "name": "Osc2 Freq Mod",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 128,
+      "name": "Osc2 Freq Mod LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 129,
+      "name": "Osc2 Freq Mod LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 130,
+      "name": "Osc2 Freq Mod LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 131,
+      "name": "Osc2 Freq Mod LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 132,
+      "name": "Osc2 Freq Mod LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 133,
+      "name": "Osc2 Freq Mod LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 134,
+      "name": "Osc2 Freq Mod LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 135,
+      "name": "Osc2 Freq Mod Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 136,
+      "name": "Osc2 Freq Mod Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 137,
+      "name": "Osc2 Freq Mod Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 138,
+      "name": "Osc2 Freq Mod Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 139,
+      "name": "Osc2 Freq Mod Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 140,
+      "name": "Osc2 Freq Mod Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 141,
+      "name": "Osc2 Freq Mod Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 142,
+      "name": "Osc2 Wave Mod",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 143,
+      "name": "Osc2 Wave Mod LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 144,
+      "name": "Osc2 Wave Mod LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 145,
+      "name": "Osc2 Wave Mod LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 146,
+      "name": "Osc2 Wave Mod LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 147,
+      "name": "Osc2 Wave Mod LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 148,
+      "name": "Osc2 Wave Mod LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 149,
+      "name": "Osc2 Wave Mod LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 150,
+      "name": "Osc2 Wave Mod Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 151,
+      "name": "Osc2 Wave Mod Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 152,
+      "name": "Osc2 Wave Mod Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 153,
+      "name": "Osc2 Wave Mod Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 154,
+      "name": "Osc2 Wave Mod Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 155,
+      "name": "Osc2 Wave Mod Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 156,
+      "name": "Osc2 Wave Mod Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 157,
+      "name": "VCO Cross Mod",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 158,
+      "name": "VCO Cross Mod LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 159,
+      "name": "VCO Cross Mod LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 160,
+      "name": "VCO Cross Mod LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 161,
+      "name": "VCO Cross Mod LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 162,
+      "name": "VCO Cross Mod LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 163,
+      "name": "VCO Cross Mod LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 164,
+      "name": "VCO Cross Mod LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 165,
+      "name": "VCO Cross Mod Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 166,
+      "name": "VCO Cross Mod Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 167,
+      "name": "VCO Cross Mod Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 168,
+      "name": "VCO Cross Mod Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 169,
+      "name": "VCO Cross Mod Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 170,
+      "name": "VCO Cross Mod Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 171,
+      "name": "VCO Cross Mod Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 172,
+      "name": "VCA On",
+      "value": 0.0,
+      "text": "Off"
+    },
+    {
+      "index": 173,
+      "name": "Noise Level",
+      "value": 0,
+      "text": "-INF dB"
+    },
+    {
+      "index": 174,
+      "name": "Noise Level LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 175,
+      "name": "Noise Level LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 176,
+      "name": "Noise Level LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 177,
+      "name": "Noise Level LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 178,
+      "name": "Noise Level LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 179,
+      "name": "Noise Level LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 180,
+      "name": "Noise Level LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 181,
+      "name": "Noise Level Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 182,
+      "name": "Noise Level Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 183,
+      "name": "Noise Level Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 184,
+      "name": "Noise Level Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 185,
+      "name": "Noise Level Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 186,
+      "name": "Noise Level Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 187,
+      "name": "Noise Level Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 188,
+      "name": "Noise Type",
+      "value": 0,
+      "text": "White"
+    },
+    {
+      "index": 189,
+      "name": "Noise Type LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 190,
+      "name": "Noise Type LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 191,
+      "name": "Noise Type LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 192,
+      "name": "Noise Type LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 193,
+      "name": "Noise Type LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 194,
+      "name": "Noise Type LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 195,
+      "name": "Noise Type LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 196,
+      "name": "Noise Type Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 197,
+      "name": "Noise Type Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 198,
+      "name": "Noise Type Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 199,
+      "name": "Noise Type Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 200,
+      "name": "Noise Type Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 201,
+      "name": "Noise Type Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 202,
+      "name": "Noise Type Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 203,
+      "name": "Osc1 Level",
+      "value": 0,
+      "text": "-INF dB"
+    },
+    {
+      "index": 204,
+      "name": "Osc1 Level LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 205,
+      "name": "Osc1 Level LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 206,
+      "name": "Osc1 Level LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 207,
+      "name": "Osc1 Level LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 208,
+      "name": "Osc1 Level LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 209,
+      "name": "Osc1 Level LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 210,
+      "name": "Osc1 Level LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 211,
+      "name": "Osc1 Level Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 212,
+      "name": "Osc1 Level Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 213,
+      "name": "Osc1 Level Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 214,
+      "name": "Osc1 Level Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 215,
+      "name": "Osc1 Level Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 216,
+      "name": "Osc1 Level Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 217,
+      "name": "Osc1 Level Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 218,
+      "name": "Osc1 Sub Level",
+      "value": 0,
+      "text": "-INF dB"
+    },
+    {
+      "index": 219,
+      "name": "Osc1 Sub Level LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 220,
+      "name": "Osc1 Sub Level LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 221,
+      "name": "Osc1 Sub Level LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 222,
+      "name": "Osc1 Sub Level LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 223,
+      "name": "Osc1 Sub Level LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 224,
+      "name": "Osc1 Sub Level LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 225,
+      "name": "Osc1 Sub Level LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 226,
+      "name": "Osc1 Sub Level Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 227,
+      "name": "Osc1 Sub Level Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 228,
+      "name": "Osc1 Sub Level Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 229,
+      "name": "Osc1 Sub Level Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 230,
+      "name": "Osc1 Sub Level Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 231,
+      "name": "Osc1 Sub Level Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 232,
+      "name": "Osc1 Sub Level Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 233,
+      "name": "Osc2 Level",
+      "value": 0,
+      "text": "-INF dB"
+    },
+    {
+      "index": 234,
+      "name": "Osc2 Level LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 235,
+      "name": "Osc2 Level LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 236,
+      "name": "Osc2 Level LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 237,
+      "name": "Osc2 Level LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 238,
+      "name": "Osc2 Level LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 239,
+      "name": "Osc2 Level LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 240,
+      "name": "Osc2 Level LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 241,
+      "name": "Osc2 Level Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 242,
+      "name": "Osc2 Level Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 243,
+      "name": "Osc2 Level Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 244,
+      "name": "Osc2 Level Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 245,
+      "name": "Osc2 Level Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 246,
+      "name": "Osc2 Level Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 247,
+      "name": "Osc2 Level Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 248,
+      "name": "Osc2 Sub Level",
+      "value": 0,
+      "text": "-INF dB"
+    },
+    {
+      "index": 249,
+      "name": "Osc2 Sub Level LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 250,
+      "name": "Osc2 Sub Level LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 251,
+      "name": "Osc2 Sub Level LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 252,
+      "name": "Osc2 Sub Level LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 253,
+      "name": "Osc2 Sub Level LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 254,
+      "name": "Osc2 Sub Level LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 255,
+      "name": "Osc2 Sub Level LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 256,
+      "name": "Osc2 Sub Level Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 257,
+      "name": "Osc2 Sub Level Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 258,
+      "name": "Osc2 Sub Level Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 259,
+      "name": "Osc2 Sub Level Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 260,
+      "name": "Osc2 Sub Level Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 261,
+      "name": "Osc2 Sub Level Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 262,
+      "name": "Osc2 Sub Level Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 263,
+      "name": "VCF Mode",
+      "value": 0.0,
+      "text": "2 Pole (12dB)"
+    },
+    {
+      "index": 264,
+      "name": "Keyboard Tracking",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 265,
+      "name": "VCF Frequency",
+      "value": 1.0,
+      "text": "21000Hz"
+    },
+    {
+      "index": 266,
+      "name": "VCF Frequency LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 267,
+      "name": "VCF Frequency LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 268,
+      "name": "VCF Frequency LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 269,
+      "name": "VCF Frequency LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 270,
+      "name": "VCF Frequency LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 271,
+      "name": "VCF Frequency LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 272,
+      "name": "VCF Frequency LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 273,
+      "name": "VCF Frequency Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 274,
+      "name": "VCF Frequency Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 275,
+      "name": "VCF Frequency Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 276,
+      "name": "VCF Frequency Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 277,
+      "name": "VCF Frequency Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 278,
+      "name": "VCF Frequency Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 279,
+      "name": "VCF Frequency Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 280,
+      "name": "VCF Fine Tune",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 281,
+      "name": "VCF Fine Tune LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 282,
+      "name": "VCF Fine Tune LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 283,
+      "name": "VCF Fine Tune LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 284,
+      "name": "VCF Fine Tune LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 285,
+      "name": "VCF Fine Tune LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 286,
+      "name": "VCF Fine Tune LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 287,
+      "name": "VCF Fine Tune LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 288,
+      "name": "VCF Fine Tune Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 289,
+      "name": "VCF Fine Tune Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 290,
+      "name": "VCF Fine Tune Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 291,
+      "name": "VCF Fine Tune Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 292,
+      "name": "VCF Fine Tune Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 293,
+      "name": "VCF Fine Tune Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 294,
+      "name": "VCF Fine Tune Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 295,
+      "name": "VCF Resonance",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 296,
+      "name": "VCF Resonance LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 297,
+      "name": "VCF Resonance LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 298,
+      "name": "VCF Resonance LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 299,
+      "name": "VCF Resonance LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 300,
+      "name": "VCF Resonance LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 301,
+      "name": "VCF Resonance LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 302,
+      "name": "VCF Resonance LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 303,
+      "name": "VCF Resonance Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 304,
+      "name": "VCF Resonance Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 305,
+      "name": "VCF Resonance Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 306,
+      "name": "VCF Resonance Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 307,
+      "name": "VCF Resonance Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 308,
+      "name": "VCF Resonance Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 309,
+      "name": "VCF Resonance Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 310,
+      "name": "VCF Env Mod",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 311,
+      "name": "VCF Env Mod LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 312,
+      "name": "VCF Env Mod LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 313,
+      "name": "VCF Env Mod LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 314,
+      "name": "VCF Env Mod LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 315,
+      "name": "VCF Env Mod LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 316,
+      "name": "VCF Env Mod LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 317,
+      "name": "VCF Env Mod LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 318,
+      "name": "VCF Env Mod Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 319,
+      "name": "VCF Env Mod Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 320,
+      "name": "VCF Env Mod Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 321,
+      "name": "VCF Env Mod Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 322,
+      "name": "VCF Env Mod Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 323,
+      "name": "VCF Env Mod Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 324,
+      "name": "VCF Env Mod Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 325,
+      "name": "VCF LFO Mod",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 326,
+      "name": "VCF LFO Mod LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 327,
+      "name": "VCF LFO Mod LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 328,
+      "name": "VCF LFO Mod LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 329,
+      "name": "VCF LFO Mod LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 330,
+      "name": "VCF LFO Mod LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 331,
+      "name": "VCF LFO Mod LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 332,
+      "name": "VCF LFO Mod LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 333,
+      "name": "VCF LFO Mod Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 334,
+      "name": "VCF LFO Mod Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 335,
+      "name": "VCF LFO Mod Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 336,
+      "name": "VCF LFO Mod Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 337,
+      "name": "VCF LFO Mod Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 338,
+      "name": "VCF LFO Mod Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 339,
+      "name": "VCF LFO Mod Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 340,
+      "name": "VCA Env Mode",
+      "value": 0.0,
+      "text": "Off"
+    },
+    {
+      "index": 341,
+      "name": "VCF Env Mode",
+      "value": 0.0,
+      "text": "Off"
+    },
+    {
+      "index": 342,
+      "name": "VCA Attack",
+      "value": 0.0,
+      "text": "0ms"
+    },
+    {
+      "index": 343,
+      "name": "VCA Attack LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 344,
+      "name": "VCA Attack LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 345,
+      "name": "VCA Attack LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 346,
+      "name": "VCA Attack LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 347,
+      "name": "VCA Attack LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 348,
+      "name": "VCA Attack LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 349,
+      "name": "VCA Attack LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 350,
+      "name": "VCA Attack Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 351,
+      "name": "VCA Attack Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 352,
+      "name": "VCA Attack Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 353,
+      "name": "VCA Attack Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 354,
+      "name": "VCA Attack Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 355,
+      "name": "VCA Attack Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 356,
+      "name": "VCA Attack Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 357,
+      "name": "VCA Decay",
+      "value": 0.43540895,
+      "text": "1.1s"
+    },
+    {
+      "index": 358,
+      "name": "VCA Decay LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 359,
+      "name": "VCA Decay LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 360,
+      "name": "VCA Decay LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 361,
+      "name": "VCA Decay LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 362,
+      "name": "VCA Decay LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 363,
+      "name": "VCA Decay LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 364,
+      "name": "VCA Decay LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 365,
+      "name": "VCA Decay Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 366,
+      "name": "VCA Decay Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 367,
+      "name": "VCA Decay Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 368,
+      "name": "VCA Decay Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 369,
+      "name": "VCA Decay Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 370,
+      "name": "VCA Decay Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 371,
+      "name": "VCA Decay Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 372,
+      "name": "VCA Sustain",
+      "value": 1.0,
+      "text": "+0.00 dB"
+    },
+    {
+      "index": 373,
+      "name": "VCA Sustain LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 374,
+      "name": "VCA Sustain LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 375,
+      "name": "VCA Sustain LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 376,
+      "name": "VCA Sustain LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 377,
+      "name": "VCA Sustain LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 378,
+      "name": "VCA Sustain LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 379,
+      "name": "VCA Sustain LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 380,
+      "name": "VCA Sustain Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 381,
+      "name": "VCA Sustain Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 382,
+      "name": "VCA Sustain Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 383,
+      "name": "VCA Sustain Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 384,
+      "name": "VCA Sustain Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 385,
+      "name": "VCA Sustain Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 386,
+      "name": "VCA Sustain Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 387,
+      "name": "VCA Release",
+      "value": 0.0,
+      "text": "0ms"
+    },
+    {
+      "index": 388,
+      "name": "VCA Release LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 389,
+      "name": "VCA Release LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 390,
+      "name": "VCA Release LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 391,
+      "name": "VCA Release LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 392,
+      "name": "VCA Release LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 393,
+      "name": "VCA Release LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 394,
+      "name": "VCA Release LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 395,
+      "name": "VCA Release Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 396,
+      "name": "VCA Release Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 397,
+      "name": "VCA Release Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 398,
+      "name": "VCA Release Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 399,
+      "name": "VCA Release Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 400,
+      "name": "VCA Release Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 401,
+      "name": "VCA Release Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 402,
+      "name": "VCF Attack",
+      "value": 0.0,
+      "text": "0ms"
+    },
+    {
+      "index": 403,
+      "name": "VCF Attack LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 404,
+      "name": "VCF Attack LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 405,
+      "name": "VCF Attack LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 406,
+      "name": "VCF Attack LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 407,
+      "name": "VCF Attack LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 408,
+      "name": "VCF Attack LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 409,
+      "name": "VCF Attack LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 410,
+      "name": "VCF Attack Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 411,
+      "name": "VCF Attack Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 412,
+      "name": "VCF Attack Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 413,
+      "name": "VCF Attack Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 414,
+      "name": "VCF Attack Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 415,
+      "name": "VCF Attack Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 416,
+      "name": "VCF Attack Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 417,
+      "name": "VCF Decay",
+      "value": 0.562651753,
+      "text": "3.4s"
+    },
+    {
+      "index": 418,
+      "name": "VCF Decay LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 419,
+      "name": "VCF Decay LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 420,
+      "name": "VCF Decay LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 421,
+      "name": "VCF Decay LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 422,
+      "name": "VCF Decay LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 423,
+      "name": "VCF Decay LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 424,
+      "name": "VCF Decay LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 425,
+      "name": "VCF Decay Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 426,
+      "name": "VCF Decay Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 427,
+      "name": "VCF Decay Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 428,
+      "name": "VCF Decay Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 429,
+      "name": "VCF Decay Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 430,
+      "name": "VCF Decay Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 431,
+      "name": "VCF Decay Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 432,
+      "name": "VCF Sustain",
+      "value": 0.0,
+      "text": "-INF dB"
+    },
+    {
+      "index": 433,
+      "name": "VCF Sustain LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 434,
+      "name": "VCF Sustain LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 435,
+      "name": "VCF Sustain LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 436,
+      "name": "VCF Sustain LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 437,
+      "name": "VCF Sustain LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 438,
+      "name": "VCF Sustain LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 439,
+      "name": "VCF Sustain LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 440,
+      "name": "VCF Sustain Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 441,
+      "name": "VCF Sustain Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 442,
+      "name": "VCF Sustain Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 443,
+      "name": "VCF Sustain Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 444,
+      "name": "VCF Sustain Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 445,
+      "name": "VCF Sustain Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 446,
+      "name": "VCF Sustain Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 447,
+      "name": "VCF Release",
+      "value": 0.636221707,
+      "text": "6.3s"
+    },
+    {
+      "index": 448,
+      "name": "VCF Release LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 449,
+      "name": "VCF Release LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 450,
+      "name": "VCF Release LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 451,
+      "name": "VCF Release LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 452,
+      "name": "VCF Release LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 453,
+      "name": "VCF Release LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 454,
+      "name": "VCF Release LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 455,
+      "name": "VCF Release Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 456,
+      "name": "VCF Release Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 457,
+      "name": "VCF Release Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 458,
+      "name": "VCF Release Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 459,
+      "name": "VCF Release Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 460,
+      "name": "VCF Release Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 461,
+      "name": "VCF Release Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 462,
+      "name": "LFO Delay",
+      "value": 0.0,
+      "text": "Off"
+    },
+    {
+      "index": 463,
+      "name": "LFO Waveform",
+      "value": 1.0,
+      "text": "Sine"
+    },
+    {
+      "index": 464,
+      "name": "LFO Sync",
+      "value": 1.0,
+      "text": "On"
+    },
+    {
+      "index": 465,
+      "name": "LFO Retrigger",
+      "value": 1.0,
+      "text": "On"
+    },
+    {
+      "index": 466,
+      "name": "LFO Rate",
+      "value": 0.157226384,
+      "text": "1/1D"
+    },
+    {
+      "index": 467,
+      "name": "LFO Rate LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 468,
+      "name": "LFO Rate LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 469,
+      "name": "LFO Rate LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 470,
+      "name": "LFO Rate LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 471,
+      "name": "LFO Rate LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 472,
+      "name": "LFO Rate LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 473,
+      "name": "LFO Rate LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 474,
+      "name": "LFO Rate Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 475,
+      "name": "LFO Rate Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 476,
+      "name": "LFO Rate Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 477,
+      "name": "LFO Rate Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 478,
+      "name": "LFO Rate Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 479,
+      "name": "LFO Rate Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 480,
+      "name": "LFO Rate Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 481,
+      "name": "Hold",
+      "value": 0.0,
+      "text": "Off"
+    },
+    {
+      "index": 482,
+      "name": "Transpose",
+      "value": 0.5,
+      "text": "Off"
+    },
+    {
+      "index": 483,
+      "name": "Unison State",
+      "value": 0.0,
+      "text": "Off"
+    },
+    {
+      "index": 484,
+      "name": "Pan Spread",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 485,
+      "name": "Pan Spread Mode",
+      "value": 0.0,
+      "text": "Random"
+    },
+    {
+      "index": 486,
+      "name": "Polyphony",
+      "value": 0.0,
+      "text": "1"
+    },
+    {
+      "index": 487,
+      "name": "Keyboard Mode",
+      "value": 1.0,
+      "text": "Mono"
+    },
+    {
+      "index": 488,
+      "name": "Bend Destination",
+      "value": 0.0,
+      "text": "Both VCOs"
+    },
+    {
+      "index": 489,
+      "name": "Pitch Bend Lever",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 490,
+      "name": "Pitch Bend Range",
+      "value": 0.0,
+      "text": "2"
+    },
+    {
+      "index": 491,
+      "name": "Vintage",
+      "value": 0,
+      "text": "0 %"
+    },
+    {
+      "index": 492,
+      "name": "XMod Retrigger",
+      "value": 0.0,
+      "text": "Off"
+    },
+    {
+      "index": 493,
+      "name": "XMod Sync",
+      "value": 1.0,
+      "text": "On"
+    },
+    {
+      "index": 494,
+      "name": "Delay Sync",
+      "value": 1.0,
+      "text": "On"
+    },
+    {
+      "index": 495,
+      "name": "Portamento",
+      "value": 0.0,
+      "text": "0ms"
+    },
+    {
+      "index": 496,
+      "name": "Portamento LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 497,
+      "name": "Portamento LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 498,
+      "name": "Portamento LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 499,
+      "name": "Portamento LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 500,
+      "name": "Portamento LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 501,
+      "name": "Portamento LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 502,
+      "name": "Portamento LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 503,
+      "name": "Portamento Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 504,
+      "name": "Portamento Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 505,
+      "name": "Portamento Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 506,
+      "name": "Portamento Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 507,
+      "name": "Portamento Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 508,
+      "name": "Portamento Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 509,
+      "name": "Portamento Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 510,
+      "name": "Detune Spread",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 511,
+      "name": "Detune Spread LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 512,
+      "name": "Detune Spread LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 513,
+      "name": "Detune Spread LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 514,
+      "name": "Detune Spread LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 515,
+      "name": "Detune Spread LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 516,
+      "name": "Detune Spread LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 517,
+      "name": "Detune Spread LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 518,
+      "name": "Detune Spread Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 519,
+      "name": "Detune Spread Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 520,
+      "name": "Detune Spread Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 521,
+      "name": "Detune Spread Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 522,
+      "name": "Detune Spread Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 523,
+      "name": "Detune Spread Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 524,
+      "name": "Detune Spread Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 525,
+      "name": "Output Gain",
+      "value": 0.5,
+      "text": "-13.98 dB"
+    },
+    {
+      "index": 526,
+      "name": "Output Gain LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 527,
+      "name": "Output Gain LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 528,
+      "name": "Output Gain LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 529,
+      "name": "Output Gain LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 530,
+      "name": "Output Gain LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 531,
+      "name": "Output Gain LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 532,
+      "name": "Output Gain LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 533,
+      "name": "Output Gain Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 534,
+      "name": "Output Gain Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 535,
+      "name": "Output Gain Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 536,
+      "name": "Output Gain Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 537,
+      "name": "Output Gain Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 538,
+      "name": "Output Gain Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 539,
+      "name": "Output Gain Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 540,
+      "name": "Reverb State",
+      "value": 0.0,
+      "text": "Off"
+    },
+    {
+      "index": 541,
+      "name": "Reverb Size",
+      "value": 0.610000014,
+      "text": "61 %"
+    },
+    {
+      "index": 542,
+      "name": "Reverb PreDelay",
+      "value": 0.181339294,
+      "text": "0.181 S"
+    },
+    {
+      "index": 543,
+      "name": "Delay State",
+      "value": 0.0,
+      "text": "Off"
+    },
+    {
+      "index": 544,
+      "name": "Delay Link",
+      "value": 0.0,
+      "text": "Off"
+    },
+    {
+      "index": 545,
+      "name": "Delay Mode",
+      "value": 1.0,
+      "text": "Crossover"
+    },
+    {
+      "index": 546,
+      "name": "Delay Time L",
+      "value": 0.400000006,
+      "text": "1/8"
+    },
+    {
+      "index": 547,
+      "name": "Delay Time R",
+      "value": 0.483007491,
+      "text": "1/4T"
+    },
+    {
+      "index": 548,
+      "name": "Chorus Mode",
+      "value": 0.0,
+      "text": "1"
+    },
+    {
+      "index": 549,
+      "name": "Chorus State",
+      "value": 0.0,
+      "text": "Off"
+    },
+    {
+      "index": 550,
+      "name": "HPF Mode",
+      "value": 0.0,
+      "text": "2 Pole (12dB)"
+    },
+    {
+      "index": 551,
+      "name": "HPF Keyboard Tracking",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 552,
+      "name": "HPF State",
+      "value": 0.0,
+      "text": "Off"
+    },
+    {
+      "index": 553,
+      "name": "Reverb Damping",
+      "value": 0.25999999,
+      "text": "-48 %"
+    },
+    {
+      "index": 554,
+      "name": "Reverb Damping LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 555,
+      "name": "Reverb Damping LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 556,
+      "name": "Reverb Damping LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 557,
+      "name": "Reverb Damping LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 558,
+      "name": "Reverb Damping LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 559,
+      "name": "Reverb Damping LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 560,
+      "name": "Reverb Damping LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 561,
+      "name": "Reverb Damping Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 562,
+      "name": "Reverb Damping Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 563,
+      "name": "Reverb Damping Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 564,
+      "name": "Reverb Damping Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 565,
+      "name": "Reverb Damping Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 566,
+      "name": "Reverb Damping Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 567,
+      "name": "Reverb Damping Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 568,
+      "name": "Reverb Decay",
+      "value": 0.449999988,
+      "text": "45 %"
+    },
+    {
+      "index": 569,
+      "name": "Reverb Decay LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 570,
+      "name": "Reverb Decay LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 571,
+      "name": "Reverb Decay LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 572,
+      "name": "Reverb Decay LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 573,
+      "name": "Reverb Decay LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 574,
+      "name": "Reverb Decay LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 575,
+      "name": "Reverb Decay LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 576,
+      "name": "Reverb Decay Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 577,
+      "name": "Reverb Decay Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 578,
+      "name": "Reverb Decay Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 579,
+      "name": "Reverb Decay Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 580,
+      "name": "Reverb Decay Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 581,
+      "name": "Reverb Decay Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 582,
+      "name": "Reverb Decay Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 583,
+      "name": "Reverb Amount",
+      "value": 0.596756399,
+      "text": "28.21 %"
+    },
+    {
+      "index": 584,
+      "name": "Reverb Amount LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 585,
+      "name": "Reverb Amount LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 586,
+      "name": "Reverb Amount LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 587,
+      "name": "Reverb Amount LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 588,
+      "name": "Reverb Amount LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 589,
+      "name": "Reverb Amount LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 590,
+      "name": "Reverb Amount LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 591,
+      "name": "Reverb Amount Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 592,
+      "name": "Reverb Amount Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 593,
+      "name": "Reverb Amount Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 594,
+      "name": "Reverb Amount Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 595,
+      "name": "Reverb Amount Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 596,
+      "name": "Reverb Amount Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 597,
+      "name": "Reverb Amount Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 598,
+      "name": "Reverb Mod Depth",
+      "value": 0.25,
+      "text": "25 %"
+    },
+    {
+      "index": 599,
+      "name": "Reverb Mod Depth LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 600,
+      "name": "Reverb Mod Depth LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 601,
+      "name": "Reverb Mod Depth LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 602,
+      "name": "Reverb Mod Depth LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 603,
+      "name": "Reverb Mod Depth LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 604,
+      "name": "Reverb Mod Depth LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 605,
+      "name": "Reverb Mod Depth LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 606,
+      "name": "Reverb Mod Depth Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 607,
+      "name": "Reverb Mod Depth Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 608,
+      "name": "Reverb Mod Depth Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 609,
+      "name": "Reverb Mod Depth Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 610,
+      "name": "Reverb Mod Depth Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 611,
+      "name": "Reverb Mod Depth Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 612,
+      "name": "Reverb Mod Depth Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 613,
+      "name": "Reverb Mod Freq",
+      "value": 0.202222213,
+      "text": "1.4100000"
+    },
+    {
+      "index": 614,
+      "name": "Reverb Mod Freq LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 615,
+      "name": "Reverb Mod Freq LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 616,
+      "name": "Reverb Mod Freq LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 617,
+      "name": "Reverb Mod Freq LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 618,
+      "name": "Reverb Mod Freq LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 619,
+      "name": "Reverb Mod Freq LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 620,
+      "name": "Reverb Mod Freq LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 621,
+      "name": "Reverb Mod Freq Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 622,
+      "name": "Reverb Mod Freq Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 623,
+      "name": "Reverb Mod Freq Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 624,
+      "name": "Reverb Mod Freq Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 625,
+      "name": "Reverb Mod Freq Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 626,
+      "name": "Reverb Mod Freq Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 627,
+      "name": "Reverb Mod Freq Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 628,
+      "name": "Delay Amount",
+      "value": 0.399141729,
+      "text": "-17.40 dB"
+    },
+    {
+      "index": 629,
+      "name": "Delay Amount LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 630,
+      "name": "Delay Amount LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 631,
+      "name": "Delay Amount LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 632,
+      "name": "Delay Amount LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 633,
+      "name": "Delay Amount LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 634,
+      "name": "Delay Amount LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 635,
+      "name": "Delay Amount LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 636,
+      "name": "Delay Amount Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 637,
+      "name": "Delay Amount Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 638,
+      "name": "Delay Amount Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 639,
+      "name": "Delay Amount Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 640,
+      "name": "Delay Amount Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 641,
+      "name": "Delay Amount Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 642,
+      "name": "Delay Amount Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 643,
+      "name": "Delay Feedback",
+      "value": 0.947681963,
+      "text": "94.77 %"
+    },
+    {
+      "index": 644,
+      "name": "Delay Feedback LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 645,
+      "name": "Delay Feedback LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 646,
+      "name": "Delay Feedback LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 647,
+      "name": "Delay Feedback LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 648,
+      "name": "Delay Feedback LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 649,
+      "name": "Delay Feedback LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 650,
+      "name": "Delay Feedback LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 651,
+      "name": "Delay Feedback Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 652,
+      "name": "Delay Feedback Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 653,
+      "name": "Delay Feedback Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 654,
+      "name": "Delay Feedback Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 655,
+      "name": "Delay Feedback Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 656,
+      "name": "Delay Feedback Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 657,
+      "name": "Delay Feedback Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 658,
+      "name": "Delay Mod Depth",
+      "value": 0.793792844,
+      "text": "79.38 %"
+    },
+    {
+      "index": 659,
+      "name": "Delay Mod Depth LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 660,
+      "name": "Delay Mod Depth LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 661,
+      "name": "Delay Mod Depth LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 662,
+      "name": "Delay Mod Depth LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 663,
+      "name": "Delay Mod Depth LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 664,
+      "name": "Delay Mod Depth LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 665,
+      "name": "Delay Mod Depth LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 666,
+      "name": "Delay Mod Depth Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 667,
+      "name": "Delay Mod Depth Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 668,
+      "name": "Delay Mod Depth Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 669,
+      "name": "Delay Mod Depth Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 670,
+      "name": "Delay Mod Depth Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 671,
+      "name": "Delay Mod Depth Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 672,
+      "name": "Delay Mod Depth Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 673,
+      "name": "Delay Mod Freq",
+      "value": 0.357664168,
+      "text": "2.54 Hz"
+    },
+    {
+      "index": 674,
+      "name": "Delay Mod Freq LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 675,
+      "name": "Delay Mod Freq LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 676,
+      "name": "Delay Mod Freq LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 677,
+      "name": "Delay Mod Freq LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 678,
+      "name": "Delay Mod Freq LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 679,
+      "name": "Delay Mod Freq LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 680,
+      "name": "Delay Mod Freq LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 681,
+      "name": "Delay Mod Freq Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 682,
+      "name": "Delay Mod Freq Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 683,
+      "name": "Delay Mod Freq Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 684,
+      "name": "Delay Mod Freq Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 685,
+      "name": "Delay Mod Freq Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 686,
+      "name": "Delay Mod Freq Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 687,
+      "name": "Delay Mod Freq Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 688,
+      "name": "Delay Filter",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 689,
+      "name": "Delay Filter LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 690,
+      "name": "Delay Filter LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 691,
+      "name": "Delay Filter LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 692,
+      "name": "Delay Filter LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 693,
+      "name": "Delay Filter LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 694,
+      "name": "Delay Filter LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 695,
+      "name": "Delay Filter LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 696,
+      "name": "Delay Filter Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 697,
+      "name": "Delay Filter Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 698,
+      "name": "Delay Filter Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 699,
+      "name": "Delay Filter Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 700,
+      "name": "Delay Filter Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 701,
+      "name": "Delay Filter Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 702,
+      "name": "Delay Filter Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 703,
+      "name": "Chorus Rate",
+      "value": 0.412656665,
+      "text": "1.3 Hz"
+    },
+    {
+      "index": 704,
+      "name": "Chorus Rate LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 705,
+      "name": "Chorus Rate LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 706,
+      "name": "Chorus Rate LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 707,
+      "name": "Chorus Rate LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 708,
+      "name": "Chorus Rate LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 709,
+      "name": "Chorus Rate LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 710,
+      "name": "Chorus Rate LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 711,
+      "name": "Chorus Rate Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 712,
+      "name": "Chorus Rate Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 713,
+      "name": "Chorus Rate Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 714,
+      "name": "Chorus Rate Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 715,
+      "name": "Chorus Rate Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 716,
+      "name": "Chorus Rate Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 717,
+      "name": "Chorus Rate Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 718,
+      "name": "Chorus Depth",
+      "value": 0.637921274,
+      "text": "63.79 %"
+    },
+    {
+      "index": 719,
+      "name": "Chorus Depth LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 720,
+      "name": "Chorus Depth LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 721,
+      "name": "Chorus Depth LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 722,
+      "name": "Chorus Depth LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 723,
+      "name": "Chorus Depth LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 724,
+      "name": "Chorus Depth LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 725,
+      "name": "Chorus Depth LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 726,
+      "name": "Chorus Depth Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 727,
+      "name": "Chorus Depth Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 728,
+      "name": "Chorus Depth Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 729,
+      "name": "Chorus Depth Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 730,
+      "name": "Chorus Depth Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 731,
+      "name": "Chorus Depth Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 732,
+      "name": "Chorus Depth Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 733,
+      "name": "Chorus Amount",
+      "value": 0.734247863,
+      "text": "73.42 %"
+    },
+    {
+      "index": 734,
+      "name": "Chorus Amount LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 735,
+      "name": "Chorus Amount LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 736,
+      "name": "Chorus Amount LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 737,
+      "name": "Chorus Amount LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 738,
+      "name": "Chorus Amount LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 739,
+      "name": "Chorus Amount LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 740,
+      "name": "Chorus Amount LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 741,
+      "name": "Chorus Amount Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 742,
+      "name": "Chorus Amount Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 743,
+      "name": "Chorus Amount Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 744,
+      "name": "Chorus Amount Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 745,
+      "name": "Chorus Amount Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 746,
+      "name": "Chorus Amount Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 747,
+      "name": "Chorus Amount Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 748,
+      "name": "HPF Frequency",
+      "value": 0.304981202,
+      "text": "587Hz"
+    },
+    {
+      "index": 749,
+      "name": "HPF Frequency LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 750,
+      "name": "HPF Frequency LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 751,
+      "name": "HPF Frequency LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 752,
+      "name": "HPF Frequency LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 753,
+      "name": "HPF Frequency LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 754,
+      "name": "HPF Frequency LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 755,
+      "name": "HPF Frequency LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 756,
+      "name": "HPF Frequency Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 757,
+      "name": "HPF Frequency Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 758,
+      "name": "HPF Frequency Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 759,
+      "name": "HPF Frequency Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 760,
+      "name": "HPF Frequency Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 761,
+      "name": "HPF Frequency Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 762,
+      "name": "HPF Frequency Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 763,
+      "name": "HPF Fine Tune",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 764,
+      "name": "HPF Fine Tune LFO Rate",
+      "value": 0.428571433,
+      "text": "1/4"
+    },
+    {
+      "index": 765,
+      "name": "HPF Fine Tune LFO Amount",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 766,
+      "name": "HPF Fine Tune LFO Shape",
+      "value": 0.0,
+      "text": "Sine"
+    },
+    {
+      "index": 767,
+      "name": "HPF Fine Tune LFO Sample Hold",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 768,
+      "name": "HPF Fine Tune LFO Smoothing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 769,
+      "name": "HPF Fine Tune LFO Phase",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 770,
+      "name": "HPF Fine Tune LFO Fade In",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 771,
+      "name": "HPF Fine Tune Env Attack",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 772,
+      "name": "HPF Fine Tune Env Decay",
+      "value": 0.438200325,
+      "text": "1/8"
+    },
+    {
+      "index": 773,
+      "name": "HPF Fine Tune Env Slope Time",
+      "value": 0.0,
+      "text": "0"
+    },
+    {
+      "index": 774,
+      "name": "HPF Fine Tune Env Slope Start",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 775,
+      "name": "HPF Fine Tune Env Release",
+      "value": 0.315273285,
+      "text": "1/32"
+    },
+    {
+      "index": 776,
+      "name": "HPF Fine Tune Env Amp",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 777,
+      "name": "HPF Fine Tune Env Velo",
+      "value": 0.5,
+      "text": "0 %"
+    },
+    {
+      "index": 778,
+      "name": "Macro 1",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 779,
+      "name": "Macro 2",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 780,
+      "name": "Macro 3",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 781,
+      "name": "Macro 4",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 782,
+      "name": "Velocity Destination",
+      "value": 0.0,
+      "text": "Filter Freq"
+    },
+    {
+      "index": 783,
+      "name": "Aftertouch Destination",
+      "value": 0.0,
+      "text": "Filter Freq"
+    },
+    {
+      "index": 784,
+      "name": "VCF Frequency Velocity",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 785,
+      "name": "VCF Frequency Aftertouch",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 786,
+      "name": "VCF Env Mod Velocity",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 787,
+      "name": "Gain Velocity",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 788,
+      "name": "Gain Aftertouch",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 789,
+      "name": "LFO Rate Velocity",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 790,
+      "name": "LFO Rate Aftertouch",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 791,
+      "name": "Osc1 Waveform Velocity",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 792,
+      "name": "Osc1 Waveform Aftertouch",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 793,
+      "name": "Osc1 Wave Mod Velocity",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 794,
+      "name": "Osc1 Wave Mod Aftertouch",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 795,
+      "name": "Osc1 Freq Mod Aftertouch",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 796,
+      "name": "Osc2 Waveform Velocity",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 797,
+      "name": "Osc2 Waveform Aftertouch",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 798,
+      "name": "Osc2 Wave Mod Velocity",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 799,
+      "name": "Osc2 Wave Mod Aftertouch",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 800,
+      "name": "Osc2 Freq Mod Aftertouch",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 801,
+      "name": "Macro1 Velocity",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 802,
+      "name": "Macro1 Aftertouch",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 803,
+      "name": "Macro2 Velocity",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 804,
+      "name": "Macro2 Aftertouch",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 805,
+      "name": "Macro3 Velocity",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 806,
+      "name": "Macro3 Aftertouch",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 807,
+      "name": "Macro4 Velocity",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 808,
+      "name": "Macro4 Aftertouch",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 809,
+      "name": "Arpeggiator/Sequencer Mode",
+      "value": 0.5,
+      "text": "Off"
+    },
+    {
+      "index": 810,
+      "name": "Sequencer Rate",
+      "value": 0.400000006,
+      "text": "1/4"
+    },
+    {
+      "index": 811,
+      "name": "Sequencer Swing",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 812,
+      "name": "Sequencer Play State",
+      "value": 0.5,
+      "text": "Key"
+    },
+    {
+      "index": 813,
+      "name": "Sequencer Play Mode",
+      "value": 0.0,
+      "text": "Forwards"
+    },
+    {
+      "index": 814,
+      "name": "Sequencer Record",
+      "value": 0.0,
+      "text": "Off"
+    },
+    {
+      "index": 815,
+      "name": "Sequencer Octave",
+      "value": 0.5,
+      "text": "0"
+    },
+    {
+      "index": 816,
+      "name": "Sequencer Note Length",
+      "value": 0.5,
+      "text": "50 %"
+    },
+    {
+      "index": 817,
+      "name": "Macro Portamento",
+      "value": 0.0,
+      "text": "0 %"
+    },
+    {
+      "index": 818,
+      "name": "Sequencer Note Lane Length",
+      "value": 1.0,
+      "text": "16"
+    },
+    {
+      "index": 819,
+      "name": "Velocity Lane Length",
+      "value": 1.0,
+      "text": "16"
+    },
+    {
+      "index": 820,
+      "name": "Macro Lane Length",
+      "value": 1.0,
+      "text": "16"
+    },
+    {
+      "index": 821,
+      "name": "Bypass",
+      "value": 0.0,
+      "text": "Off"
+    },
+    {
+      "index": 2902,
+      "name": "Bypass",
+      "value": 0.0,
+      "text": "normal"
+    },
+    {
+      "index": 2903,
+      "name": "Wet",
+      "value": 1.0,
+      "text": "100"
+    },
+    {
+      "index": 2904,
+      "name": "Delta",
+      "value": 0.0,
+      "text": "normal"
+    }
+  ],
+  "presets": {
+    "freq2_0": {
+      "82": 0.5
+    },
+    "freq2_12": {
+      "82": 0.75
+    },
+    "freq2_19": {
+      "82": 0.8958333333333334
+    },
+    "freq2_7": {
+      "82": 0.6458333333333334
+    },
+    "freq2_m12": {
+      "82": 0.25
+    },
+    "freq2_m24": {
+      "82": 0.0
+    },
+    "freq2_max": {
+      "82": 1.0
+    },
+    "freq2_mid": {
+      "82": 0.5
+    },
+    "freq2_min": {
+      "82": 0.0
+    },
+    "fund1_full": {
+      "203": 1
+    },
+    "fund1_half": {
+      "203": 0.5
+    },
+    "fund2_full": {
+      "233": 1
+    },
+    "noise_full": {
+      "173": 1
+    },
+    "noise_pink": {
+      "188": 1
+    },
+    "noise_white": {
+      "188": 0
+    },
+    "shape1_0": {
+      "22": 0.0
+    },
+    "shape1_100": {
+      "22": 1.0
+    },
+    "shape1_25": {
+      "22": 0.25
+    },
+    "shape1_50": {
+      "22": 0.5
+    },
+    "shape1_75": {
+      "22": 0.75
+    },
+    "shape2_saw": {
+      "97": 1
+    },
+    "shape2_square": {
+      "97": 0.93
+    },
+    "sub1_full": {
+      "218": 1
+    },
+    "sync_on": {
+      "6": 1
+    },
+    "vco1_pulse": {
+      "0": 1
+    },
+    "vco1_saw": {
+      "0": 0
+    },
+    "vco2_pulse": {
+      "3": 1
+    },
+    "vco2_saw": {
+      "3": 0
+    },
+    "vintage_default": {
+      "491": 0.314623058
+    },
+    "vintage_max": {
+      "491": 1
+    },
+    "xmod_max": {
+      "157": 1
+    }
+  },
+  "calibration_notes": "Acoustic pilot: waveform 0 triangle, 1 saw; native pulse travel approximately 6.75%-53.25% duty at A3, square2=.93 (H2 -58.97 dB before fine tune). NoiseType0 white (-0.19 dB/oct), 1 pink (-3.20 dB/oct). VCO2 coarse min/mid/max 54.953/219.798/879.252 Hz with centred fine tune. Fine2 calibrated to VCO1 220.350 Hz using measured slope; fine1 remains centre. Both sweep timing and 22-second uninterrupted note checked. Repeated saw pitch differed below .00001 Hz and steady level .011 dB. Output fixed -13.98 dB; loudest pilot peak .2263. First samples align with note onset, no fixed latency adjustment. Initial patch Biggu Reibu; macro inputs zero, destinations retained. Reference tracking and actual intervals are reported after final capture; hardware behaviour remains unmeasured.",
+  "baseline_notes": "REAPER dry pilot, global tuning 440 Hz, mono/1 voice; effects/XMods/velocity/aftertouch off, macro inputs zero; output -13.98 dB; native stereo.",
+  "host": "REAPER 7.82; full-speed offline; hardware block 512, offline processing block not independently verified"
+}

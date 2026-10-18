@@ -236,7 +236,7 @@ static void test_silent_voice(void)
     assert(voice[0].vco2.vco.phase != before.vco2.vco.phase);
 }
 
-int main(void)
+static void test_layout_and_ranges(void)
 {
     static const uint8_t mixer_page[8] = {8, 9, 10, CM_SRC_BLANK, 11, 12, 13, 14};
     static const char *const names[K_COUNT] = {
@@ -287,6 +287,10 @@ int main(void)
     type_text(buf, 0x100, 0, 69); assert(!strcmp(buf, "PULS"));
     level_text(buf, 64 << 8, 0, 69); assert(!strcmp(buf, "-3DB"));
     switch_text(buf, 64 << 8, 0, 69); assert(!strcmp(buf, "ON"));
+}
+
+static void test_pitch_and_wave_translation(void)
+{
     reset();
     struct ob1_knobs knobs = {63, 63, 6, 3, 0, 0};
     parity(&knobs, 0, 0, 0, 0);
@@ -300,6 +304,14 @@ int main(void)
     param(K_TYP1, 0x100); knobs.wav1 = 127; parity(&knobs, 0, 0, 0, 0);
     param(K_WAV1, 0); knobs.wav1 = 64; parity(&knobs, 0, 0, 0, 0);
     param(K_TYP2, 0x100); param(K_WAV2, 0); knobs.wav2 = 64; parity(&knobs, 0, 0, 0, 0);
+}
+
+static void test_mixer_translation(void)
+{
+    struct ob1_knobs knobs = {64, 64, 0, 0, 0, 0};
+    reset();
+    param(K_TYP1, 0x100); param(K_WAV1, 0);
+    param(K_TYP2, 0x100); param(K_WAV2, 0);
     for (int mix1 = 0; mix1 < 9; mix1++) for (int mix2 = 0; mix2 < 9; mix2++)
         for (int mod = 0; mod < 4; mod++) {
             param(K_FND1, ZONE_AT(mix1 / 3, 3) << 8);
@@ -312,6 +324,26 @@ int main(void)
             knobs.mix1 = mix1; knobs.mix2 = mix2; knobs.mod = mod; knobs.nois = mod % 3;
             parity(&knobs, 0, 0, 0, 0);
         }
+}
+
+static void test_midi_lookup(void)
+{
+    assert(ob1_midi_cc_parameter(0, 69, 24) == 164);
+    assert(ob1_midi_cc_parameter(7, 69, 30) == 170);
+    for (int track = 8; track <= 16; track++)
+        assert(ob1_midi_cc_parameter(track, 69, 24) == 0);
+    assert(ob1_midi_cc_parameter(-1, 69, 24) == 0);
+    assert(ob1_midi_cc_parameter(0, 3, 24) == 0);
+    assert(ob1_midi_cc_parameter(0, 69, 23) == 0);
+    assert(ob1_midi_cc_parameter(0, 69, 31) == 0);
+}
+
+int main(void)
+{
+    test_layout_and_ranges();
+    test_pitch_and_wave_translation();
+    test_mixer_translation();
+    test_midi_lookup();
     test_waveform_graphics();
     test_level_graphics();
     test_silent_voice();

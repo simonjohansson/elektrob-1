@@ -4,7 +4,7 @@ The 17 October 2026 baseline starts at revision `145adfc8b78a7715643d51006721ff2
 Measurements use the same compiler, dependencies and workloads before and after the corrections.
 Firmware, source snapshots, executable benchmarks, stimulus scripts and raw reports are retained
 locally under `capture-local/performance-20261017/`; they are not distributed with the firmware.
-The initial-correction sections record firmware `0ff0295d…`. The later VST calibration below
+The initial-correction sections record firmware `0ff0295d…`. The later reference calibration below
 records the current sound model against both that correction and the original baseline.
 
 ## Initial correction: sound-engine instructions
@@ -111,14 +111,14 @@ The first correction's highest peak in that matrix was −4.24 dBFS. All four pr
 campaign cases were rerendered without rail hits. This is bounded test coverage, not a proof for every
 possible control transition or physical device workload.
 
-## VST calibration
+## Reference calibration
 
-The calibration target is the measured OB-2 by KBPlugs oscillator output. The same 64-position
+The calibration target is the measured reference oscillator output. The same 64-position
 saw curve and fundamental-level coefficients are used across pitches and VCOs. Compact reference
 cycle/level fixtures, middle-position checks and noise checks run with the normal host tests.
 Physical circuit uncertainties remain separate from this selected reference target.
 
-| Calibration check | Previous model | VST-calibrated model |
+| Calibration check | Previous model | Reference-calibrated model |
 |---|---:|---:|
 | Median normalized saw-family cycle RMSE, 70 pitch/VCO cases | 0.4841 | 0.1143 |
 | Median absolute relative waveform-level error | 0.424 dB | 0.039 dB |
@@ -144,7 +144,7 @@ track seeds were checked for distribution, spectral flatness, lag and cross-trac
 The noise-off paths omit that filter work. These choices keep the measured calibration within the
 original instruction budget.
 
-| Eight-voice DSP workload | Original baseline | Initial correction | VST calibration |
+| Eight-voice DSP workload | Original baseline | Initial correction | Reference calibration |
 |---|---:|---:|---:|
 | One saw | 15,554 | 15,538 | 13,817 |
 | Both VCOs/subs | 24,090 | 24,059 | 20,494 |
@@ -153,14 +153,13 @@ original instruction budget.
 All host suites and AddressSanitizer/UBSan checks pass. The 240 maximum-mix cases peak at
 −4.28 dBFS, slightly below the initial correction's −4.24 dBFS. The final waveform and noise
 calibration adds no increase in the checked maximum level. Both supported OS images build/link/patch;
-raw measurements, source hashes and simulator stimuli are retained locally under
-`capture-local/vst-calibration-20261017/`.
+raw measurements, source hashes and simulator stimuli are retained locally.
 
 The final OS 1.54 image repeats the same fresh boot/control script and controlled eight-voice
 workloads as both comparison images. No workload settings, dependency revision or timing model
 were changed. The modeled 100 ms results are:
 
-| Workload | Original busy | Initial correction busy | VST calibration busy | Original worst margin | VST calibration worst margin |
+| Workload | Original busy | Initial correction busy | Reference calibration busy | Original worst margin | Reference calibration worst margin |
 |---|---:|---:|---:|---:|---:|
 | One saw | 75.26% | 75.23% | 73.85% | 24.68% | 27.08% |
 | Both VCOs/subs | 81.75% | 81.72% | 79.07% | 16.94% | 21.50% |

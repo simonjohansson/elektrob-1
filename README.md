@@ -115,9 +115,9 @@ See [benchmark interpretation](docs/development.md#benchmark-interpretation).
 ## How faithful it is
 
 The model follows the OB-1's oscillator topology, with saw-family shape/level, cross-modulation depth,
-mixer steps and white-noise output calibrated against OB-2 by KBPlugs. Both mixer middle positions
+mixer steps and white-noise output calibrated against the reference. Both mixer middle positions
 are approximately −3 dB. The minimum pulse width remains provisional at 6.7 %; drift and other analog
-variation are omitted. Agreement with the reference plugin is distinct from validation against a
+variation are omitted. Agreement with the reference is distinct from validation against a
 physical OB-1, for which no controlled capture set is included.
 
 [Sources and confidence](docs/references.md) separates printed facts, calculations, measurements and

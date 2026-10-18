@@ -5,8 +5,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include "voice.h"
+#include "dsp.h"
 
 #define RATE 48000
 #define N 4800                  /* 0.1 s: 10 Hz bins */
@@ -288,7 +287,7 @@ static void test_xmod_scale(void)
     assert(dsp_xmod_scale(65535, 32767, 0, DSP_INC_MAX) == DSP_INC_MAX);
 }
 
-/* OB-2 by KBPlugs' slow-ramp full-depth mean reset ratio is 2.78; test without the pitch clamp. */
+/* The reference's slow-ramp full-depth mean reset ratio is 2.78; test without the pitch clamp. */
 static void test_xmod_pitch(void)
 {
     struct dsp_osc o1 = {{0}, 0, 32767, 32767}, o2 = {{0}, 0, 32767, 32767};
@@ -336,43 +335,6 @@ static void test_noise(void)
     assert(fabs(corr / power) < 0.02);
 }
 
-/* Reference middle levels are -3 dB below ON for oscillator and noise sources. */
-static void test_mix_gains(void)
-{
-    assert(fabs(20 * log10((double)DSP_MIX_LOW / DSP_MIX_HIGH) + 3) < 0.02);
-    assert(fabs(20 * log10((double)DSP_MIX_NOISE_LOW / DSP_MIX_NOISE_HIGH) + 3) < 0.02);
-}
-
-/* The output: a quarter of a source at ON, DC gone within a second, a source at gain 0 left out, and
- * clipped, never wrapped. */
-static void test_mix_out(void)
-{
-    static int32_t acc[RATE], out[RATE], junk[RATE];
-    struct dsp_hpf h = {0};
-    uint32_t noise = 1;
-    const int32_t *src[4] = {acc, junk, junk, junk};
-    int32_t high[4] = {DSP_MIX_HIGH, 0, 0, 0}, i;
-    double tail = 0;
-    for (i = 0; i < RATE; i++) {
-        acc[i] = 10000 + ((i / 24) & 1 ? 20000 : -20000);   /* 1 kHz square riding on DC */
-        junk[i] = 65535;
-    }
-    dsp_voice_out(&h, src, high, &noise, 0, out, RATE);
-    for (i = RATE - 4800; i < RATE; i++)
-        tail += out[i];
-    assert(fabs(tail / 4800 / 2147483648.0) < 0.001);           /* the DC is gone */
-    /* the square's edge at a quarter, less the 11 Hz high-pass's droop over 24 samples (3.4 %) */
-    assert(abs((out[RATE - 1] - out[RATE - 25]) / 65536 - 2 * 5000) < 400);
-    for (i = 0; i < RATE; i++)
-        acc[i] = junk[i] = (i & 1) ? 65535 : -65535;          /* four sources at their loudest: too loud */
-    for (i = 0; i < 4; i++)
-        high[i] = DSP_MIX_HIGH;
-    src[1] = src[2] = src[3] = junk;
-    dsp_voice_out(&h, src, high, &noise, DSP_MIX_NOISE_HIGH, out, 64);
-    for (i = 0; i < 64; i++)
-        assert((i & 1) ? out[i] > 0 : out[i] < 0);
-}
-
 /* The band-limiting, at 1.9 kHz. The 2-point polyBLEP is weak just above Nyquist (the 13th harmonic,
  * 24.7 kHz, folds to 23.3 kHz at -31 dB), so the check is on the aliases that land below 10 kHz. */
 static void test_saw_type_aliasing(void)
@@ -396,118 +358,6 @@ static void test_saw_type_aliasing(void)
     printf("saw at %d Hz, aliases below 10 kHz: %.1f dB (naive %.1f); anywhere: %.1f dB (naive %.1f)\n",
            F0, blep, naive, blep_all, naive_all);
     assert(blep < naive - 20);
-}
-
-/* The pulse control ends at square; audible source shaping must not alter raw-ramp XMOD. */
-static void test_wave_mapping_and_xmod_source(void)
-{
-    struct dsp_shape shape, carrier;
-    int32_t f1[32], s1[32], f2[32], s2[32], reference[32 * 32];
-    uint32_t previous = 0;
-    int wave, block, i;
-    dsp_shape_saw(&carrier, 32768);
-    for (wave = 64; wave < 128; wave++) {
-        ob1_shape(&shape, wave);
-        assert(shape.pulse && shape.width > previous && shape.width <= 0x80000000u);
-        previous = shape.width;
-    }
-    ob1_shape(&shape, 64);
-    assert(fabs(shape.width / 4294967296.0 - 0.067) < 1e-8);
-    assert(fabs(previous / 4294967296.0 - 0.5) < 1e-7);
-    for (wave = 0; wave < 128; wave++) {
-        struct dsp_osc a = {{0}, 0, 32767, 32767}, b = a;
-        ob1_shape(&shape, wave);
-        for (block = 0; block < 32; block++) {
-            dsp_pair(&a, &b, step(200), step(2), &carrier, &shape, DSP_XMOD,
-                     f1, s1, f2, s2, 32);
-            for (i = 0; i < 32; i++) {
-                if (!wave)
-                    reference[block * 32 + i] = f1[i];
-                else
-                    assert(f1[i] == reference[block * 32 + i]);
-            }
-        }
-    }
-}
-
-/* Mixer levels must not affect oscillator clocks, sub-octaves or modulation history. */
-static void test_modulation_routing(void)
-{
-    int mode, mix, block, i, different = 0;
-    int32_t out[32], other[32];
-    struct ob1_voice muted, audible, xmod;
-    struct ob1_knobs k = {63, 127, 6, 0, 0, 0}, a;
-    for (mode = 0; mode < 4; mode++) {
-        ob1_voice_init(&muted, 1);
-        ob1_voice_init(&audible, 1);
-        k.mod = mode;
-        a = k;
-        a.mix2 = 8;
-        for (block = 0; block < 200; block++) {
-            ob1_voice_render(&muted, &k, step(220), step(330), out);
-            ob1_voice_render(&audible, &a, step(220), step(330), other);
-            assert(!memcmp(&muted.vco1, &audible.vco1, sizeof muted.vco1));
-            assert(!memcmp(&muted.vco2, &audible.vco2, sizeof muted.vco2));
-        }
-    }
-    ob1_voice_init(&muted, 1);
-    ob1_voice_init(&xmod, 1);
-    for (block = 0; block < 200; block++) {
-        k.mod = DSP_SYNC | DSP_XMOD;
-        ob1_voice_render(&muted, &k, step(220), step(330), out);
-        k.mod = DSP_XMOD;
-        ob1_voice_render(&xmod, &k, step(220), step(330), other);
-        for (i = 0; i < 32; i++)
-            different |= out[i] != other[i];
-    }
-    assert(different);
-    ob1_voice_init(&muted, 1);
-    ob1_voice_init(&audible, 1);
-    for (block = 0; block < 400; block++) {
-        uint32_t inc1 = step(block < 200 ? 220 : 330), inc2 = step(261.625565);
-        mix = block % 9;
-        mode = block / 100;
-        k.mix1 = mix;
-        k.mix2 = (block / 9) % 9;
-        k.mod = mode;
-        k.wav1 = block % 128;
-        k.wav2 = 127 - k.wav1;
-        a = k;
-        a.mix1 = a.mix2 = 8;
-        ob1_voice_render(&muted, &k, inc1, inc2, out);
-        ob1_voice_render(&audible, &a, inc1, inc2, other);
-        assert(!memcmp(&muted.vco1, &audible.vco1, sizeof muted.vco1));
-        assert(!memcmp(&muted.vco2, &audible.vco2, sizeof muted.vco2));
-    }
-}
-
-static void test_mixer_phase_continuity(void)
-{
-    struct ob1_voice v;
-    struct ob1_knobs k = {0, 0, 6, 3, 0, 0};
-    const uint32_t inc = step(261.625565);
-    int32_t out[32];
-    double low = 1e100, high = 0;
-    ob1_voice_init(&v, 1);
-    for (int repeat = 0; repeat < 6; repeat++) {
-        k.mix2 = 0;
-        for (int block = 0; block < 997 + 137 * repeat; block++) {
-            ob1_voice_render(&v, &k, inc, inc, out);
-            assert(v.vco1.vco.phase == v.vco2.vco.phase);
-            assert(v.vco1.sub == v.vco2.sub);
-        }
-        k.mix2 = 3;
-        double power = 0;
-        for (int block = 0; block < 900; block++) {
-            ob1_voice_render(&v, &k, inc, inc, out);
-            if (block >= 150)
-                for (int i = 0; i < 32; i++)
-                    power += (double)out[i] * out[i];
-        }
-        low = fmin(low, power);
-        high = fmax(high, power);
-    }
-    assert(10 * log10(high / low) < 0.02);
 }
 
 /* Immediate reset clocks one sub event per natural/forced reset, merging coincident events. */
@@ -551,8 +401,60 @@ static void test_blep_full_jump(void)
     assert(prev == 0 && cur == 0);
 }
 
+/* Standalone and paired full-saw evaluators must agree sample for sample. */
+static void test_full_saw_fast_path(void)
+{
+    const uint32_t increments[] = {1u << 15, 19685266u, 1u << 28, DSP_INC_MAX};
+    unsigned k;
+    for (k = 0; k < sizeof(increments) / sizeof(increments[0]); k++) {
+        struct dsp_osc a = {{0}, 0, 32767, 32767}, b = a;
+        struct dsp_shape saw;
+        struct dsp_osc other_vco = a;
+        int32_t fast[32], fs[32], generic[32], gs[32], other[32], os[32];
+        int block, i;
+        dsp_shape_saw(&saw, 32768);
+        for (block = 0; block < 100; block++) {
+            dsp_osc_block(&a, increments[k], &saw, fast, fs, 32);
+            dsp_pair(&b, &other_vco, increments[k], increments[k], &saw, &saw,
+                     0, generic, gs, other, os, 32);
+            for (i = 0; i < 32; i++) { assert(fast[i] == generic[i]); assert(fs[i] == gs[i]); }
+        }
+    }
+}
+
+/* Golden hashes from the generic full-saw carrier, before adding paired fast paths. */
+static void test_full_saw_pair_golden(void)
+{
+    static const uint32_t increments[3][2] = {
+        {2926235u, 4389432u}, {19685266u, 29494959u}, {157482134u, 235959677u}
+    };
+    static const uint32_t expected[4][3] = {{0x8f88db6au,0xc1f19a2cu,0xeeb379dau},{0x6b86055fu,0x6486e294u,0x56779a0bu},{0xe7713475u,0xbfc48d35u,0x88efe863u},{0xec36dd62u,0x4fb6060cu,0x39bb8b30u}};
+    struct dsp_shape carrier, source;
+    int mod, shape, block, i, j;
+    dsp_shape_saw(&carrier, 32768);
+    for (mod = 0; mod < 4; mod++)
+        for (shape = 0; shape < 3; shape++) {
+            struct dsp_osc a = {{0}, 0, 32767, 32767}, b = a;
+            int32_t output[4][32];
+            uint32_t hash = 2166136261u;
+            a.vco.phase = 0x12345678u; b.vco.phase = 0x98765432u;
+            if (!shape) dsp_shape_saw(&source, -12343);
+            else dsp_shape_pulse(&source, shape == 1 ? 0x80000000u : 287762809u);
+            for (block = 0; block < 100; block++) {
+                dsp_pair(&a, &b, increments[shape][0], increments[shape][1], &carrier, &source,
+                         mod, output[0], output[1], output[2], output[3], 32);
+                for (i = 0; i < 32; i++)
+                    for (j = 0; j < 4; j++)
+                        hash = (hash ^ (uint32_t)output[j][i]) * 16777619u;
+            }
+            assert(hash == expected[mod][shape]);
+        }
+}
+
 int main(void)
 {
+    test_full_saw_fast_path();
+    test_full_saw_pair_golden();
     test_blep_full_jump();
     test_vco_resets();
     test_vco_crossing_position();
@@ -569,15 +471,10 @@ int main(void)
     test_sync_clocks_sub();
     test_sync_whole_multiple();
     test_sync_ratio_boundaries();
-    test_modulation_routing();
-    test_mixer_phase_continuity();
-    test_wave_mapping_and_xmod_source();
     test_xmod_scale();
     test_xmod_pitch();
     test_xmod_clamp();
     test_noise();
-    test_mix_gains();
-    test_mix_out();
     puts("dsp: all tests passed");
     return 0;
 }

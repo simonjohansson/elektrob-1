@@ -18,6 +18,13 @@ enum {
 
 static const struct cm_ui32 ob1_page;
 
+int32_t ob1_midi_cc_parameter(int32_t track, int32_t machine, int32_t cc)
+{
+    if (track < 0 || track >= 8 || machine != OB1_ID || cc < 24 || cc > 30)
+        return 0;
+    return 164 + cc - 24;
+}
+
 /* ---- the sound (ev_render_voices: the render, interrupt level) ----------------------------------- */
 
 static struct ob1_voice voice[8];            /* set up on its first block */

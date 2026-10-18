@@ -2,5 +2,6 @@
 out/
 .digiemu/
 .DS_Store
-KBPLUGS.md
+__pycache__/
+REFERENCE.md
 /research/ob1/

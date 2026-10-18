@@ -16,8 +16,39 @@ mise run knobs:digitakt
 ```
 
 These tasks need neither stock firmware nor the m68k cross-toolchain. The analysis task uses uv to
-obtain its Python dependencies. Host tests check oscillator events, spectra, sync,
-cross modulation, noise and mixer behavior. They do not test the complete device wrapper or saved sounds.
+obtain its Python dependencies. Host tests cover DSP mechanics, rendered voice policy,
+Digitakt pitch/note logic and capture plumbing. They do not execute the complete firmware wrapper
+or verify saved sounds.
+
+## Test ownership
+
+Organize checks by the behavior and execution boundary they protect. A reference measurement is
+the provenance of a regression expectation, not a separate class of test.
+
+| Boundary | Responsibility |
+|---|---|
+| DSP mechanics | Oscillator events, edge correction, harmonic structure, sync/XMOD and optimized-path equivalence. Historical sample hashes preserve implementation behavior; they do not establish reference accuracy. |
+| Rendered shared voice | Mixer ratio invariance across shapes/pitches, source routing, noise continuity/coloration, additivity and maximum-output policy. |
+| Captured reference agreement | Recorded waveform, pitch, level and spectral expectations through one shared assertion path; fixed output-path gains and explicit phase-aware mixture bounds. |
+| Digitakt logic on the host | Pitch conversion, held-note priority, control decoding/defaults, wrapper-to-engine parity and UI composition, independently of stock firmware execution. |
+| Capture/assertion plumbing on the host | Case coverage, control mappings, note cleanup, recording integrity, numeric extraction and rejection of known synthetic audio changes. Fake transports and synthetic signals do not qualify firmware or hardware. |
+| Firmware emulator | Real panel/key and MIDI paths, stored and live setup, active AMP and complete audio acquisition through the compiled firmware. |
+| Physical device | Complete setup over USB MIDI and stereo USB acquisition on a prepared device. Firmware emulation and transport mocks do not qualify hardware setup. |
+
+`mise run test` runs the host checks together. `regression:dsp`, `regression:firmware` and
+`regression:device` select the shared capture catalogue at their respective boundaries. Device capture
+requires separate firmware installation and manual project/receive-channel preparation. These tasks
+perform acquisition only; a separate `regression:assert` task checks reviewed numeric expectations.
+`mise run test:reference` captures the actual DSP catalogue and checks the committed numeric reference
+policy; CI runs it after the host checks. Known differences fail normally and can keep CI red.
+The old embedded waveform table and calibrated broadband-noise-level test have been replaced by this
+shared path. The broader mixer mechanics matrix and output policy remain independent of reference
+agreement. Reusing cases across target boundaries is intentional; avoid copying expected values into
+separate DSP, firmware and device tests.
+
+The host maximum-mix regression currently limits the matrix peak to −4.25 dBFS: the unchanged
+engine measures −4.28 dBFS, with 0.03 dB allowed for rounding. Keep this output-level policy distinct
+from merely avoiding full-scale clipping. It is a bounded matrix, not a guarantee for every transition.
 
 ## Commands and firmware
 
@@ -28,7 +59,13 @@ cross modulation, noise and mixer behavior. They do not test the complete device
 | `mise run build:deps` | Builds device dependencies; the Digitakt build recreates `out/os*`. |
 | `mise run firmware` | Patches the selected stock OS into `out/Digitakt_custom.syx`. |
 | `mise run emu` | Builds the firmware and opens it in digiemu. Use FUNC+SRC to choose the machine; shift-click FUNC to latch it. |
-| `mise run test` | Compiles and runs the host DSP checks. |
+| `mise run test` | Runs host DSP, voice regression, Digitakt logic, capture plumbing and synthetic assertion checks. |
+| `mise run firmware:fetch` | Downloads the latest supported Digitakt mk1 OS from Elektron; refuses an unreviewed OS update. |
+| `mise run test:emulator` | Runs the pinned emulator's self-tests; checks for unrelated firmware or optional platforms may skip. |
+| `mise run test:reference` | Captures all 315 DSP cases and checks the committed reference policy; known mismatches return nonzero. |
+| `mise run regression:measure RUN --out NEW.json` | Exports compact numeric measurements from a completed capture; does not approve a baseline. |
+| `mise run regression:assert RUN --expectations FILE.json` | Checks reviewed numeric limits and signed cycles; reports failures without reference WAVs. |
+| `mise run test:firmware:midi --firmware IMAGE --os OS --out NEW_DIR` | Builds firmware, then verifies native MIDI setup and routing in an isolated emulator. |
 | `mise run render OUT.wav [key=value...]` | Produces 48 kHz mono, 24-bit PCM audio. |
 | `mise run analyze FILE.wav` | Estimates fundamental frequency, harmonic levels and the strongest non-harmonic spectral bin. |
 | `mise run knobs` | Prints knob graphics as text for inspection. |
@@ -40,6 +77,10 @@ Device tasks dispatch to Digitakt and Digitone. Their direct forms are `build:di
 replace `digitakt` with `digitone` for the other target. Every Digitone task currently prints a
 placeholder message and succeeds without producing artifacts, running an emulator or publishing.
 Shared host tasks and bootstrap run once.
+
+The [regression capture workflow](regression.md) sets up and records shared cases on the host,
+compiled firmware and a physical Digitakt. Its initial stage checks acquisition only, without
+comparing audio against expected values.
 
 For firmware work, obtain stock Digitakt mk1 OS 1.53 or 1.54 from Elektron. Create `firmware/` before
 copying it there, and set `ELEKLOADER_STOCK` in `mise.toml` to the desired stock file. Run `mise bootstrap`
@@ -83,9 +124,14 @@ Every invocation starts a fresh voice. It cannot establish device note-to-note p
 | Graphics | Text previews plus emulator or device screenshots. | Physical readability and control behavior. |
 | SDK, firmware or release changes | Build each supported OS, inspect artifacts, exercise the complete firmware. | Exact-build hardware qualification. |
 
-CI runs host DSP tests. A passing job does not establish firmware linking, device UI, persistence,
-CPU headroom or agreement with physical OB-1 hardware. Repeat broader checks when a change crosses
-those boundaries, rather than treating every task as requiring every check.
+CI runs host tests, downloads the current official Digitakt mk1 OS, builds the firmware, runs the
+pinned emulator's self-tests and compiled MIDI integration, then captures all 315 firmware cases.
+Both firmware and DSP captures are checked against the recorded reference. Independent checks still
+run when an earlier check fails; reference disagreements remain ordinary failures. CI retains capture
+audio, screenshots and reports for seven days, excluding stock/custom firmware and emulator images.
+Physical-device capture and flashing run separately. A passing job does not establish physical UI,
+persistence, CPU headroom or agreement with physical OB-1 hardware. Repeat broader checks when a
+change crosses those boundaries.
 
 ## Benchmark interpretation
 

@@ -85,7 +85,7 @@ void dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *ou
 
 /* ---- the two VCOs together --------------------------------------------------------------------------
  * SYNC: VCO1's reset pulse resets VCO2 (R120, Q21; SW17). XMOD: VCO2's ramp moves VCO1's pitch through its
- * exponential converter. The depth matches OB-2 by KBPlugs' measured slow-ramp mean reset ratio, 2.78. */
+ * exponential converter. The depth matches the reference's measured slow-ramp mean reset ratio, 2.78. */
 #define DSP_SYNC        1
 #define DSP_XMOD        2
 #define DSP_XMOD_OCT    4   /* integer ceiling for the exponential lookup */
@@ -102,7 +102,7 @@ uint32_t dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max);
 
 /* ---- the mixer ----------------------------------------------------------------------------------------
  * The OB-1 mixes VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each switched ON, -3 dB or OFF through U13-U15 (4016s).
- * Middle/ON gains match the measured OB-2 by KBPlugs -3 dB positions; source resistor ratios alone
+ * Middle/ON gains match the measured reference -3 dB positions; source resistor ratios alone
  * do not establish those levels. A shared 11 Hz high-pass approximates AC coupling.
  * Gains against an oscillator at ON: */
 #define DSP_OUTPUT_GAIN     1295            /* Q12: fixed -10 dB voice trim, folded into source gains */

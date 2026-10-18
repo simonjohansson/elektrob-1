@@ -61,26 +61,66 @@ done
 '''
 
 [tasks.test]
-description = "Build the machine's DSP for the host and run its tests"
+description = "Run host DSP, voice, Digitakt logic and capture-harness checks"
 run = [
   "mkdir -p out",
-  "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c dsp/voice.c tests/test_dsp.c -lm -o out/test_dsp",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c tests/test_dsp.c -lm -o out/test_dsp",
   "out/test_dsp",
-  "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c dsp/voice.c tests/test_voice_headroom.c -lm -o out/test_voice_headroom",
-  "out/test_voice_headroom",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c dsp/voice.c tests/test_voice.c -lm -o out/test_voice",
+  "out/test_voice",
   "cc -std=c99 -O2 -Wall -Wextra -Werror tests/test_digitakt_pitch.c -lm -o out/test_digitakt_pitch",
   "out/test_digitakt_pitch",
   "cc -std=c99 -O2 -Wall -Wextra -Werror -Ivendor/elekloader/elekloader/sdk/include machines/digitakt/notes.c tests/test_digitakt_notes.c -o out/test_digitakt_notes",
   "out/test_digitakt_notes",
   "cc -std=c99 -O2 -Wall -Wextra -Werror -Ivendor/elekloader/elekloader/sdk/include -Idsp dsp/dsp.c dsp/voice.c machines/digitakt/knobs.c tests/test_digitakt_controls.c -o out/test_digitakt_controls",
   "out/test_digitakt_controls",
-  "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c dsp/voice.c tests/test_vst_shapes.c -lm -o out/test_vst_shapes",
-  "out/test_vst_shapes",
-  "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c dsp/voice.c tests/test_vst_noise.c -lm -o out/test_vst_noise",
-  "out/test_vst_noise",
-  "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c dsp/voice.c tests/test_vst_mixer.c -lm -o out/test_vst_mixer",
-  "out/test_vst_mixer",
+  'uv run --python "$(mise which python)" --with numpy python -m unittest discover -s tests -p "test_regression*.py"',
 ]
+
+[tasks."regression:dsp"]
+description = "Set up and capture host DSP cases, without audio comparisons"
+run = 'python tools/regression.py dsp "$@"'
+
+[tasks."firmware:fetch"]
+description = "Download the latest supported Digitakt mk1 stock OS from Elektron"
+run = 'python tools/fetch_firmware.py'
+
+[tasks."test:emulator"]
+description = "Run the pinned emulator's self-tests; unrelated firmware inputs may skip"
+dir = "vendor/digiemu"
+run = 'uv run --python "$(mise which python)" --extra midi bash tools/ci/run-tests.sh .venv/bin/python'
+
+[tasks."regression:measure"]
+description = "Export compact capture measurements as unapproved JSON candidates"
+run = 'uv run --python "$(mise which python)" --with numpy python tools/regression_assert.py measure "$@"'
+
+[tasks."regression:assert"]
+description = "Check captured audio against reviewed numeric expectations"
+run = 'uv run --python "$(mise which python)" --with numpy python tools/regression_assert.py check "$@"'
+
+[tasks."test:reference"]
+description = "Capture the DSP catalogue and assert the recorded reference; known mismatches fail"
+run = '''
+set -eu
+mkdir -p out/regression
+capture=$(mktemp -d "$PWD/out/regression/reference.XXXXXX")/capture
+python tools/regression.py dsp --suite all --out "$capture"
+uv run --python "$(mise which python)" --with numpy python tools/regression_assert.py check "$capture" --expectations tests/reference/recorded/assertions.json
+'''
+
+[tasks."test:firmware:midi"]
+description = "Verify compiled Digitakt MIDI dispatch and control setup in an isolated emulator"
+depends = ["firmware:digitakt"]
+run = 'uv run --python "$(mise which python)" --project vendor/digiemu python tests/test_digitakt_midi.py "$@"'
+
+[tasks."regression:firmware"]
+description = "Set up and capture actual firmware in an isolated emulator"
+depends = ["firmware:digitakt"]
+run = 'uv run --python "$(mise which python)" --project vendor/digiemu python tools/regression.py firmware "$@"'
+
+[tasks."regression:device"]
+description = "Set up and capture a prepared Digitakt over USB MIDI and USB audio"
+run = 'uv run --python "$(mise which python)" --with python-rtmidi --with sounddevice python tools/regression.py device "$@"'
 
 [tasks.render]
 description = "Render the machine's voice to a WAV (tools/render.c: note, seconds, the knobs, sweep)"

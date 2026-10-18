@@ -82,6 +82,27 @@ Switching a track to OB-1 sets both saws in unison, VCO1 FUND ON, VCO2 FUND −3
 and modulation OFF. Defaults must reach both the saved sound and the live engine. Updating only one
 can leave the displayed or reloaded sound different from the sound being played.
 
+## Incoming MIDI controls
+
+On an OB-1 audio track, CC 16–30 address the fifteen source controls in logical order:
+
+| CC | Control | Integer values |
+|---|---|---|
+| 16 / 20 | FRQ1 / FRQ2 | 0–63, with unison at 32 |
+| 17 / 21 | FIN1 / FIN2 | 0–127, with exact zero at 64 |
+| 18 / 22 | TYP1 / TYP2 | 0 saw, 1 pulse |
+| 19 / 23 | WAV1 / WAV2 | 0–63 within the selected family |
+| 24 / 27 | FND1 / FND2 | 0–42 OFF, 43–85 −3 dB, 86–127 ON |
+| 25 / 28 | OCT1 / OCT2 | 0–42 OFF, 43–85 −3 dB, 86–127 ON |
+| 26 / 29 | XMOD / SYNC | 0–63 OFF, 64–127 ON |
+| 30 | NOIS | 0–42 OFF, 43–85 −3 dB, 86–127 ON |
+
+Send raw integers; values above a control's maximum clamp to that maximum. MIDI uses the native
+track receive channel, or the auto channel for the selected track, with RECEIVE CC/NRPN enabled.
+The additional assignments apply only to audio tracks running machine 69. Other audio machines,
+MIDI tracks and FX retain their native controller lookup, including the FX uses of CC 24–30.
+This adds reception for the mixer controls; it does not assign outgoing MIDI feedback or new NRPNs.
+
 ## Pitch, pages and dependencies
 
 Digitakt uses its firmware pitch table for both oscillators' independent note and tuning offsets.

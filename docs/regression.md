@@ -1,0 +1,225 @@
+# Regression capture setup
+
+Acquisition sets up sounds, plays them and records the output. A separate assertion step compares
+numeric measurements with reviewed JSON expectations; reference WAVs are not needed in Git or CI.
+`captured` means acquisition finished, not that the sound is correct. Existing DSP correctness
+tests protect mechanics, routing, continuity and output policy; recorded reference expectations
+belong to the shared assertion step.
+
+The initial catalogue contains 60 isolated waveshape cases (both VCOs, ten positions, three notes),
+all 243 FUND/OCT/noise level combinations at a fixed saw/unison/A3, and twelve modulation cases.
+Each case specifies every source control. The five-case smoke selection includes both VCOs, silence,
+maximum mixing and modulation with a muted source. Persistence, locks/LFO automation, note sequences
+and sustained multi-track load are later stages.
+
+## Run the host DSP
+
+From the repository root, with the mise runtimes installed:
+
+```sh
+mise run regression:dsp
+mise run regression:dsp --suite all
+mise run regression:dsp --suite mixer --list
+mise run regression:dsp --case wave-vco1-n57-w63
+mise run test:reference
+```
+
+Suite choices are `smoke`, `waves`, `mixer`, `modulation` and `all`. Repeat `--case` to select exact
+case IDs. `--list` prints settings without executing them. Defaults are one second settling plus
+two seconds sustained audio. `--settle` and `--seconds` change those durations.
+
+The host captures the shared voice after its mixer, DC removal and output trim. There is no device
+filter, AMP, key scanner or note-off envelope at this boundary. It uses the existing renderer with a
+fresh voice for each case and labels that distinction in the report.
+
+## Run compiled firmware
+
+Initialize the pinned SDK/emulator and install the emulator's patched Unicorn using the existing
+bootstrap workflow. Obtain stock firmware locally as described in [Development](development.md).
+The regression task builds the configured Digitakt firmware automatically before starting:
+
+```sh
+mise run regression:firmware --firmware out/Digitakt_custom.syx --os 1.54
+```
+
+`--os` identifies the underlying stock OS, even when the custom image has another display version.
+OS 1.53 and 1.54 are supported. Pass the corresponding image and OS together. The runner creates a
+fresh virtual card/project inside its new output directory; it does not open or reset an existing
+simulator session. It uses the pinned SDK's OS-specific locations for read-only setup observations.
+
+Panel key events select OB-1. Actual encoder events set both oscillator and mixer pages, filter and
+AMP controls, with native sound-slot readback to catch missed or ineffective turns. At both ends of
+the sustained recording window, all fifteen live engine source controls must match the case,
+including exact zero fine tuning, and the AMP gate must be held with nonzero envelope level. These checks verify setup;
+they do not compare the audio to an expected sound. FUNC+TRK enters chromatic mode;
+octave arrows and held/released trig key 14 play the catalogue's low/middle/high A notes. The actual
+voice note is read back before recording the sustained section. This exercises guest panel/voice
+code. Direct envelope writes, forced oscillator blocks and output
+substitution are not used.
+
+The setup selects filter TYPE OFF, zero resonance, AMP attack zero, HOLD NOTE, decay zero, overdrive
+and sends OFF, centered pan and AMP volume 127. Fresh-project base-width full-span, SRR zero and both
+LFOs' neutral settings are checked. The recorder observes the emulator's final stereo SSI output,
+including the remaining stock processing. Setup screenshots and native readbacks accompany the audio.
+The fresh kit's track level 100 and compressor dry mix are also checked. The playback session disables
+the emulator's drawing/float shortcuts; modeled timing and physical performance are outside this run.
+
+## MIDI integration checks
+
+The firmware capture catalogue exercises the panel. A separate firmware integration check exercises
+the native MIDI receive path through the emulator's DIN UART:
+
+```sh
+mise run test:firmware:midi --firmware out/Digitakt_custom.syx --os 1.54 --out out/midi-check
+```
+
+This checks native lookup and its calling convention, all fifteen stored/live source values at range
+and zone boundaries, track isolation, stock/FX fallback, the device adapter's setup messages and
+note-on/off. It enables the fresh project's FX receive channel through panel events, then checks
+that compressor control reaches the native kit. It records firmware provenance and setup observations.
+This is firmware-dispatch evidence; USB transport and physical acquisition require a device run.
+
+## Physical Digitakt
+
+Install the intended MIDI-enabled firmware separately. The runner never flashes a device, and its
+firmware hash describes the supplied file; it cannot read back the installed build. Use a disposable
+project, stop the sequencer, select OB-1 on track 1 and silence the other tracks and external inputs.
+Use class-compliant USB audio and USB MIDI, enable RECEIVE NOTES and RECEIVE CC/NRPN, and set INPUT
+FROM to USB or MIDI+USB. Set track 1's receive channel to 1 and FX CONTROL CH to 9, or supply matching
+`--channel` / `--fx-channel` values. FX reception is OFF in a fresh project. Keep these channels distinct
+from the auto channel and other tracks' receive channels; disable conflicting assignments for this run.
+
+Discover ports without sending notes or controls:
+
+```sh
+mise run regression:device --ports
+```
+
+Then use the exact MIDI port name and current audio input index, for example:
+
+```sh
+mise run regression:device --firmware out/Digitakt_custom.syx --os 1.54 \
+  --midi-port 'Elektron Digitakt' --audio-device 1 --case wave-vco1-n57-w63
+```
+
+The adapter sends all fifteen [source controls](architecture.md#incoming-midi-controls), filter TYPE
+OFF, the known AMP setup, neutral LFOs, zero sends/overdrive, centered pan, track level 100 and dry
+compressor with zero makeup. It plays and releases notes while recording the USB stereo input.
+Settings are sent without device readback; manual preparation and installed firmware are
+operator-declared. A successful capture establishes acquisition, not correct audio or hardware fidelity.
+Device waits follow recorded sample counts and fail if input stalls. The reported input latency is
+allowed to pass after note-on before counting the settling window; it is retained in capture metadata.
+
+## Evidence and failures
+
+Runs go under ignored `out/regression/`, or a new directory supplied with `--out`. Existing output
+directories are refused. `run.json` records the revision, working-tree state, declared firmware hash,
+OS, durations, planned cases and capture completion/error. Each case retains its settings, WAV and
+capture metadata; firmware/device cases also retain the input events. Audio comparisons are marked
+`not run` throughout.
+
+Acquisition checks detect empty/truncated recordings and wrong sample rates, simulator halts,
+ineffective simulator setup and physical audio stream errors. Start/end frame positions identify
+the sustained recording window; setup audio cannot compensate for missing sustained samples.
+The requested duration must be present within one audio block (32 frames for host/emulator,
+256 for USB capture). Failed recordings and their available events are retained. Silence is a valid recording. No
+threshold checks decide whether an audible source is loud enough, tuned correctly or unclipped.
+A disconnected or absent device is an acquisition error, not successful qualification.
+
+The simulator's fresh state, host voice initialization and physical retained voice state differ.
+Captured audio does not yet establish sound equivalence, hardware CPU capacity or analog fidelity.
+
+## Compact measurements and assertions
+
+First acquire a run, then measure its existing sustained recordings:
+
+```sh
+mise run regression:dsp --suite all --out out/regression/candidate
+mise run regression:measure out/regression/candidate --out out/candidate-measurements.json
+mise run regression:assert out/regression/candidate --expectations tests/reference/recorded/assertions.json
+```
+
+The recorded-reference policy is active for all 315 cases. It checks fixed waveform pitch, signed
+shape and levels, isolated sources and middle-position ratios, noise, phase-aware mixtures and
+modulation spectra. [Reference provenance and budgets](../tests/reference/recorded/README.md) describe
+the output paths, calibration and exact coverage. Reference agreement is not physical OB-1 fidelity.
+
+CI first runs the host mechanics and synthetic checker tests, then `mise run test:reference` acquires
+the real DSP catalogue and checks this policy. Known mismatches fail normally; CI can be red until
+they are resolved. Reports retain every checked property, not just the first failing case. No audio
+plugin or reference WAV is needed in CI. Firmware and device acquisitions use the same assertion
+command on their completed capture directories; the declared route/OS and source hashes remain in
+the report. The policy currently covers OS 1.54 only and performs no flashing or hardware acquisition.
+
+Full catalogues contain the reference dependencies. For smaller selections, include the VCO1 full
+saw at each played note when checking relative wave levels. Isolated mixer sources need `mix-6-0-0`,
+and a middle-position case also needs its isolated ON counterpart. Missing dependencies are errors.
+The five-case smoke selection already contains the needed wave anchor; its mixture checks use the
+committed isolated-source measurements to allow coherent reinforcement and cancellation.
+
+The internal measurement JSON has `format: 2`, `role`, `target`, `stock_os`, `source` and a `cases` object
+keyed by catalogue ID. Measurement exports have `role: "measurements"`; they cannot be used directly
+as expectations. Each case retains `settings`, `observation`, `channels`, `frames`, `wav_sha256` and
+`metrics`. Source metadata records the capture manifest hash, revision, declared image hash and NumPy
+version. Changing measurement semantics requires a format-version change, preventing old fixtures
+from being interpreted as new measurements. Format 1 exports/absolute fixtures must be measured
+again; the committed reference remains original format-1 evidence with its two documented frequency
+corrections, imported explicitly by the version-2 reference policy. Keep original recordings locally.
+
+Measurements cover each channel independently: `rms_dbfs`, linear full-scale `peak`, signed `dc`, and
+`band_rms_dbfs` in the ordered bands 20–80, 80–200, 200–1000, 1000–4000, 4000–8000, 8000–16000 and
+16000–24000 Hz. Digital zero is represented as −240 dBFS. Band levels integrate a one-sided Welch
+power spectrum with a periodic Hann window, up to 8192 samples and 50% overlap, without detrending.
+No independent-noise sample equality is assumed.
+
+Isolated `wave-` cases also have `pitch_hz` and a 256-point, unit-RMS signed `cycle`. Frequency comes
+from a zero-padded Hann spectrum's strongest peak within ±2 % of the known played note, with local
+interpolation. Reject a boundary peak or a candidate more than 20 dB below the strongest component;
+this keeps a stronger overtone from becoming an octave error without treating FFT leakage as a
+fundamental. This estimator is for the isolated-wave catalogue, not arbitrary polyphonic/modulated recordings.
+The cycle projects up to 64 harmonics below 0.475 times the sample rate. The fundamental fixes its
+time origin. It does not invert polarity, reverse time or resample the recording. At least eight
+cycles are required. Symmetric signals cannot distinguish a polarity flip from a half-cycle shift;
+asymmetric anchors protect orientation. Whole-mixture levels and spectra are measured without
+aligning individual oscillators or assuming their relative phases agree.
+
+Analysis uses the beginning of each verified sustained window for the requested duration rounded
+down to a 32-sample block. Target/OS, settings, observation point, channel count and analysis length
+must match the fixture. Use separate fixtures for DSP, SSI and USB, whose output paths differ.
+
+For a separate absolute fixture, review the source and measurements, set `role: "expectations"`, describe
+their origin and tolerance rationale in `source.description`, and replace each case's `metrics`
+with `limits`. For example, a mono level limit has this structure (illustrative values only):
+
+```json
+{"limits": {"rms_dbfs": {"min": [-34.1], "max": [-33.9]}}}
+```
+
+Bounds may contain `min`, `max` or both. Their dimensions match the measurement: one value per
+channel, or one row of seven band values per channel. Missing expectations, empty assertions,
+unknown metrics, wrong dimensions, invalid numbers and incompatible captures are errors, not skips.
+A larger fixture may serve a smoke subset, but every selected case needs expectations.
+
+A shape assertion additionally uses `cycle: {"values": [[...]], "max_rmse": ...}` with 256 signed
+values per channel and a nonnegative normalized-cycle RMS-error limit. Shape assertions also require
+independent `pitch_hz` and `rms_dbfs` limits, so phase/shape normalization cannot hide pitch or gain
+changes. Set tolerances per property from justified requirements or repeatability measurements;
+never automatically accept candidates, widen limits, or absorb an unexplained polarity difference.
+
+Assertion reports go into a new `out/assertions/` directory, or a new directory supplied by `--out`.
+They retain actual measurements and each checked property's bounds/result. Failed checks and invalid
+inputs return nonzero. Neither checking nor measuring rewrites captures or fixtures; existing outputs
+are refused. CI retains generated regression audio and JSON reports on failure as temporary artifacts,
+excluding firmware images. No baseline-generation step runs in CI.
+
+The reference-policy fixture has `format: 2`, `role: "expectations"`, `source.description`, a relative
+reference path and SHA-256, per-target observation/channel/OS/fixed-gain calibration, and explicit
+per-property budgets. It reads the immutable measured case settings and metrics directly rather
+than copying them into three target fixtures. Gain and level are checked independently of signed
+unit-RMS shape. Source identities, settings and windows must match; malformed references, unknown
+tolerances, missing anchors and digest mismatches are errors, never skips. Updates to measurements,
+path calibration or budgets must be reviewed explicitly. No current render can update them.
+
+The control assignments and AMP behavior follow Elektron's *Digitakt User Manual*, OS 1.51,
+chromatic mode section 8.5.1, AMP/filter sections 11.4–11.6 and MIDI Appendix B. The source-control mapping follows this project's
+[architecture](architecture.md); the pinned firmware is the authority for setup readbacks.
