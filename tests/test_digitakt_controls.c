@@ -190,10 +190,14 @@ static void reset(void)
     for (int k = 0; k < K_COUNT; k++) {
         const struct cm_knob *p = k < 8 ? &ob1_page.base.knob[k] : &ob1_page.extra[k - 8];
         int slot = k < 8 ? 17 + k : 46 + k - 8;
-        assert(sound[10 + slot] == p->def);
-        assert(cm_src_value(0, k) == p->def);
+        int expected = k == K_FIN2 ? 67 << 8 : p->def;
+        assert(sound[10 + slot] == expected);
+        assert(cm_src_value(0, k) == expected);
     }
     assert(sound[10] == 0xa5a5);  /* Reserved slot 0 is untouched. */
+    assert(ob1_page.base.knob[K_FIN2].def == 64 << 8);
+    /* Translation checks below use exact unison rather than the fresh patch's detune. */
+    param(K_FIN2, 64 << 8);
     memset(ready, 0, sizeof(ready));
     memset((void *)fw_render_machine, 0, sizeof(fw_render_machine));
     fw_render_machine[0] = OB1_ID;
@@ -282,6 +286,7 @@ static void test_layout_and_ranges(void)
     frq_text(buf, 63 << 8, 0, 69); assert(!strcmp(buf, "+31"));
     fine_text(buf, 0, 0, 69); assert(!strcmp(buf, "-50.0"));
     fine_text(buf, 64 << 8, 0, 69); assert(!strcmp(buf, "+0.0"));
+    fine_text(buf, 67 << 8, 0, 69); assert(!strcmp(buf, "+2.4"));
     fine_text(buf, 127 << 8, 0, 69); assert(!strcmp(buf, "+50.0"));
     fine_text(buf, 65 << 8, 0, 69); assert(!strcmp(buf, "+0.8"));
     type_text(buf, 0x100, 0, 69); assert(!strcmp(buf, "PULS"));

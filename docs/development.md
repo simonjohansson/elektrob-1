@@ -96,8 +96,9 @@ identifying what a firmware build contains. Do not infer that from the minimum C
 
 ## Rendering controls
 
-The host defaults match switching to OB-1: both saws in unison, VCO1 FUND ON and VCO2 FUND −3DB,
-everything else OFF. Set `mix2=0` explicitly when measuring VCO1 alone.
+The host defaults use both saws in exact unison, VCO1 FUND ON and VCO2 FUND −3DB, everything else OFF.
+The device's fresh init patch adds +2.4 cents on FIN2; the host renderer has no fine-tuning control.
+Set `mix2=0` explicitly when measuring VCO1 alone.
 
 | Setting | Host values |
 |---|---|

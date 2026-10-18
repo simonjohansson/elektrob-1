@@ -318,8 +318,10 @@ static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
     for (int k = 0; k < K_COUNT; k++) {
         const struct cm_knob *p = k < 8 ? &ob1_page.base.knob[k] : &ob1_page.extra[k - 8];
         int slot = k < 8 ? 17 + k : 46 + k - 8;
-        *(uint16_t *)(sound + 20 + 2 * slot) = (uint16_t)p->def;
-        fw_set_param(p->def, track, slot);
+        /* Detune the fresh patch while retaining zero as the control's neutral default. */
+        int32_t value = k == K_FIN2 ? 67 << 8 : p->def;
+        *(uint16_t *)(sound + 20 + 2 * slot) = (uint16_t)value;
+        fw_set_param(value, track, slot);
     }
 }
 

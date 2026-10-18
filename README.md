@@ -48,8 +48,16 @@ press **TRIG 4** for **OS UPGRADE**, and send the stock file with Transfer's leg
 
 ## Playing it
 
-On a track's SRC page, open the machine menu (**FUNC + SRC**) and pick **OB-1**. A track switched to OB-1
-starts as two sawtooths in unison: VCO1's fundamental ON, VCO2's at −3 dB, everything else OFF.
+On a track's SRC page, open the machine menu (**FUNC + SRC**) and pick **OB-1**.
+
+### Init patch
+
+A track switched to OB-1 starts with two sawtooths: VCO1's fundamental ON, VCO2's at −3 dB,
+subs, noise and modulation OFF. Both coarse tunings are centred; **FIN1** is **+0.0 cents** and
+**FIN2** is **+2.4 cents**. This small detune lets the oscillators move through phase cancellation
+instead of holding it. Set FIN2 to +0.0 for exact unison. Saved sounds keep their stored tuning.
+
+### Controls
 
 The first SRC page puts both oscillators' performance controls together: VCO1 on the top row,
 VCO2 on the bottom row. Press **SRC** to switch to the mixer and routing page; press it again to return.

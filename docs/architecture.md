@@ -78,9 +78,11 @@ its oscillator mix remains three times the fundamental level plus the sub-octave
 This translation does not change waveform calibration, source gains or maximum available levels.
 The host renderer and DSP benchmark continue to accept those compact sound-engine controls.
 
-Switching a track to OB-1 sets both saws in unison, VCO1 FUND ON, VCO2 FUND −3DB, subs and noise OFF,
-and modulation OFF. Defaults must reach both the saved sound and the live engine. Updating only one
-can leave the displayed or reloaded sound different from the sound being played.
+Switching a track to OB-1 sets both saws to the played note with FIN1 at zero and FIN2 at +2.4 cents,
+VCO1 FUND ON, VCO2 FUND −3DB, subs and noise OFF, and modulation OFF. This fresh-patch detune leaves
+the fine controls' neutral defaults at zero and does not change loaded sounds. Initial values must
+reach both the saved sound and the live engine. Updating only one can leave the displayed or reloaded
+sound different from the sound being played.
 
 ## Incoming MIDI controls
 
