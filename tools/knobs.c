@@ -36,10 +36,10 @@ int main(void)
     static const char *const xn[] = {"-/-", "H/-", "L/L", "H/L", "-/H", "H/H"};
     static const int32_t nv[] = {0, 1, 2};
     static const char *const nn[] = {"OFF", "LO", "HI"};
-    show("WAV1 / WAV2", knob_wave, wv, wn, 6);
-    show("FRQ2", knob_frq, fv, fn, 6);
-    show("MOD", knob_mod, mv, mn, 4);
-    show("MIX1 / MIX2", knob_mix, xv, xn, 6);
-    show("NOIS", knob_noise, nv, nn, 3);
+    show("WAV1 / WAV2", ob1_knob_wave, wv, wn, 6);
+    show("FRQ2", ob1_knob_frq, fv, fn, 6);
+    show("MOD", ob1_knob_mod, mv, mn, 4);
+    show("MIX1 / MIX2", ob1_knob_mix, xv, xn, 6);
+    show("NOIS", ob1_knob_noise, nv, nn, 3);
     return 0;
 }

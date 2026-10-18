@@ -3,10 +3,12 @@ import io
 import sys
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 from zipfile import ZipFile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
-from fetch_firmware import firmware_payload, latest_download
+from fetch_firmware import firmware_payload, latest_download, main
 
 
 class FirmwareDownloadTests(unittest.TestCase):
@@ -22,19 +24,36 @@ class FirmwareDownloadTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Latest Digitakt OS is 1.55'):
             latest_download(html + '<a href="/Digitakt_OS1.55_dist.zip">new</a>')
 
-    def test_only_the_expected_payload_is_read(self):
-        def archive(files):
-            data = io.BytesIO()
-            with ZipFile(data, 'w') as zipped:
-                for name in files:
-                    zipped.writestr(name, b'payload')
-            return data.getvalue()
+    def test_loaded_firmware_must_match_device_and_release(self):
+        stock = SimpleNamespace(raw=b'known stock')
+        for device, version in [('digitakt-mk1', '1.54'), ('digitakt-mk1', '1.53'),
+                                ('digitone-mk1', '1.54')]:
+            with self.subTest(device=device, version=version), patch(
+                    'fetch_firmware.formats.load', return_value=(
+                        stock, SimpleNamespace(key=device, name=device), SimpleNamespace(version=version))) as load:
+                if device == 'digitakt-mk1' and version == '1.54':
+                    self.assertEqual(firmware_payload(b'archive', '1.54'), stock.raw)
+                else:
+                    with self.assertRaisesRegex(ValueError, 'Expected Digitakt mk1 OS 1.54'):
+                        firmware_payload(b'archive', '1.54')
+                load.assert_called_once_with(b'archive')
 
-        self.assertEqual(firmware_payload(archive(['release/Digitakt_OS1.54.syx',
-                                                  '__MACOSX/Digitakt_OS1.54.syx', 'readme.txt']), '1.54'), b'payload')
-        for files in (['Digitakt_OS1.53.syx'], ['a/Digitakt_OS1.54.syx', 'b/Digitakt_OS1.54.syx']):
-            with self.assertRaisesRegex(ValueError, 'exactly one'):
-                firmware_payload(archive(files), '1.54')
+    def test_unknown_content_is_rejected_even_with_expected_filename(self):
+        data = io.BytesIO()
+        with ZipFile(data, 'w') as zipped:
+            zipped.writestr('Digitakt_OS1.54.syx', b'unknown firmware')
+        with self.assertRaisesRegex(ValueError, 'no stock firmware elekloader knows'):
+            firmware_payload(data.getvalue(), '1.54')
+        with self.assertRaisesRegex(ValueError, 'zip cannot be read'):
+            firmware_payload(b'PK\x03\x04broken zip', '1.54')
+
+    def test_invalid_download_does_not_overwrite_firmware(self):
+        html = b'<a href="/Digitakt_OS1.54_dist.zip">current</a>'
+        with patch('fetch_firmware.fetch', side_effect=[html, b'unknown firmware']), \
+                patch('fetch_firmware.Path.write_bytes') as write:
+            with self.assertRaises(ValueError):
+                main()
+            write.assert_not_called()
 
 
 if __name__ == '__main__':

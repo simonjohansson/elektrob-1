@@ -66,9 +66,9 @@ static uint32_t wave_width(int32_t w)
 void ob1_shape(struct dsp_shape *sh, int32_t w)
 {
     if (w < 64)
-        dsp_shape_saw(sh, saw_shape[w].g);
+        ob1_dsp_shape_saw(sh, saw_shape[w].g);
     else
-        dsp_shape_pulse(sh, wave_width(w));
+        ob1_dsp_shape_pulse(sh, wave_width(w));
 }
 
 /* An oscillator at rest: its ramp at 0, its flip-flop high. Field by field: a struct copy would call
@@ -100,10 +100,10 @@ void ob1_voice_render(struct ob1_voice *v, const struct ob1_knobs *k, uint32_t i
     ob1_shape(&sh2, k->wav2);
     /* Mixer switches gate audio, not the oscillator clocks or modulation paths. */
     if (mod)
-        dsp_pair(&v->vco1, &v->vco2, inc1, inc2, &sh1, &sh2, mod, f1, s1, f2, s2, 32);
+        ob1_dsp_pair(&v->vco1, &v->vco2, inc1, inc2, &sh1, &sh2, mod, f1, s1, f2, s2, 32);
     else {
-        dsp_osc_block(&v->vco1, inc1, &sh1, f1, s1, 32);
-        dsp_osc_block(&v->vco2, inc2, &sh2, f2, s2, 32);
+        ob1_dsp_osc_block(&v->vco1, inc1, &sh1, f1, s1, 32);
+        ob1_dsp_osc_block(&v->vco2, inc2, &sh2, f2, s2, 32);
     }
     src[0] = f1;                                                   /* FUND and OCT, each VCO */
     src[1] = s1;
@@ -115,7 +115,7 @@ void ob1_voice_render(struct ob1_voice *v, const struct ob1_knobs *k, uint32_t i
     gain[3] = mix_gain[mix2 % 3];
     gain[0] = fundamental_gain(gain[0], inc1);
     gain[2] = fundamental_gain(gain[2], inc2);
-    dsp_voice_out(&v->hpf, src, gain, &v->noise, noise_gain[k->nois], out, 32);
+    ob1_dsp_voice_out(&v->hpf, src, gain, &v->noise, noise_gain[k->nois], out, 32);
     /* Shared reference rolloff: a convex average preserves the mixer's peak bound. */
     int32_t a = v->smooth[0], b = v->smooth[1];
     for (int i = 0; i < 32; i++) {

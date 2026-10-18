@@ -16,7 +16,7 @@ struct dsp_vco {
 };
 
 /* Once a block: the step for this block's pitch. The only divide. */
-void dsp_vco_set(struct dsp_vco *v, uint32_t inc);
+void ob1_dsp_vco_set(struct dsp_vco *v, uint32_t inc);
 
 /* After a step: if the ramp passed `at` during this sample, how far past it the sample ends, as a
  * fraction of a sample, Q16 (0-65535): the t a polyBLEP takes. Else -1. */
@@ -45,7 +45,7 @@ static inline int32_t dsp_saw(uint32_t phase)
 /* ---- band-limiting ----------------------------------------------------------------------------------
  * A jump of h, or a change of slope of m a sample, t (Q16) before the current sample: the 2-point
  * polyBLEP and polyBLAMP residuals, added to the previous sample (not yet output) and the current one. */
-void dsp_blep(int32_t *prev, int32_t *cur, int32_t t, int32_t h, int32_t m);
+void ob1_dsp_blep(int32_t *prev, int32_t *cur, int32_t t, int32_t h, int32_t m);
 
 /* ---- one oscillator ---------------------------------------------------------------------------------- */
 struct dsp_osc {
@@ -70,18 +70,18 @@ struct dsp_shape {
     uint32_t mid;           /* where its second corner or edge is: 2^31 (saw type, s = 0) or width */
     int32_t dc;             /* its mean */
 };
-void dsp_shape_saw(struct dsp_shape *sh, int32_t g);
-void dsp_shape_pulse(struct dsp_shape *sh, uint32_t width);
+void ob1_dsp_shape_saw(struct dsp_shape *sh, int32_t g);
+void ob1_dsp_shape_pulse(struct dsp_shape *sh, uint32_t width);
 
 /* One oscillator a block: n samples of the waveshape into out and of the sub-octave into sub (the OB-1's OCT,
  * a 4013 flip-flop clocked by the VCO's reset: a square an octave down, toggling at each reset, a sync's
  * included, and free-running too), both one sample late. */
-void dsp_osc_block(struct dsp_osc *o, uint32_t inc, const struct dsp_shape *sh, int32_t *out, int32_t *sub,
+void ob1_dsp_osc_block(struct dsp_osc *o, uint32_t inc, const struct dsp_shape *sh, int32_t *out, int32_t *sub,
                    int n);
 
 /* The same, a shape at a time. */
-void dsp_saw_type(struct dsp_osc *o, uint32_t inc, int32_t g, int32_t *out, int32_t *sub, int n);
-void dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *out, int32_t *sub, int n);
+void ob1_dsp_saw_type(struct dsp_osc *o, uint32_t inc, int32_t g, int32_t *out, int32_t *sub, int n);
+void ob1_dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *out, int32_t *sub, int n);
 
 /* ---- the two VCOs together --------------------------------------------------------------------------
  * SYNC: VCO1's reset pulse resets VCO2 (R120, Q21; SW17). XMOD: VCO2's ramp moves VCO1's pitch through its
@@ -93,12 +93,12 @@ void dsp_pulse_type(struct dsp_osc *o, uint32_t inc, uint32_t width, int32_t *ou
 
 /* Both VCOs a block, sample by sample, with mod (DSP_SYNC | DSP_XMOD): fund and sub of each into f1, s1, f2,
  * s2, one sample late. */
-void dsp_pair(struct dsp_osc *o1, struct dsp_osc *o2, uint32_t inc1, uint32_t inc2, const struct dsp_shape *sh1,
+void ob1_dsp_pair(struct dsp_osc *o1, struct dsp_osc *o2, uint32_t inc1, uint32_t inc2, const struct dsp_shape *sh1,
               const struct dsp_shape *sh2, int mod, int32_t *f1, int32_t *s1, int32_t *f2, int32_t *s2, int n);
 
 /* The cross mod's pitch factor on v: (v 2^((DSP_XMOD_DEPTH_Q6 / 64) x / 32768)) << sh (>> -sh if negative), x from
  * -32768 to 32767, v < 2^16, saturating at max. */
-uint32_t dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max);
+uint32_t ob1_dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max);
 
 /* ---- the mixer ----------------------------------------------------------------------------------------
  * The OB-1 mixes VCO1, VCO1 OCT, VCO2, VCO2 OCT and NOISE, each switched ON, -3 dB or OFF through U13-U15 (4016s).
@@ -113,7 +113,7 @@ uint32_t dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max);
 
 /* Raw white noise from the high 16 bits of a full-period 32-bit linear congruential generator.
  * n samples, -32768 to 32767; output coloration is applied only in the voice mixer. */
-void dsp_noise(uint32_t *state, int32_t *out, int n);
+void ob1_dsp_noise(uint32_t *state, int32_t *out, int n);
 
 /* Q12 source scale: colored noise at ON is 20.41 dB below full-saw RMS in the measured 200-8000 Hz band.
  * This calibrates the reference output path, not a physical transistor noise amplitude. */
@@ -129,7 +129,7 @@ struct dsp_hpf {
  * high-pass (one for the voice, where the OB-1 has one a source: it only differs at DC); a quarter, so two
  * oscillators and their subs at ON fit, and beyond that clipped at full scale, Q31. A single oscillator
  * at ON peaks at -12 dB. */
-void dsp_voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t gain[4], uint32_t *noise,
+void ob1_dsp_voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t gain[4], uint32_t *noise,
                    int32_t noise_gain, int32_t *out, int n);
 
 #endif
