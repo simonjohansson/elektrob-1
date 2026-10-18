@@ -233,3 +233,38 @@ The 240-case maximum-mix headroom suite retains its −4.28 dBFS peak. Six match
 Repeated OFF/−3 dB transitions at equal oscillator pitches preserve phase and sub-octave alignment;
 steady mixed levels remain within 0.02 dB across the tested mute durations. Intentional detuning can
 still produce beating and changing cancellation as the oscillator phases evolve.
+
+## Two-instance device timing
+
+Physical Digitakt mk1 measurements on 18 October 2026 compare revision `3398672` before the
+continuous-oscillator correction with `0d2dfc0` after it, on OS 1.54. Both diagnostic builds use
+Core 4.0, machine-pages 1.2, m68k-elf GCC 16.2.0 with `-mcpu=54455 -O2`, and
+[DigiHealth's timer diagnostics](https://github.com/irpina/digihealth/blob/b2c3cf16eaaf0ed638214858a487c955b5efd5cc/tools/digiusb.py).
+FAST AUDIO and the SYSTEM INFO overlay are OFF in both builds.
+
+Two OB-1 tracks hold MIDI note 57 at velocity 100, with full saws at unison. Six stock-machine tracks
+are idle and the transport is stopped. Each case collects twenty timer snapshots, about 30,000
+renders. Decoded source settings and live filter, AMP and other stock parameter values match across
+each pair. The default mixes VCO1 ON and VCO2 at −3 dB. The heavy case enables both fundamentals,
+both subs, noise, sync and cross modulation, all ON.
+
+| Two-track workload | Mean render before | Mean render after | Peak margin before | Peak margin after |
+|---|---:|---:|---:|---:|
+| VCO1 alone | 82.49% | 83.25% | 11.10% | 8.88% |
+| Default two saws | 83.91% | 83.78% | 9.09% | 9.22% |
+| Both VCOs/subs, sync, cross modulation and noise | 89.20% | 89.05% | 4.42% | 4.47% |
+
+Mean render load is render time divided by the measurement window. Peak margin is the fraction of
+the 32-sample block budget remaining after the longest observed render. Keeping muted oscillators
+running adds about 0.76 percentage points of average render load in the VCO1-only case. The other
+two workloads are essentially unchanged; the small decreases do not establish a general speedup.
+
+These are observed margins with identical diagnostic overhead, whose absolute cost was not measured
+separately. Busy sample tracks, sequencer activity, locks, LFOs and active UI work were not exercised.
+The roughly 4.5% heavy-case reserve is limited; these measurements do not establish a safe voice
+count or an exhaustive worst case.
+
+Diagnostic firmware SHA-256 values:
+
+- Before, OBP0: `ab4f93962d1ea586ead4f4ec07b6d3249dcfda25118f2792df91b4ebd51d792a`.
+- After, OBP1: `1b90152d9bf7880d0ccfec6d0808c174c6c184bb0a9c3cbe23da9ea27d5b2c92`.
