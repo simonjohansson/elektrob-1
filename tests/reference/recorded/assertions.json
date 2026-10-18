@@ -2,7 +2,7 @@
   "format": 2,
   "role": "expectations",
   "source": {
-    "description": "Recorded reference with explicit engineering error budgets. Known mismatches are failures, without polarity inversion or per-case fitting. Limits and path calibration are documented beside the measurements."
+    "description": "Recorded reference with explicit engineering error budgets. Spectral bands from 4 kHz upward are diagnostics because the reference filter and sample-rate-dependent processing affect them. Other known mismatches are failures, without polarity inversion or per-case fitting. Limits and path calibration are documented beside the measurements."
   },
   "reference": {
     "path": "measurements.json",

@@ -324,6 +324,37 @@ class ReferenceAssertionTest(unittest.TestCase):
         self.profile['targets']['dsp']['gain_db'] = -20
         self.assertEqual(self.result()['status'], 'passed')
 
+    def test_reference_high_bands_are_diagnostic_but_lower_bands_still_fail(self):
+        noise = np.fft.rfft(np.random.default_rng(42).normal(0, .05, RATE))
+        noise[np.fft.rfftfreq(RATE, 1/RATE) >= 4000] = 0
+        noise = np.fft.irfft(noise, n=RATE)
+        self.add('mix-0-0-2', noise)
+        self.add('mix-6-0-2', tone() + noise)
+        original = copy.deepcopy(self.actual)
+        for key in ('mod-3-frq2-32', 'mix-0-0-2', 'mix-6-0-2'):
+            for band, hz in ((4, 6000), (5, 12000), (6, 20000)):
+                with self.subTest(key=key, hz=hz):
+                    self.actual = copy.deepcopy(original)
+                    high = .005*np.sin(2*np.pi*hz*np.arange(RATE*2)/RATE)
+                    self.set_actual(key, self.signals[key] + high)
+                    result = self.result()
+                    self.assertEqual(result['status'], 'passed')
+                    row = next(r for r in result['cases'] if r['id'] == key)
+                    diagnostic = next(c for c in row['checks'] if c['status'] == 'diagnostic')
+                    self.assertGreater(diagnostic['actual'][0][band-4], diagnostic['expected']['max'][0][band-4])
+                    self.assertEqual(np.shape(self.actual['cases'][key]['metrics']['band_rms_dbfs']), (1, 7))
+        self.actual = original
+        key = 'mod-3-frq2-32'
+        self.set_actual(key, self.signals[key] + .005*np.sin(2*np.pi*3000*np.arange(RATE*2)/RATE))
+        row = next(r for r in self.result()['cases'] if r['id'] == key)
+        self.assertEqual(row['status'], 'failed')
+        self.assertEqual(next(c['status'] for c in row['checks'] if c['property'] == 'modulation_bands_relative_saw_db'), 'failed')
+
+    def test_nonfinite_high_band_diagnostics_are_rejected(self):
+        self.actual['cases']['mod-3-frq2-32']['metrics']['band_rms_dbfs'][0][4] = float('nan')
+        with self.assertRaisesRegex(ValueError, 'finite'):
+            self.result()
+
     def test_invalid_profiles_boundaries_and_missing_anchors_are_errors(self):
         original = copy.deepcopy(self.profile)
         for field, value in [('format', 1), ('format', True), ('source', None), ('role', 'measurements'), ('tolerances', {})]:
@@ -356,6 +387,15 @@ class ReferenceAssertionTest(unittest.TestCase):
             report = read_json(root/'polarity-failure/assertions.json')
             self.assertEqual(report['status'],'failed')
             self.assertTrue((root/'polarity-failure/measurements.json').exists())
+            key = 'mod-3-frq2-32'
+            high = .005*np.sin(2*np.pi*12000*np.arange(RATE*2)/RATE)
+            capture(run, (self.signals[key]+high)*10**(-.7/20), case=self.catalogue[key])
+            self.assertEqual(check('diagnostic'),0)
+            report = read_json(root/'diagnostic/assertions.json')
+            diagnostic = next(c for c in report['cases'][0]['checks'] if c['status']=='diagnostic')
+            self.assertGreater(diagnostic['actual'][0][1], diagnostic['expected']['max'][0][1])
+            measured = read_json(root/'diagnostic/measurements.json')['cases'][key]['metrics']
+            self.assertEqual(np.shape(measured['band_rms_dbfs']), (1, 7))
             ref_path.write_text(ref_path.read_text()+'\n')
             self.assertEqual(check('hash-error'),1)
             self.assertIn('SHA-256',read_json(root/'hash-error/assertions.json')['error'])

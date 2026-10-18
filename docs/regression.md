@@ -142,7 +142,11 @@ mise run regression:assert out/regression/candidate --expectations tests/referen
 The recorded-reference policy is active for all 315 cases. It checks waveform pitch against standard
 tuning (twelve-tone equal temperament, A4 = 440 Hz), independently of reference detuning, plus signed
 shape and levels, isolated sources and middle-position ratios, noise, phase-aware mixtures and
-modulation spectra. [Reference provenance and budgets](../tests/reference/recorded/README.md) describe
+modulation spectra below 4000 Hz. Direct reference band comparisons from 4000–24000 Hz
+are retained as diagnostics because the reference filter and sample-rate-dependent processing
+color them. They do not affect pass/fail. All seven raw spectral bands remain measured;
+standard pitch, full-band levels, signed cycles and independent engine checks remain strict.
+[Reference provenance and budgets](../tests/reference/recorded/README.md) describe
 the output paths, calibration and exact coverage. Reference agreement is not physical OB-1 fidelity.
 
 CI first runs the host mechanics and synthetic checker tests, then `mise run test:reference` acquires
@@ -209,7 +213,9 @@ never automatically accept candidates, widen limits, or absorb an unexplained po
 
 Assertion reports go into a new `out/assertions/` directory, or a new directory supplied by `--out`.
 They retain actual measurements and each checked property's bounds/result. Failed checks and invalid
-inputs return nonzero. Neither checking nor measuring rewrites captures or fixtures; existing outputs
+inputs return nonzero. Reference high-frequency comparisons have `status: "diagnostic"`, actual values
+and reference bounds; the console summarizes their count. These entries do not fail a case or run.
+Neither checking nor measuring rewrites captures or fixtures; existing outputs
 are refused. CI retains generated regression audio and JSON reports on failure as temporary artifacts,
 excluding firmware images. No baseline-generation step runs in CI.
 

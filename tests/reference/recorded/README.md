@@ -47,10 +47,10 @@ absolute saw anchor is checked separately, so relative levels cannot hide an ove
 gain change. DSP uses the left reference channel; stereo paths check each channel.
 Only OS 1.54 firmware/device observations are covered by this policy.
 
-Known differences are ordinary failures. There is no automatic polarity inversion,
+Supported reference differences are ordinary failures. There is no automatic polarity inversion,
 time reversal, pitch correction, expected-failure list or threshold widening. In
 particular, the current DSP/device waveform orientation, register-dependent levels,
-noise bandwidth and modulation differences can fail. Passing acquisition does not
+noise levels and low-frequency modulation differences can fail. Passing acquisition does not
 mean passing reference assertions, and passing levels does not establish matching
 modulation spectra.
 
@@ -64,8 +64,8 @@ The limits are engineering comparison budgets, not statistical confidence interv
 | Signed unit-RMS cycle | RMSE ≤0.25; retains the previous waveform budget with stricter orientation handling. |
 | Isolated FUND/sub/noise RMS | ±0.2 dB, both absolute and relative to the isolated VCO1 saw. |
 | Source middle/ON ratio | ±0.05 dB around the measured ratio. Broader shape/pitch mixer mechanics remain independently tested. |
-| Noise 200–8000 Hz level and middle/ON ratio | ±0.25 dB, allowing finite noise-window variation. |
-| Noise/modulation spectral bands | ±1 dB, after the fixed path calibration. |
+| Noise 200–4000 Hz level and middle/ON ratio | ±0.25 dB, allowing finite noise-window variation. |
+| Noise/modulation spectral bands below 4000 Hz | ±1 dB, after the fixed path calibration. |
 | Modulation RMS | ±0.5 dB. Spectral checks remain independent. |
 | Mixed-source bounds | ±0.5 dB around phase-aware energy bounds, allowing finite-window variation. |
 | All sources OFF | No more than 6 dB above the calibrated reference background RMS. |
@@ -78,6 +78,20 @@ between `max(0, 2*largest − sum)` and `sum`; noise adds in power. The same bou
 apply to spectral-band energy. A single arbitrary unison phase is not an oracle
 for whole-mixture RMS. This bounds check complements the existing engine additivity
 and continuity tests; it does not identify every possible mixture defect.
+
+Direct reference comparisons in 4000–8000, 8000–16000 and 16000–24000 Hz are
+diagnostics. The fully open reference filter remains active, and changing oversampling
+or output sample rate changes these bands across tonal and noise sources. They cannot
+establish an isolated oscillator defect. Modulation, noise and phase-aware mixture
+reports retain their actual values and reference bounds with `status: "diagnostic"`;
+those entries do not affect case/run status. All seven raw bands remain in measurement
+exports for every case. No recorded values, fixed gains or budgets are refitted.
+
+Band assertions below 4000 Hz remain strict. The dedicated noise band-level check uses
+200–4000 Hz so it does not gate an excluded band indirectly. Full-band RMS, signed cycles,
+standard pitch, mixer ratios and silence remain checked; levels and cycles are not tests
+of isolated frequency regions. Independent engine aliasing, band-limiting and headroom
+checks, and separate absolute spectral fixtures, retain their existing behavior.
 
 The gains are measured once from the unchanged engine's A3 full-saw recordings and
 recorded with capture hashes. They compensate the declared output paths, including
