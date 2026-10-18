@@ -193,7 +193,7 @@ USB level matching and hardware CPU timing remain unverified.
 
 The 18 October 2026 correction makes mixer settings affect output gains only. Both oscillators,
 their sub-octave flip-flops and selected modulation paths continue advancing throughout an active
-voice. The fully silent voice path is unchanged. The matched baseline is revision `3398672`, whose
+voice. The matched baseline is revision `3398672`, whose
 sound engine is identical to the previously flashed `cde5e99` build.
 
 The linked Digitakt renderer was measured with eight voices at MIDI 60, four warm-up blocks and
@@ -206,10 +206,9 @@ renderer gives the same counts.
 | One audible full saw, other outputs OFF | 18,152 | 23,065 | +4,913 (+27.1%) |
 | Default two saws | 24,777 | 24,649 | −128 (−0.5%) |
 | Both sources/subs, SYNC, XMOD and noise | 43,715 | 43,627 | −88 (−0.2%) |
-| Fully silent AMP envelopes | 958 | 958 | 0 |
 
-The extra cost is concentrated in previously skipped oscillators or routing. A separate engine-only
-comparison at fixed C4/G4-area pitches measures +35.9% for one audible full saw, +45.0% for one audible
+The increase is largest when one or both VCO outputs are OFF. A separate engine-only comparison
+at fixed C4/G4-area pitches measures +35.9% for one audible full saw, +45.0% for one audible
 triangle, and +78.7% for noise alone with both VCO outputs OFF. These percentages exclude the integration
 and stock track processing. Selected routing continues even if both VCO outputs are muted. Removing
 branches slightly reduces instruction counts when the same work was already running.

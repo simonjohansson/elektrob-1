@@ -35,12 +35,10 @@ The render callback replaces the selected tracks' audio after stock playback and
 overdrive. It runs at interrupt level. Its work must be bounded and must not allocate memory, perform
 I/O or wait for UI work. Tracks using another machine retain their stock audio blocks.
 
-Voice state is initialized on first use. Trigs do not restart oscillator phase. Once the AMP envelope
-has reached exactly zero and no trig starts the voice, sound generation is skipped and its block is
-cleared. Within an active voice, both oscillators and sub-octaves advance continuously, including
+Voice state is initialized on first use. Trigs do not restart oscillator phase.
+Within an active voice, both oscillators and sub-octaves advance continuously, including
 while their mixer outputs are OFF. Selected sync and cross modulation keep running independently
 of output levels. Mixer changes therefore preserve oscillator phase and band-limiting history.
-The fully silent voice optimization still pauses all oscillator state until rendering resumes.
 
 Live notes on an OB-1 track use last-note priority. Releasing the newest note recalls the most
 recent note still held, with its original velocity and trigger settings, through the stock note-on

@@ -68,8 +68,6 @@ operate together, so the two oscillators must be advanced as an interacting pair
 Both VCOs and their sub-octave flip-flops advance on every rendered block, even with their mixer
 outputs OFF. Selected sync and cross modulation also remain active regardless of output levels.
 This preserves phase, reset timing and band-limiting history when a source returns to the mix.
-The device may skip an entire voice once its amplitude envelope is fully silent. Noise state
-advances only while noise contributes to the output.
 
 ## Mixer, noise and headroom
 
@@ -99,4 +97,4 @@ calibration. Preserve or reduce maximum loudness when changing gains, and compar
 as timbre.
 
 No drift, component mismatch, finite analog reset time or transistor-level noise generation is
-modeled. See [Architecture](architecture.md#timing-and-state) for the approximation during silent time.
+modeled.

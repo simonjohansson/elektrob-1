@@ -90,13 +90,11 @@ Some things to try:
 - **A fat unison:** both fundamentals ON, FRQ1 and FRQ2 at +0, then detune FIN2 by a few cents and add the subs to taste.
 
 Notes and mixer switches do not reset oscillator phase. Both VCOs and their sub-octaves keep running
-while the voice is active, including when their outputs are OFF. A fully silent voice stops advancing
-until it sounds again.
+while the voice is active, including when their outputs are OFF.
 
 ### Voices and CPU
 
-Each sounding OB-1 voice costs DSP time on top of the stock engine. A voice whose amp envelope has finished
-skips sound generation, with a small check and buffer-clearing cost remaining.
+Each sounding OB-1 voice costs DSP time on top of the stock engine.
 
 Both oscillators run for every active voice, even when one or both mixer outputs are OFF. Selected
 sync and cross modulation also keep running while muted, so muting a source does not reclaim its CPU
