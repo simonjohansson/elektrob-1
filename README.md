@@ -63,6 +63,13 @@ starts as two sawtooths in unison: VCO1's fundamental ON, VCO2's at −3 dB, eve
 | G | MIX2 | FUND/OCT, each ON, -3 or - (OFF) | VCO2's, as MIX1 |
 | H | NOIS | OFF, -3DB, ON | Noise in the mix |
 
+Press **SRC** to switch between the two pages. Page 1 has the controls above. Page 2 has seven
+placeholders, **MOCK1–MOCK7** (0–127, initially 0), and a blank H knob. They support locks, LFOs and
+saving but do not affect the sound yet.
+
+Sounds saved with this two-page build use machine-pages' version-4 format and require compatible
+custom firmware to reload; stock firmware and older machine-pages cannot read them correctly.
+
 Some things to try:
 
 - **Sync sweep:** MOD on SYNC, VCO2 alone, then sweep FRQ2 or put an LFO on it.

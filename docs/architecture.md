@@ -52,8 +52,8 @@ sample preview retain their stock paths; held-note bookkeeping runs only on live
 Machine ID **69** identifies OB-1 in saved Digitakt sounds. Its identity and the meaning of saved
 parameter values are compatibility boundaries. Changing them requires an explicit compatibility plan.
 
-The eight SRC controls use the stock SLICE parameter layout so the existing lock and LFO machinery
-can act on them. Firmware knob values have eight fractional bits (8.8 fixed point); oscillator
+The first page's eight SRC controls use the stock SLICE parameter layout so the existing lock and LFO
+machinery can act on them. Firmware knob values have eight fractional bits (8.8 fixed point); oscillator
 settings use decoded integers. Display labels are not an alternative storage format.
 
 | Control | Meaning at the sound-engine boundary |
@@ -96,7 +96,12 @@ The SRC page borrows the stock parameter machinery while supplying names, text a
 Controls that would otherwise open a sample list or use unsuitable stock ranges need explicit page
 behavior. Page defaults alone do not replace the machine-switch initialization described above.
 
-Digitakt integration requires the Core 3.0 interface and machine-pages with custom knob drawing
-(1.1 or newer). Core interface compatibility is distinct from the Core version selected for a build.
+The second SRC page exposes seven mock values, independent of the sound engine. They occupy the
+additional sound slots supplied by machine-pages and retain locks, LFO modulation and saving. Its
+version-4 saved sounds require compatible custom firmware; older machine-pages and stock firmware
+cannot reload that format correctly.
+
+Digitakt integration requires the Core 3.0 interface and machine-pages 1.2 for the two-page UI.
+Core interface compatibility is distinct from the Core version selected for a build.
 See the pinned SDK's [Core reference](../vendor/elekloader/mods/core/README.md) and
 [machine-page reference](../vendor/elekloader/mods/machine-pages/README.md) for the framework contracts.

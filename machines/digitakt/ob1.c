@@ -273,27 +273,44 @@ static void ob1_switch(int32_t track, int32_t from, uint8_t *sound)
     set(sound, track, K_NOIS, 0);
 }
 
-static const struct cm_ui ob1_page = {
-    .abi = cm_ui_v31,                                   /* machine-pages 1.1: knobs that draw */
-    .page_from = 3,                                     /* SLICE's page, as every added machine gets */
-    .on_switch = ob1_switch,
-    .knob = {
-        /* the slots whose own UI records turn oddly (PLAY, SAMP, LEN, GRID) borrow BR's */
-        [K_FRQ2] = { .name = "FRQ2", .lname = "VCO2 freq", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
-                     .min = 0, .max = 63 << 8, .def = 32 << 8, .fmt = frq_text, .draw = draw_frq },
-        [K_WAV1] = { .name = "WAV1", .lname = "VCO1 wave", .flags = CM_DRAW, .fmt = wave_text, .draw = draw_wave },
-        [K_WAV2] = { .name = "WAV2", .lname = "VCO2 wave", .look = ID_BR, .flags = CM_NOT_SAMPLE | CM_RANGE |
-                     CM_DEFAULT | CM_DRAW, .min = 0, .max = 127 << 8, .def = 63 << 8, .fmt = wave_text,
-                     .draw = draw_wave },
-        [K_MOD] = { .name = "MOD", .lname = "Sync/cross mod", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
-                    .min = 0, .max = 127 << 8, .def = 0, .fmt = mod_text, .draw = draw_mod },
-        [K_MIX1] = { .name = "MIX1", .lname = "VCO1 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
-                     .min = 0, .max = 127 << 8, .def = ZONE_AT(2, 9) << 8, .fmt = mix_text, .draw = draw_mix },  /* ON/- */
-        [K_MIX2] = { .name = "MIX2", .lname = "VCO2 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
-                     .min = 0, .max = 127 << 8, .def = ZONE_AT(1, 9) << 8, .fmt = mix_text, .draw = draw_mix },  /* -3/- */
-        [K_NOIS] = { .name = "NOIS", .lname = "Noise", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
-                     .min = 0, .max = 127 << 8, .def = 0, .fmt = noise_text, .draw = draw_noise },
+static const struct cm_src_page ob1_pages[] = {
+    { .title = "OB-1 1/2", .parameter = {0, 1, 2, 3, 4, 5, 6, 7} },
+    { .title = "OB-1 2/2", .parameter = {8, 9, 10, 11, 12, 13, 14, CM_SRC_BLANK} },
+};
+
+#define MOCK_PARAMETER(n) { .name = "MOCK" #n, .lname = "Mock parameter " #n, \
+    .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT, .max = 127 << 8 }
+
+static const struct cm_ui32 ob1_page = {
+    .base = {
+        .abi = cm_ui_v32,
+        .page_from = 3,                                     /* SLICE's page, as every added machine gets */
+        .on_switch = ob1_switch,
+        .knob = {
+            /* the slots whose own UI records turn oddly (PLAY, SAMP, LEN, GRID) borrow BR's */
+            [K_FRQ2] = { .name = "FRQ2", .lname = "VCO2 freq", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
+                         .min = 0, .max = 63 << 8, .def = 32 << 8, .fmt = frq_text, .draw = draw_frq },
+            [K_WAV1] = { .name = "WAV1", .lname = "VCO1 wave", .flags = CM_DRAW, .fmt = wave_text, .draw = draw_wave },
+            [K_WAV2] = { .name = "WAV2", .lname = "VCO2 wave", .look = ID_BR, .flags = CM_NOT_SAMPLE | CM_RANGE |
+                         CM_DEFAULT | CM_DRAW, .min = 0, .max = 127 << 8, .def = 63 << 8, .fmt = wave_text,
+                         .draw = draw_wave },
+            [K_MOD] = { .name = "MOD", .lname = "Sync/cross mod", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
+                        .min = 0, .max = 127 << 8, .def = 0, .fmt = mod_text, .draw = draw_mod },
+            [K_MIX1] = { .name = "MIX1", .lname = "VCO1 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
+                         .min = 0, .max = 127 << 8, .def = ZONE_AT(2, 9) << 8, .fmt = mix_text, .draw = draw_mix },  /* ON/- */
+            [K_MIX2] = { .name = "MIX2", .lname = "VCO2 mix", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
+                         .min = 0, .max = 127 << 8, .def = ZONE_AT(1, 9) << 8, .fmt = mix_text, .draw = draw_mix },  /* -3/- */
+            [K_NOIS] = { .name = "NOIS", .lname = "Noise", .look = ID_BR, .flags = CM_RANGE | CM_DEFAULT | CM_DRAW,
+                         .min = 0, .max = 127 << 8, .def = 0, .fmt = noise_text, .draw = draw_noise },
+        },
     },
+    /* shortcut: these values have no sound-engine role until the second page's controls are decided. */
+    .extra = {
+        MOCK_PARAMETER(1), MOCK_PARAMETER(2), MOCK_PARAMETER(3), MOCK_PARAMETER(4),
+        MOCK_PARAMETER(5), MOCK_PARAMETER(6), MOCK_PARAMETER(7),
+    },
+    .page_count = 2,
+    .pages = ob1_pages,
 };
 
 /* An 11 x 7 icon, as the stock ones: a word a column, the top row in bit 25, pixels then mask. A sawtooth. */
@@ -315,5 +332,5 @@ static const struct {
 /* params 3 and render its own id: SLICE's eight parameters (their defaults, MIDI, the LFOs), and an empty
  * voice window that ob1_render fills. */
 const struct cm_machine ob1_machine = {
-    OB1_ID, "OB-1", "OB-1", &ob1_icon, 3, OB1_ID, CM_UI_TAG, &ob1_page,
+    OB1_ID, "OB-1", "OB-1", &ob1_icon, 3, OB1_ID, CM_UI_TAG, &ob1_page.base,
 };
