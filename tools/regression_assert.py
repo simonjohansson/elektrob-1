@@ -236,13 +236,16 @@ def compare_reference(actual, expected, reference):
     if not actual['cases'] or actual['target'] not in expected['targets']:
         raise ValueError('Missing reference cases or target calibration')
     target = expected['targets'][actual['target']]
-    if set(target) != {'stock_os', 'channels', 'observation', 'gain_db', 'calibration'}:
+    if set(target) != {'stock_os', 'channels', 'observation', 'gain_db', 'cycle_polarity', 'calibration'}:
         raise ValueError('Invalid target calibration fields')
     if target['stock_os'] != actual['stock_os'] or type(target['channels']) is not int or target['channels'] not in (1, 2):
         raise ValueError('Reference assertion target/OS mismatch')
     if not isinstance(target['calibration'], str) or not target['calibration'].strip():
         raise ValueError('Missing fixed-gain calibration provenance')
     gain = float(numbers(target['gain_db'], ()))
+    polarity = target['cycle_polarity']
+    if type(polarity) is not int or polarity not in (-1, 1):
+        raise ValueError('Invalid fixed cycle polarity: expected -1 or +1')
     limits = expected['tolerances']
     wanted = {'anchor_db', 'pitch_cents', 'wave_level_db', 'cycle_rmse', 'source_level_db',
               'middle_db', 'noise_db', 'spectrum_db', 'modulation_db', 'mixture_db',
@@ -313,7 +316,11 @@ def compare_reference(actual, expected, reference):
             saw = f'wave-vco1-n{case["note"]}-w63'
             near('relative_wave_level_db', level - observed(saw, 'rms_dbfs'),
                  ref(key, 'rms_dbfs') - ref(saw, 'rms_dbfs'), limits['wave_level_db'])
-            error = np.sqrt(np.mean((metric(entry, 'cycle') - ref(key, 'cycle')) ** 2, axis=1))
+            cycle = metric(entry, 'cycle')
+            if polarity == -1:
+                # Restore the fundamental phase origin after the fixed polarity inversion.
+                cycle = -np.roll(cycle, CYCLE_POINTS // 2, axis=1)
+            error = np.sqrt(np.mean((cycle - ref(key, 'cycle')) ** 2, axis=1))
             bound('signed_cycle_rmse', error, 0, limits['cycle_rmse'])
         elif key.startswith('mod-'):
             near('modulation_rms_dbfs', level, ref(key, 'rms_dbfs') + gain, limits['modulation_db'])
@@ -377,7 +384,7 @@ def compare_reference(actual, expected, reference):
             raise ValueError(f'Unknown reference case class: {key}')
         results.append(dict(id=key, status='failed' if any(c['status'] == 'failed' for c in checks) else 'passed', checks=checks))
     return dict(status='passed' if all(c['status'] == 'passed' for c in results) else 'failed',
-                target=actual['target'], fixed_gain_db=gain, cases=results)
+                target=actual['target'], fixed_gain_db=gain, cycle_polarity=polarity, cases=results)
 
 
 def main():

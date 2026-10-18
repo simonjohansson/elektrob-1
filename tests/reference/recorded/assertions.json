@@ -2,7 +2,7 @@
   "format": 2,
   "role": "expectations",
   "source": {
-    "description": "Recorded reference with explicit engineering error budgets. Spectral bands from 4 kHz upward are diagnostics because the reference filter and sample-rate-dependent processing affect them. Other known mismatches are failures, without polarity inversion or per-case fitting. Limits and path calibration are documented beside the measurements."
+    "description": "Recorded reference with explicit engineering error budgets. Spectral bands from 4 kHz upward are diagnostics because the reference filter and sample-rate-dependent processing affect them. Signed cycles use a fixed output-path polarity calibration, never per-case sign fitting. Other known mismatches are failures. Limits and path calibration are documented beside the measurements."
   },
   "reference": {
     "path": "measurements.json",
@@ -14,21 +14,24 @@
       "channels": 1,
       "observation": "shared voice output after mixer/HPF/trim",
       "gain_db": -1.005342,
-      "calibration": "Fixed A3 VCO1 saw path offset measured against the reference at unchanged source revision 08b5bf0; capture WAV SHA-256 6a07033718323ad5f8037c5f50e908e19a8b9fef5bc905dd2cf37c96e5f19f82. Never refit during assertion runs."
+      "cycle_polarity": -1,
+      "calibration": "Fixed A3 VCO1 saw path offset measured against the reference at unchanged source revision 08b5bf0; capture WAV SHA-256 6a07033718323ad5f8037c5f50e908e19a8b9fef5bc905dd2cf37c96e5f19f82. Never refit during assertion runs. Fixed cycle polarity: retained asymmetric waves from both VCOs at A1/A3/A5 establish rising DSP saws opposite to the reference's falling output saws."
     },
     "firmware": {
       "stock_os": "1.54",
       "channels": 2,
       "observation": "emulated SSI stereo output after stock processing",
       "gain_db": -7.792659,
-      "calibration": "Fixed A3 VCO1 saw path offset measured against the reference at unchanged source revision 08b5bf0; capture WAV SHA-256 63389d8d86fa88c0c82464008ac58440c3e8c2487b463b0d0bc38e2a9dcc5ae7. Never refit during assertion runs."
+      "cycle_polarity": 1,
+      "calibration": "Fixed A3 VCO1 saw path offset measured against the reference at unchanged source revision 08b5bf0; capture WAV SHA-256 63389d8d86fa88c0c82464008ac58440c3e8c2487b463b0d0bc38e2a9dcc5ae7. Never refit during assertion runs. Fixed cycle polarity: retained asymmetric waves match the reference's falling output saws; the stock SSI output applies a negative main-mix gain, verified by a read-only firmware trace."
     },
     "device": {
       "stock_os": "1.54",
       "channels": 2,
       "observation": "Digitakt class-compliant USB stereo input",
       "gain_db": -7.792697,
-      "calibration": "Fixed A3 VCO1 saw path offset measured against the reference at unchanged source revision 08b5bf0; capture WAV SHA-256 c1849a4106983bb952c1410d0377c18b86a8fadd238ae37511079b2dbaeb10a5. Never refit during assertion runs."
+      "cycle_polarity": -1,
+      "calibration": "Fixed A3 VCO1 saw path offset measured against the reference at unchanged source revision 08b5bf0; capture WAV SHA-256 c1849a4106983bb952c1410d0377c18b86a8fadd238ae37511079b2dbaeb10a5. Never refit during assertion runs. Fixed cycle polarity: retained asymmetric USB recordings establish rising saws opposite to the reference's falling output saws; the firmware USB handoff preserves the main mix polarity."
     }
   },
   "tolerances": {

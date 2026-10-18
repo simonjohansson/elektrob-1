@@ -47,10 +47,29 @@ absolute saw anchor is checked separately, so relative levels cannot hide an ove
 gain change. DSP uses the left reference channel; stereo paths check each channel.
 Only OS 1.54 firmware/device observations are covered by this policy.
 
-Supported reference differences are ordinary failures. There is no automatic polarity inversion,
-time reversal, pitch correction, expected-failure list or threshold widening. In
-particular, the current DSP/device waveform orientation, register-dependent levels,
-noise levels and low-frequency modulation differences can fail. Passing acquisition does not
+Signed cycles use a fixed `cycle_polarity` calibration when compared with the reference output:
+
+| Capture boundary | Comparison polarity |
+|---|---:|
+| Shared DSP output | −1 |
+| Simulator SSI output | +1 |
+| Device USB output | −1 |
+
+Retained asymmetric waves from both VCOs at A1/A3/A5 establish the reference's falling-saw
+orientation, opposite to DSP and USB. Repeated reference captures and filter, oversampling and
+sample-rate controls retain it. A read-only stock-firmware trace confirms that SSI applies a
+negative main-output gain while the USB handoff preserves the main mix polarity. This establishes
+the measured output conventions, not internal reference-oscillator or physical Oberheim polarity.
+
+For −1, inversion of an already canonicalized cycle includes a half-cycle shift to restore its
+fundamental phase origin. Only the signed-cycle comparison uses this transform; raw recordings,
+exported measurements and all other checks retain their original values. Reports record the fixed
+convention. A new inversion or time reversal still fails. The separate stock 5 Hz high-pass response
+is not compensated.
+
+Supported reference differences are ordinary failures. There is no automatic sign selection,
+time reversal, pitch correction, expected-failure list or threshold widening. Register-dependent levels,
+noise levels and low-frequency waveform/modulation differences can fail. Passing acquisition does not
 mean passing reference assertions, and passing levels does not establish matching
 modulation spectra.
 
@@ -61,7 +80,7 @@ The limits are engineering comparison budgets, not statistical confidence interv
 | Absolute A3 saw anchor | ±0.1 dB around the frozen output-path calibration. |
 | Isolated-wave pitch | ±1 cent from twelve-tone equal temperament, A4 = 440 Hz. Reference detuning is not a tuning target. |
 | Wave absolute/relative RMS | ±0.2 dB; retains the previous relative-level budget. |
-| Signed unit-RMS cycle | RMSE ≤0.25; retains the previous waveform budget with stricter orientation handling. |
+| Signed unit-RMS cycle | RMSE ≤0.25 after fixed output-path polarity calibration. |
 | Isolated FUND/sub/noise RMS | ±0.2 dB, both absolute and relative to the isolated VCO1 saw. |
 | Source middle/ON ratio | ±0.05 dB around the measured ratio. Broader shape/pitch mixer mechanics remain independently tested. |
 | Noise 200–4000 Hz level and middle/ON ratio | ±0.25 dB, allowing finite noise-window variation. |

@@ -242,7 +242,7 @@ class ReferenceAssertionTest(unittest.TestCase):
     def setUp(self):
         self.profile = read_json(Path(__file__).parent/'reference/recorded/assertions.json')
         self.profile['targets']['dsp'].update(observation='synthetic reference boundary', gain_db=-.7,
-                                            calibration='Synthetic known -0.7 dB path')
+                                            cycle_polarity=1, calibration='Synthetic known -0.7 dB path')
         self.catalogue = {c['id']: c for c in cases()}
         self.reference = dict(format=1, role='measurements', target='reference', cases={})
         self.actual = dict(format=VERSION, target='dsp', stock_os=None, cases={})
@@ -301,6 +301,57 @@ class ReferenceAssertionTest(unittest.TestCase):
             self.set_actual(key, signal*1.2)
         anchor = next(r for r in self.result()['cases'] if r['id']=='wave-vco1-n57-w63')
         self.assertEqual(next(c for c in anchor['checks'] if c['property']=='absolute_anchor_dbfs')['status'], 'failed')
+
+    def test_fixed_cycle_polarity_preserves_checks_and_rejects_audio_changes(self):
+        original = copy.deepcopy(self.actual)
+        key = 'wave-vco1-n57-w96'
+        for channels in (1, 2):
+            baseline = None
+            for polarity in (1, -1):
+                with self.subTest(channels=channels, polarity=polarity):
+                    self.actual = copy.deepcopy(original)
+                    self.profile['targets']['dsp'].update(channels=channels, cycle_polarity=polarity)
+                    for entry in self.actual['cases'].values():
+                        entry['channels'] = channels
+                        entry['metrics'] = {name: value*channels for name, value in entry['metrics'].items()}
+
+                    def set_wave(name, samples):
+                        self.actual['cases'][name]['metrics'] = measurements(
+                            np.repeat((samples*10**(-.7/20))[:, None], channels, axis=1), True, 57)
+
+                    for name, signal in self.signals.items():
+                        if name.startswith('wave-'):
+                            set_wave(name, polarity*signal)
+                    unchanged = copy.deepcopy(self.actual)
+                    result = self.result()
+                    self.assertEqual(result['status'], 'passed')
+                    self.assertEqual(result['cycle_polarity'], polarity)
+                    self.assertEqual(self.actual, unchanged)
+                    other_checks = [[c for c in row['checks'] if c['property'] != 'signed_cycle_rmse']
+                                    for row in result['cases']]
+                    if baseline is None:
+                        baseline = other_checks
+                    self.assertEqual(other_checks, baseline)
+                    for signal, status in [(polarity*np.tile(tone(phase=1.31), 2), 'passed'),
+                                           (-polarity*self.signals[key], 'failed'),
+                                           (polarity*self.signals[key][::-1], 'failed')]:
+                        set_wave(key, signal)
+                        row = next(r for r in self.result()['cases'] if r['id'] == key)
+                        self.assertEqual(next(c['status'] for c in row['checks']
+                                              if c['property'] == 'signed_cycle_rmse'), status)
+
+    def test_fixed_cycle_polarity_requires_an_explicit_integer_convention(self):
+        profile = read_json(Path(__file__).parent/'reference/recorded/assertions.json')
+        self.assertEqual({name: target['cycle_polarity'] for name, target in profile['targets'].items()},
+                         dict(dsp=-1, firmware=1, device=-1))
+        for polarity in (0, 2, -2, True, False, 1., -1., '-1', None):
+            with self.subTest(polarity=polarity):
+                self.profile['targets']['dsp']['cycle_polarity'] = polarity
+                with self.assertRaisesRegex(ValueError, 'cycle polarity'):
+                    self.result()
+        del self.profile['targets']['dsp']['cycle_polarity']
+        with self.assertRaisesRegex(ValueError, 'target calibration fields'):
+            self.result()
 
     def test_mixture_bounds_allow_cancellation_but_detect_excess_gain(self):
         self.add('mix-0-0-0', np.zeros(RATE))
@@ -386,6 +437,7 @@ class ReferenceAssertionTest(unittest.TestCase):
             self.assertEqual(check('polarity-failure'),1)
             report = read_json(root/'polarity-failure/assertions.json')
             self.assertEqual(report['status'],'failed')
+            self.assertEqual(report['cycle_polarity'], 1)
             self.assertTrue((root/'polarity-failure/measurements.json').exists())
             key = 'mod-3-frq2-32'
             high = .005*np.sin(2*np.pi*12000*np.arange(RATE*2)/RATE)

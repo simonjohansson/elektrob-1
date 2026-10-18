@@ -220,12 +220,21 @@ are refused. CI retains generated regression audio and JSON reports on failure a
 excluding firmware images. No baseline-generation step runs in CI.
 
 The reference-policy fixture has `format: 2`, `role: "expectations"`, `source.description`, a relative
-reference path and SHA-256, per-target observation/channel/OS/fixed-gain calibration, and explicit
+reference path and SHA-256, per-target observation/channel/OS/fixed-gain/polarity calibration, and explicit
 per-property budgets. It reads the immutable measured case settings and metrics directly rather
 than copying them into three target fixtures. Gain and level are checked independently of signed
 unit-RMS shape. Source identities, settings and windows must match; malformed references, unknown
 tolerances, missing anchors and digest mismatches are errors, never skips. Updates to measurements,
 path calibration or budgets must be reviewed explicitly. No current render can update them.
+
+For reference signed-cycle comparison, the required integer `cycle_polarity` is −1 for DSP and
+device USB, +1 for simulator SSI. Retained asymmetric recordings establish the reference output's
+falling-saw orientation, opposite to DSP/USB. The stock SSI output applies a negative main-mix
+gain; the USB handoff retains the main mix polarity. The fixed convention appears in each report.
+It is never selected by trying both signs. For −1, a half-cycle shift follows inversion to restore
+the canonical cycle's fundamental phase origin. Raw measurements and recordings remain unchanged,
+and a new inversion or time reversal still fails. Other properties and generic absolute fixtures
+retain their checks. The separate stock 5 Hz high-pass response is not compensated.
 
 The control assignments and AMP behavior follow Elektron's *Digitakt User Manual*, OS 1.51,
 chromatic mode section 8.5.1, AMP/filter sections 11.4–11.6 and MIDI Appendix B. The source-control mapping follows this project's
