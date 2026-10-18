@@ -146,6 +146,12 @@ modulation spectra below 4000 Hz. Direct reference band comparisons from 4000–
 are retained as diagnostics because the reference filter and sample-rate-dependent processing
 color them. They do not affect pass/fail. All seven raw spectral bands remain measured;
 standard pitch, full-band levels, signed cycles and independent engine checks remain strict.
+Noise uses strict 200–4000 Hz level/ratio checks and a strict isolated 20–200 Hz aggregate.
+Its individual low bands remain diagnostic: 20–80 and 80–200 Hz for isolated noise,
+20–80 Hz for noise-bearing mixtures. Remaining mixture bands propagate the existing
+noise spectral budget through the noise contribution; tonal and full-band level bounds
+are unchanged. A longer multi-history noise-spectrum check runs on the host, while
+simulator captures keep their two-second analysis windows.
 [Reference provenance and budgets](../tests/reference/recorded/README.md) describe
 the output paths, calibration and exact coverage. Reference agreement is not physical OB-1 fidelity.
 
@@ -214,7 +220,8 @@ never automatically accept candidates, widen limits, or absorb an unexplained po
 Assertion reports go into a new `out/assertions/` directory, or a new directory supplied by `--out`.
 They retain actual measurements and each checked property's bounds/result. Failed checks and invalid
 inputs return nonzero. Reference high-frequency comparisons have `status: "diagnostic"`, actual values
-and reference bounds; the console summarizes their count. These entries do not fail a case or run.
+and reference bounds; the console summarizes their count. Narrow low-frequency noise
+diagnostics are counted separately. These entries do not fail a case or run.
 Neither checking nor measuring rewrites captures or fixtures; existing outputs
 are refused. CI retains generated regression audio and JSON reports on failure as temporary artifacts,
 excluding firmware images. No baseline-generation step runs in CI.

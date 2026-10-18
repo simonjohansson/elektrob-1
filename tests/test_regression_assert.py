@@ -391,7 +391,7 @@ class ReferenceAssertionTest(unittest.TestCase):
                     result = self.result()
                     self.assertEqual(result['status'], 'passed')
                     row = next(r for r in result['cases'] if r['id'] == key)
-                    diagnostic = next(c for c in row['checks'] if c['status'] == 'diagnostic')
+                    diagnostic = next(c for c in row['checks'] if c['property'].endswith('_4000_24000_hz_diagnostic'))
                     self.assertGreater(diagnostic['actual'][0][band-4], diagnostic['expected']['max'][0][band-4])
                     self.assertEqual(np.shape(self.actual['cases'][key]['metrics']['band_rms_dbfs']), (1, 7))
         self.actual = original
@@ -405,6 +405,52 @@ class ReferenceAssertionTest(unittest.TestCase):
         self.actual['cases']['mod-3-frq2-32']['metrics']['band_rms_dbfs'][0][4] = float('nan')
         with self.assertRaisesRegex(ValueError, 'finite'):
             self.result()
+
+    def test_noise_checks_reject_gain_filtering_and_wrong_middle_ratio(self):
+        noise = np.random.default_rng(42).normal(0, .03, RATE)
+        self.add('mix-0-0-2', noise)
+        self.add('mix-0-0-1', noise*10**(-3/20))
+        self.assertEqual(self.result()['status'], 'passed')
+        original = copy.deepcopy(self.actual)
+        key = 'mix-0-0-2'
+        signal = self.signals[key]
+        frequency = np.fft.rfftfreq(len(signal), 1/RATE)
+        spectrum = np.fft.rfft(signal)
+        for label, changed, property in (
+            ('gain', signal*10**(.5/20), 'noise_200_4000_relative_saw_db'),
+            ('highpass', np.fft.irfft(spectrum*(1j*frequency/(80+1j*frequency))), 'noise_20_200_relative_saw_db'),
+            ('lowpass', np.fft.irfft(spectrum/(1+1j*frequency/4000)), 'noise_200_4000_relative_saw_db'),
+        ):
+            with self.subTest(change=label):
+                self.actual = copy.deepcopy(original)
+                self.set_actual(key, changed)
+                row = next(r for r in self.result()['cases'] if r['id'] == key)
+                self.assertEqual(next(c['status'] for c in row['checks'] if c['property'] == property), 'failed')
+        self.actual = copy.deepcopy(original)
+        self.set_actual('mix-0-0-1', self.signals['mix-0-0-1']*10**(.5/20))
+        row = next(r for r in self.result()['cases'] if r['id'] == 'mix-0-0-1')
+        self.assertEqual(next(c['status'] for c in row['checks'] if c['property'] == 'middle_minus_on_db'), 'failed')
+
+    def test_noise_mixture_uncertainty_preserves_tonal_bounds(self):
+        noise = np.random.default_rng(42).normal(0, .03, RATE)
+        self.add('mix-0-0-2', noise)
+        self.add('mix-6-0-2', tone()+noise)
+        self.set_actual('mix-6-0-2', self.signals['mix-6-0-2']+.004*np.sin(2*np.pi*40*np.arange(RATE*2)/RATE))
+        row = next(r for r in self.result()['cases'] if r['id'] == 'mix-6-0-2')
+        self.assertEqual(row['status'], 'passed')
+        diagnostic = next(c for c in row['checks'] if c['property'].endswith('_20_80_hz_diagnostic'))
+        self.assertGreater(diagnostic['actual'][0][0], diagnostic['expected']['max'][0][0])
+        original = copy.deepcopy(self.actual)
+        self.set_actual('mix-6-0-2', self.signals['mix-6-0-2']+np.tile(tone(gain=.1),2))
+        row = next(r for r in self.result()['cases'] if r['id'] == 'mix-6-0-2')
+        self.assertEqual(next(c['status'] for c in row['checks'] if c['property'] == 'phase_aware_band_relative_saw_db_80_4000_hz'), 'failed')
+        self.set_actual('mix-6-0-2', np.tile(tone(),2))
+        row = next(r for r in self.result()['cases'] if r['id'] == 'mix-6-0-2')
+        self.assertEqual(next(c['status'] for c in row['checks'] if c['property'] == 'phase_aware_band_relative_saw_db_80_4000_hz'), 'failed')
+        self.actual = original
+        self.set_actual('mix-6-6-0', self.signals['mix-6-6-0']+.004*np.sin(2*np.pi*40*np.arange(RATE*2)/RATE))
+        row = next(r for r in self.result()['cases'] if r['id'] == 'mix-6-6-0')
+        self.assertEqual(next(c['status'] for c in row['checks'] if c['property'] == 'phase_aware_band_relative_saw_db'), 'failed')
 
     def test_invalid_profiles_boundaries_and_missing_anchors_are_errors(self):
         original = copy.deepcopy(self.profile)

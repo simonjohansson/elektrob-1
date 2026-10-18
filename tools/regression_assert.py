@@ -277,8 +277,8 @@ def compare_reference(actual, expected, reference):
     reference_anchor = ref(anchor, 'rms_dbfs')
     floor = limits['band_floor_db']
 
-    def band_level(entry):
-        bands = metric(entry, 'band_rms_dbfs')[:, 2:4]
+    def band_level(entry, first=2, last=4):
+        bands = metric(entry, 'band_rms_dbfs')[:, first:last]
         return 10 * np.log10(np.sum(10 ** (bands / 10), axis=1))
 
     results = []
@@ -301,9 +301,15 @@ def compare_reference(actual, expected, reference):
         def near(name, value, center, tolerance):
             bound(name, value, center - tolerance, center + tolerance)
 
-        def band_bounds(name, value, lower, upper):
+        def band_bounds(name, value, lower, upper, first=0):
             # The reference's filter and resampling color bands from 4 kHz upward.
-            bound(name, value[:, :4], lower[:, :4], upper[:, :4])
+            if first:
+                bound(name + f'_20_{BANDS[first-1][1]}_hz_diagnostic', value[:, :first],
+                      lower[:, :first], upper[:, :first], diagnostic=True)
+                name_strict = name + f'_{BANDS[first][0]}_4000_hz'
+            else:
+                name_strict = name
+            bound(name_strict, value[:, first:4], lower[:, first:4], upper[:, first:4])
             bound(name + '_4000_24000_hz_diagnostic', value[:, 4:], lower[:, 4:], upper[:, 4:], diagnostic=True)
 
         level = metric(entry, 'rms_dbfs')
@@ -346,12 +352,14 @@ def compare_reference(actual, expected, reference):
                 near('relative_source_level_db', level - observed(saw, 'rms_dbfs'),
                      ref(key, 'rms_dbfs') - ref(saw, 'rms_dbfs'), limits['source_level_db'])
                 if noise:
+                    near('noise_20_200_relative_saw_db', band_level(entry, 0, 2) - observed(saw, 'rms_dbfs'),
+                         band_level(baseline, 0, 2) - ref(saw, 'rms_dbfs'), limits['spectrum_db'])
                     near('noise_200_4000_relative_saw_db', band_level(entry) - observed(saw, 'rms_dbfs'),
                          band_level(baseline) - ref(saw, 'rms_dbfs'), limits['noise_db'])
                     bands = np.maximum(metric(entry, 'band_rms_dbfs') - gain - reference_anchor[:, None], floor)
                     centers = np.maximum(ref(key, 'band_rms_dbfs') - reference_anchor[:, None], floor)
                     band_bounds('noise_bands_relative_saw_db', bands,
-                                centers - limits['spectrum_db'], centers + limits['spectrum_db'])
+                                centers - limits['spectrum_db'], centers + limits['spectrum_db'], first=2)
                 if (sources and sources[0][1] == 1) or case['nois'] == 1:
                     on = dict(case)
                     on['mix1'] = case['mix1'] * 2
@@ -368,8 +376,12 @@ def compare_reference(actual, expected, reference):
                     total = tones.sum(axis=0) if len(tones) else np.zeros(shape)
                     largest = tones.max(axis=0) if len(tones) else np.zeros(shape)
                     n = 10 ** (ref(noise, name) / 20) if noise else np.zeros(shape)
-                    lower = db(np.sqrt(np.maximum(0, 2 * largest - total) ** 2 + n*n)) + gain
-                    upper = db(np.sqrt(total*total + n*n)) + gain
+                    # Propagate the existing noise-spectrum budget without relaxing tonal bounds.
+                    uncertainty = np.ones(shape)
+                    if noise and name == 'band_rms_dbfs':
+                        uncertainty[:, 1:4] = 10 ** (limits['spectrum_db'] / 20)
+                    lower = db(np.sqrt(np.maximum(0, 2 * largest - total) ** 2 + (n/uncertainty)**2)) + gain
+                    upper = db(np.sqrt(total*total + (n*uncertainty)**2)) + gain
                     value = metric(entry, name)
                     if name == 'band_rms_dbfs':
                         value = np.maximum(value - gain - reference_anchor[:, None], floor)
@@ -377,7 +389,8 @@ def compare_reference(actual, expected, reference):
                         upper = np.maximum(upper - gain - reference_anchor[:, None], floor)
                     property = 'phase_aware_band_relative_saw_db' if name == 'band_rms_dbfs' else 'phase_aware_rms_dbfs'
                     if name == 'band_rms_dbfs':
-                        band_bounds(property, value, lower - limits['mixture_db'], upper + limits['mixture_db'])
+                        band_bounds(property, value, lower - limits['mixture_db'], upper + limits['mixture_db'],
+                                    first=1 if noise else 0)
                     else:
                         bound(property, value, lower - limits['mixture_db'], upper + limits['mixture_db'])
         else:
@@ -434,9 +447,13 @@ def main():
     if report.get('cases'):
         failed = sum(case['status'] == 'failed' for case in report['cases'])
         print(f'{len(report["cases"])} cases checked: {len(report["cases"]) - failed} passed, {failed} failed')
-        diagnostics = sum(check['status'] == 'diagnostic' for case in report['cases'] for check in case['checks'])
-        if diagnostics:
-            print(f'{diagnostics} high-frequency comparisons retained as diagnostics (4000–24000 Hz); excluded from pass/fail')
+        diagnostics = [check for case in report['cases'] for check in case['checks'] if check['status'] == 'diagnostic']
+        high = sum(check['property'].endswith('_4000_24000_hz_diagnostic') for check in diagnostics)
+        low = len(diagnostics) - high
+        if high:
+            print(f'{high} high-frequency comparisons retained as diagnostics (4000–24000 Hz); excluded from pass/fail')
+        if low:
+            print(f'{low} narrow low-frequency noise comparisons retained as diagnostics; excluded from pass/fail')
     for case in report.get('cases', []):
         for check in case['checks']:
             if check['status'] == 'failed':

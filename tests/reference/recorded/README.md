@@ -84,7 +84,8 @@ The limits are engineering comparison budgets, not statistical confidence interv
 | Isolated FUND/sub/noise RMS | ±0.2 dB, both absolute and relative to the isolated VCO1 saw. |
 | Source middle/ON ratio | ±0.05 dB around the measured ratio. Broader shape/pitch mixer mechanics remain independently tested. |
 | Noise 200–4000 Hz level and middle/ON ratio | ±0.25 dB, allowing finite noise-window variation. |
-| Noise/modulation spectral bands below 4000 Hz | ±1 dB, after the fixed path calibration. |
+| Isolated noise 20–200 Hz aggregate and 200–1000 / 1000–4000 Hz bands | ±1 dB, using the existing spectral budget. |
+| Modulation spectral bands below 4000 Hz | ±1 dB, after the fixed path calibration. |
 | Modulation RMS | ±0.5 dB. Spectral checks remain independent. |
 | Mixed-source bounds | ±0.5 dB around phase-aware energy bounds, allowing finite-window variation. |
 | All sources OFF | No more than 6 dB above the calibrated reference background RMS. |
@@ -98,6 +99,25 @@ apply to spectral-band energy. A single arbitrary unison phase is not an oracle
 for whole-mixture RMS. This bounds check complements the existing engine additivity
 and continuity tests; it does not identify every possible mixture defect.
 
+Noise-bearing mixture spectral bounds propagate the isolated noise's existing ±1 dB
+spectral budget through its power contribution before applying the ±0.5 dB mixture
+allowance. Tonal amplitudes and their coherent bounds are unchanged. Full-band mixture
+levels retain their original bounds; this uncertainty propagation applies only to bands.
+
+Two-second narrow-band noise measurements vary with noise history. Isolated noise
+therefore checks combined 20–200 Hz power, rather than gating its 20–80 and 80–200 Hz
+bands separately. Both individual bands remain diagnostics. Noise-bearing mixtures
+retain 20–80 Hz as diagnostics and check 80–4000 Hz using the propagated bounds.
+Tone-only mixture and modulation band checks remain strict below 4000 Hz.
+
+The host also renders eight disjoint sixteen-second noise windows and checks all four
+bands below 4000 Hz against the same reference and ±1 dB budget. A deliberate 3 dB cut
+below 80 Hz must fail this detailed check. This catches narrow bass coloration without
+lengthening simulator captures. The two-second checks also reject deliberate ±0.5 dB
+noise gain changes, an 80 Hz high-pass and a 4 kHz low-pass in the measured study. A
+64-history study motivates this division of checks; it does not certify a long-term
+false-failure rate for every machine or firmware state.
+
 Direct reference comparisons in 4000–8000, 8000–16000 and 16000–24000 Hz are
 diagnostics. The fully open reference filter remains active, and changing oversampling
 or output sample rate changes these bands across tonal and noise sources. They cannot
@@ -106,7 +126,7 @@ reports retain their actual values and reference bounds with `status: "diagnosti
 those entries do not affect case/run status. All seven raw bands remain in measurement
 exports for every case. No recorded values, fixed gains or budgets are refitted.
 
-Band assertions below 4000 Hz remain strict. The dedicated noise band-level check uses
+Supported band assertions below 4000 Hz remain strict as described above. The dedicated noise band-level check uses
 200–4000 Hz so it does not gate an excluded band indirectly. Full-band RMS, signed cycles,
 standard pitch, mixer ratios and silence remain checked; levels and cycles are not tests
 of isolated frequency regions. Independent engine aliasing, band-limiting and headroom
