@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "dsp.h"
+#include "output.h"
 
 /* The per-sample helpers are inlined, and the loops compiled once per waveshape (`pulse` a constant), so the
  * hot loop has no calls and no branch on the shape. */
@@ -298,11 +299,6 @@ void ob1_dsp_pair(struct dsp_osc *o1, struct dsp_osc *o2, uint32_t inc1, uint32_
         pair(o1, o2, sh1, sh2, 0, 0, mod, f1, s1, f2, s2, n);
 }
 
-HOT uint32_t noise_next(uint32_t x)
-{
-    return x * 1664525u + 1013904223u;
-}
-
 void ob1_dsp_noise(uint32_t *state, int32_t *out, int n)
 {
     uint32_t x = *state;
@@ -312,42 +308,8 @@ void ob1_dsp_noise(uint32_t *state, int32_t *out, int n)
     *state = x;
 }
 
-/* ob1_dsp_voice_out's loop, compiled with and without the noise, and for VCO1's two sources alone (four: false)
- * or all four: fewer live values, fewer spilled to the stack. */
-HOT void voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t gain[4], uint32_t *noise,
-                   int32_t ng, int32_t *out, int n, int with_noise, int four)
-{
-    const int32_t *a = src[0], *b = src[1], *c = src[2], *d = src[3];
-    int32_t ga = gain[0], gb = gain[1], gc = gain[2], gd = gain[3], lp = h->lp, x, i;
-    uint32_t z = *noise;
-    for (i = 0; i < n; i++) {
-        x = a[i] * ga + b[i] * gb;                              /* |src| < 2^16, gain <= 2^12: < 2^30 */
-        if (four)
-            x += c[i] * gc + d[i] * gd;
-        if (with_noise) {
-            z = noise_next(z);
-            int32_t raw = (int32_t)z >> 16;
-            x += raw * ng;
-        }
-        x >>= 14;                               /* Q12 to Q15, and a quarter */
-        lp += (((x * 256) - lp) * 47) >> 15;     /* the low-pass the high-pass takes off: 2 pi 11 / 48000 */
-        x -= lp >> 8;
-        out[i] = x > 32767 ? 0x7fffffff : x < -32768 ? (int32_t)0x80000000 : x * 65536;
-    }
-    h->lp = lp;
-    *noise = z;
-}
-
 void ob1_dsp_voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t gain[4], uint32_t *noise,
                    int32_t noise_gain, int32_t *out, int n)
 {
-    int four = gain[2] || gain[3];
-    if (noise_gain && four)
-        voice_out(h, src, gain, noise, noise_gain, out, n, 1, 1);
-    else if (noise_gain)
-        voice_out(h, src, gain, noise, noise_gain, out, n, 1, 0);
-    else if (four)
-        voice_out(h, src, gain, noise, 0, out, n, 0, 1);
-    else
-        voice_out(h, src, gain, noise, 0, out, n, 0, 0);
+    voice_output(h, src, gain, noise, noise_gain, out, n, 0);
 }

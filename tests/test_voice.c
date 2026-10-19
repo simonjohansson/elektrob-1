@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "voice.h"
+#include "output.h"
 
 #define RATE 48000
 
@@ -198,6 +199,80 @@ static void test_output_smoothing(void)
             ob1_voice_render(&raw, &k, step(55), step(220), input);
             assert(!memcmp(input, output, 32 * sizeof *input));
         }
+}
+
+/* Freeze baseline samples and every voice-state word through block-rate control changes. */
+static void test_changing_controls_golden(void)
+{
+    const uint32_t expected[8] = {
+        0xd7b86fffu, 0x4dff38aeu, 0xb76c4dc3u, 0x8af31e82u,
+        0xa1cd0b87u, 0xdcbc87cau, 0x10763a7au, 0x5fcfe8ceu,
+    };
+    for (unsigned trial = 0; trial < 8; trial++) {
+        struct ob1_voice v;
+        uint32_t random = trial + 1, hash = 2166136261u;
+        ob1_voice_init(&v, trial);
+        for (int block = 0; block < 4096; block++) {
+            uint32_t control[8], state[sizeof v / sizeof(uint32_t)];
+            int32_t out[32];
+            for (int i = 0; i < 8; i++)
+                control[i] = random = random * 1664525u + 1013904223u;
+            struct ob1_knobs k = {control[0] >> 25, control[1] >> 25,
+                (control[2] >> 16) % 9, (control[3] >> 16) % 9,
+                (block / 3 + trial) % 4, (block / 5 + trial) % 3};
+            uint32_t inc1 = control[6] % (DSP_INC_MAX + 1u);
+            uint32_t inc2 = control[7] % (DSP_INC_MAX + 1u);
+            if (block % 17 == 0) inc1 = 0;
+            if (block % 19 == 0) inc2 = DSP_INC_MAX;
+            ob1_voice_render(&v, &k, inc1, inc2, out);
+            for (int i = 0; i < 32; i++)
+                hash = (hash ^ (uint32_t)out[i]) * 16777619u;
+            memcpy(state, &v, sizeof v);
+            for (unsigned i = 0; i < sizeof state / sizeof *state; i++)
+                hash = (hash ^ state[i]) * 16777619u;
+        }
+        if (hash != expected[trial])
+            fprintf(stderr, "changing controls %u: %08x, expected %08x\n", trial, hash, expected[trial]);
+        assert(hash == expected[trial]);
+    }
+}
+
+/* The fused loop must clip before smoothing, retain signed rounding and hold disabled noise. */
+static void test_fused_output(void)
+{
+    int32_t source[4][32], actual[32], expected[32];
+    const int32_t *src[] = {source[0], source[1], source[2], source[3]};
+    unsigned clipped[2] = {0};
+    uint32_t random = 1;
+    for (int trial = 0; trial < 64; trial++) {
+        struct dsp_hpf h = {(trial & 1) ? -8388608 : 8388608}, reference = h;
+        uint32_t seed = (trial & 8) ? 0 : (uint32_t)trial, noise = seed, reference_noise = noise;
+        int32_t smooth[2] = {-32768, 32767}, prev = smooth[0], older = smooth[1];
+        int32_t gain[] = {4096, 4096, (trial & 2) ? 4096 : 0, (trial & 2) ? 4096 : 0};
+        int32_t ng = (trial & 4) ? 512 : 0;
+        for (int block = 0; block < 32; block++) {
+            for (int i = 0; i < 32; i++)
+                for (int j = 0; j < 4; j++) {
+                    random = random * 1664525u + 1013904223u;
+                    source[j][i] = block ? (int32_t)random >> 16 : (trial & 1) ? 32767 : -32768;
+                }
+            ob1_dsp_voice_out(&reference, src, gain, &reference_noise, ng, expected, 32);
+            for (int i = 0; i < 32; i++) {
+                clipped[0] += expected[i] == INT32_MIN;
+                clipped[1] += expected[i] == INT32_MAX;
+                int32_t x = expected[i] >> 16;
+                expected[i] = ((x + 2 * prev + older) >> 2) * 65536;
+                older = prev;
+                prev = x;
+            }
+            voice_output(&h, src, gain, &noise, ng, actual, 32, smooth);
+            assert(!memcmp(actual, expected, sizeof actual));
+            assert(h.lp == reference.lp && noise == reference_noise);
+            assert(smooth[0] == prev && smooth[1] == older);
+            if (!ng) assert(noise == seed);
+        }
+    }
+    assert(clipped[0] > 0 && clipped[1] > 0);
 }
 
 static void test_noise_output(void)
@@ -433,6 +508,8 @@ int main(void)
     test_mix_levels();
     test_pitch_gain();
     test_output_smoothing();
+    test_changing_controls_golden();
+    test_fused_output();
     test_noise_output();
     test_headroom_and_additivity();
     test_mix_out();
