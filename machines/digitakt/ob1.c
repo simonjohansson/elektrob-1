@@ -7,7 +7,9 @@
 #include "knobs.h"
 #include "pitch.h"
 #include "notes.h"
+#ifdef OB1_DIAGNOSTIC_SCENARIO
 #include "scenario.h"
+#endif
 
 #define OB1_ID 69
 #define ID_BR 134
@@ -20,8 +22,10 @@ enum {
 static const struct cm_ui32 ob1_page;
 static struct ob1_voice voice[8];            /* set up on its first block */
 static volatile uint8_t ready[8];
+#ifdef OB1_DIAGNOSTIC_SCENARIO
 static struct ob1_scenario scenario[8];
 static volatile uint8_t scenario_command[8];
+#endif
 
 int32_t ob1_midi_cc_parameter(int32_t track, int32_t machine, int32_t cc)
 {
@@ -30,10 +34,14 @@ int32_t ob1_midi_cc_parameter(int32_t track, int32_t machine, int32_t cc)
     /* Defer the full reset to the audio callback; CC 9 has no stock assignment. */
     if (cc == 9) {
         ready[track] = 0;
+#ifdef OB1_DIAGNOSTIC_SCENARIO
         scenario_command[track] = 2;
+#endif
     }
+#ifdef OB1_DIAGNOSTIC_SCENARIO
     if (cc == 12)
         scenario_command[track] = 1;
+#endif
     return cc >= 24 && cc <= 30 ? 164 + cc - 24 : 0;
 }
 
@@ -90,9 +98,12 @@ void ob1_render(int32_t *blocks)
         struct ob1_knobs k;
         int32_t pitch1, pitch2, i, note;
         if (fw_render_machine[t] != OB1_ID) {
+#ifdef OB1_DIAGNOSTIC_SCENARIO
             scenario[t].block = scenario_command[t] = 0;
+#endif
             continue;
         }
+#ifdef OB1_DIAGNOSTIC_SCENARIO
         uint8_t command = scenario_command[t];
         scenario_command[t] = 0;
         if (command == 2)
@@ -103,6 +114,9 @@ void ob1_render(int32_t *blocks)
         }
         int scripted = ob1_scenario_step(&scenario[t]);
         if ((scripted && !scenario[t].gate) || (!scripted && silent(t))) {
+#else
+        if (silent(t)) {
+#endif
             for (i = 0; i < 32; i++)
                 blocks[32 * t + i] = 0;
             continue;
@@ -111,11 +125,14 @@ void ob1_render(int32_t *blocks)
             ob1_voice_init(&voice[t], t + 1);
             ready[t] = 1;
         }
+#ifdef OB1_DIAGNOSTIC_SCENARIO
         if (scripted) {
             for (i = 0; i < K_COUNT; i++)
                 p[i] = scenario[t].controls[i] * 256;
             note = (int32_t)scenario[t].note << 16;
-        } else {
+        } else
+#endif
+        {
             for (i = 0; i < 8; i++)
                 p[i] = fw_voice_params[53 * t + i];
             for (i = 8; i < K_COUNT; i++)

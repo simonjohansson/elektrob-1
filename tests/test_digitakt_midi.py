@@ -38,16 +38,17 @@ def main():
         render = int(symbols['ob1:ob1_voice_render'], 0)
         initial = struct.pack('>18I', *([0, 0, 0, 0, 0, 32767, 32767] * 2 + [0, 1, 0, 0]))
         starts = []
-        address = int(symbols['ob1:scenario'], 0)
+        address = int(symbols['ob1:scenario'], 0) if 'ob1:scenario' in symbols else None
         steps = {}
         wanted = {2, 4502, 6002, 7502, 9002, 10502, 12002, 13502, 15002,
                   16502, 18002, 19502, 21002, 22502, 24002, 25502, 30002}
 
         def observe(uc, _address, _size, _data):
-            raw = bytes(uc.mem_read(address, 21))
-            block = int.from_bytes(raw[:4], 'big')
-            if block in wanted:
-                steps[block] = dict(note=raw[4], gate=raw[5], controls=list(raw[6:21]))
+            if address is not None:
+                raw = bytes(uc.mem_read(address, 21))
+                block = int.from_bytes(raw[:4], 'big')
+                if block in wanted:
+                    steps[block] = dict(note=raw[4], gate=raw[5], controls=list(raw[6:21]))
             stack = uc.reg_read(UC_M68K_REG_A7)
             pointer = int.from_bytes(uc.mem_read(stack + 4, 4), 'big')
             if bytes(uc.mem_read(pointer, len(initial))) == initial:
@@ -189,33 +190,34 @@ def main():
             send([0x80, 57, 0])
         report['checks'].append('CC 9 values 0/127/64: full initialized voice at render entry, channel isolation and unchanged saved controls')
         report['reset_render_starts_ms'] = starts
-        # The diagnostic sequencer advances in audio blocks without changing native note/controls.
-        send([0x90, 57, 100])
-        before_sound = firmware.sound()
-        before_live = live()
-        steps.clear()
-        try:
-            send([0xb1, 12, 127])
-            assert not steps, 'Other MIDI channel triggered track 1 scenario'
-            send([0xb0, 12, 127])
-            active_block = int.from_bytes(session.m.uc.mem_read(address, 4), 'big')
-            assert 1 < active_block < 1000, ('CC 12 did not start scenario', active_block)
-            firmware.wait(23.2)
-            assert set(steps) == wanted, ('missing scenario boundaries', steps)
-            assert steps[2]['note'] == 57 and steps[10502]['note'] == 64
-            assert steps[25502]['note'] == 45 and steps[30002]['note'] == 81
-            assert steps[4502]['controls'][9] == 106 and steps[6002]['controls'][12] == 106
-            assert steps[18002]['controls'][13] == 127 and steps[19502]['controls'][10] == 127
-            assert steps[24002]['controls'][4] == 32
-            assert int.from_bytes(session.m.uc.mem_read(address, 4), 'big') == 0
-            assert firmware.sound() == before_sound and live() == before_live
-            assert int.from_bytes(firmware.read('FW_VOICE_NOTE', 4), 'big') == 57 << 16
-        finally:
-            session.m.uc.hook_del(hook)
-            send([0xb0, 9, 0])
-            send([0x80, 57, 0])
-        report['firmware_scenario_steps'] = steps
-        report['checks'].append('CC 12: channel isolation, exact DSP block boundaries, notes/control changes and completion without native note/control writes')
+        if address is not None:
+            # The diagnostic sequencer advances in audio blocks without changing native note/controls.
+            send([0x90, 57, 100])
+            before_sound = firmware.sound()
+            before_live = live()
+            steps.clear()
+            try:
+                send([0xb1, 12, 127])
+                assert not steps, 'Other MIDI channel triggered track 1 scenario'
+                send([0xb0, 12, 127])
+                active_block = int.from_bytes(session.m.uc.mem_read(address, 4), 'big')
+                assert 1 < active_block < 1000, ('CC 12 did not start scenario', active_block)
+                firmware.wait(23.2)
+                assert set(steps) == wanted, ('missing scenario boundaries', steps)
+                assert steps[2]['note'] == 57 and steps[10502]['note'] == 64
+                assert steps[25502]['note'] == 45 and steps[30002]['note'] == 81
+                assert steps[4502]['controls'][9] == 106 and steps[6002]['controls'][12] == 106
+                assert steps[18002]['controls'][13] == 127 and steps[19502]['controls'][10] == 127
+                assert steps[24002]['controls'][4] == 32
+                assert int.from_bytes(session.m.uc.mem_read(address, 4), 'big') == 0
+                assert firmware.sound() == before_sound and live() == before_live
+                assert int.from_bytes(firmware.read('FW_VOICE_NOTE', 4), 'big') == 57 << 16
+            finally:
+                send([0xb0, 9, 0])
+                send([0x80, 57, 0])
+            report['firmware_scenario_steps'] = steps
+            report['checks'].append('CC 12: channel isolation, exact DSP block boundaries, notes/control changes and completion without native note/control writes')
+        session.m.uc.hook_del(hook)
         before = session.frames[-1][1]
         firmware.tap('GLOBAL')
         assert session.frames[-1][1] != before, 'Panel stopped responding after MIDI reception'

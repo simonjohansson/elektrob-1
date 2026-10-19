@@ -5,6 +5,7 @@ import hashlib
 import json
 import subprocess
 import time
+import tempfile
 import wave
 from pathlib import Path
 
@@ -273,9 +274,29 @@ def compare(baseline, candidate, out):
     return report
 
 
+def build_diagnostic(stock, out):
+    from elekloader.sdk.build import build
+    source = ROOT / 'machines/digitakt'
+    manifest = read_json(source / 'mod.json')
+    manifest['sources'] = [str((source / name).resolve()) for name in manifest['sources']]
+    flag = '-DOB1_DIAGNOSTIC_SCENARIO'
+    manifest['cflags'] = manifest.get('cflags', []) + [flag]
+    for port in manifest.get('ports', {}).values():
+        if 'cflags' in port:
+            port['cflags'] = port['cflags'] + [flag]
+    out.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=out) as folder:
+        write_json(Path(folder) / 'mod.json', manifest)
+        path, _ = build(folder, str(stock), str(out))
+    print(f'Diagnostic OB-1 mod (CC 12 enabled): {path}')
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     commands = ap.add_subparsers(dest='command', required=True)
+    builder = commands.add_parser('build')
+    builder.add_argument('--stock', type=Path, required=True)
+    builder.add_argument('--out', type=Path, required=True)
     record = commands.add_parser('capture')
     record.add_argument('--firmware-scenario', action='store_true', help='Trigger the fixed DSP block scenario with CC 12; hold stock AMP and prepare a silent source')
     record.add_argument('--list', action='store_true', help='Print the scenario without opening MIDI or audio')
@@ -291,7 +312,9 @@ def main():
     diff.add_argument('candidate', type=Path)
     diff.add_argument('--out', type=Path, required=True)
     args = ap.parse_args()
-    if args.command == 'compare':
+    if args.command == 'build':
+        build_diagnostic(args.stock, args.out)
+    elif args.command == 'compare':
         compare(args.baseline, args.candidate, args.out)
     elif args.list:
         listing = (dict(clock='firmware-blocks', trigger_cc=12,

@@ -198,8 +198,10 @@ static void reset(void)
         param(k, p->def);
     }
     memset((void *)ready, 0, sizeof(ready));
+#ifdef OB1_DIAGNOSTIC_SCENARIO
     memset(scenario, 0, sizeof scenario);
     memset((void *)scenario_command, 0, sizeof scenario_command);
+#endif
     memset((void *)fw_render_machine, 0, sizeof(fw_render_machine));
     fw_render_machine[0] = OB1_ID;
     fw_voice_note[0] = 60 << 16;
@@ -374,6 +376,7 @@ static void test_midi_voice_reset(void)
     assert(ready[1] && !memcmp(&other, &voice[1], sizeof other));
 }
 
+#ifdef OB1_DIAGNOSTIC_SCENARIO
 static void test_block_scenario(void)
 {
     int32_t blocks[8 * 32];
@@ -424,6 +427,8 @@ static void test_block_scenario(void)
     free(recording);
 }
 
+#endif
+
 static void test_midi_lookup(void)
 {
     assert(ob1_midi_cc_parameter(0, 69, 24) == 164);
@@ -443,7 +448,11 @@ int main(void)
     test_mixer_translation();
     test_midi_lookup();
     test_midi_voice_reset();
+#ifdef OB1_DIAGNOSTIC_SCENARIO
     test_block_scenario();
+#else
+    assert(ob1_midi_cc_parameter(0, 69, 12) == 0);
+#endif
     test_waveform_graphics();
     test_level_graphics();
     test_silent_voice();

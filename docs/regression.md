@@ -346,6 +346,10 @@ chromatic mode section 8.5.1, AMP/filter sections 11.4–11.6 and MIDI Appendix 
 
 ## Firmware block-clock scenario
 
+Build the diagnostic OB-1 mod with `mise run build:digitakt:scenario`, then include that mod
+in place of the ordinary OB-1 mod when assembling the test firmware. Normal builds exclude the
+scenario entirely; the shared sound engine has no scenario code.
+
 For sample comparisons across DSP refactors, add `--firmware-scenario` to the existing
 `regression:device:scenario` task. The installed image must support OB-1 CC 12. The capture prepares
 a held stock AMP with muted sources, sends one CC 12, and records the complete 23-second scenario.

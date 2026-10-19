@@ -106,11 +106,12 @@ request until it renders again. Repeated requests before that block coalesce. Th
 not change saved controls or restart the stock AMP envelope, filters or effects. Resetting a
 sounding voice can produce a click; use it explicitly when preparing repeatable captures.
 
-CC **12**, with any value, starts the fixed 23-second diagnostic DSP scenario on the addressed
+Diagnostic builds optionally include CC **12**, which with any value starts the fixed 23-second diagnostic DSP scenario on the addressed
 OB-1 audio track at the next render block. It initializes the voice once, then schedules the pitch,
 source controls and DSP gates on exact 32-sample boundaries. Repeating CC 12 restarts the scenario;
 CC 9 cancels it and resets the voice. Switching to another machine also cancels it. The scenario
-returns to the normal live controls after 23 seconds and never writes saved parameters.
+returns to the normal live controls after 23 seconds and never writes saved parameters. Normal
+firmware builds exclude the scenario code and leave CC 12 unassigned.
 
 Prepare a held stock AMP and a silent source before triggering. During the scenario, local source
 controls and pitch override the live values; rests gate the DSP and hold its state. The stock note,

@@ -71,6 +71,7 @@ from merely avoiding full-scale clipping. It is a bounded matrix, not a guarante
 | `mise run regression:measure RUN --out NEW.json` | Exports compact numeric measurements from a completed capture; does not approve a baseline. |
 | `mise run regression:assert RUN --expectations FILE.json` | Checks reviewed numeric expectations, retaining unsupported reference comparisons as diagnostics; no reference WAVs required. |
 | `mise run regression:device:scenario --list` | Shows the fixed manual device sequence; supply firmware, MIDI/audio selection and a new output directory to record it. |
+| `mise run build:digitakt:scenario` | Build the diagnostic OB-1 mod for the selected stock OS; only this variant enables CC 12. |
 | `mise run regression:device:scenario --firmware-scenario ...` | Prepare a quiet held source and trigger the exact DSP block sequence with CC 12; stock envelope stays held. |
 | `mise run regression:device:diff BASELINE CANDIDATE --out NEW_DIR` | Produces a manual comparison report and difference WAV, preserving later MIDI timing and phase differences. |
 | `mise run test:firmware:midi --firmware IMAGE --os OS --out NEW_DIR` | Builds firmware, then verifies native MIDI setup and routing in an isolated emulator. |

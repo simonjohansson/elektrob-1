@@ -14,7 +14,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
 from regression import Device, RATE, wav_info, write_json, write_wav
-from regression_scenario import DURATION, INITIAL, capture, compare, load, main, scenario, firmware_start, play_scenario
+from regression_scenario import DURATION, INITIAL, capture, compare, load, main, scenario, firmware_start, play_scenario, build_diagnostic
 
 
 class ScenarioTest(unittest.TestCase):
@@ -183,6 +183,21 @@ class ScenarioTest(unittest.TestCase):
             write_json(path / 'run.json', metadata)
             with self.assertRaisesRegex(ValueError, 'start mismatch'):
                 load(path)
+
+    def test_diagnostic_build_uses_temporary_opt_in_manifest(self):
+        source = Path(__file__).resolve().parents[1] / 'machines/digitakt/mod.json'
+        original = source.read_bytes()
+        seen = []
+        def build(folder, stock, out):
+            manifest = json.loads((Path(folder) / 'mod.json').read_text())
+            self.assertIn('-DOB1_DIAGNOSTIC_SCENARIO', manifest['cflags'])
+            self.assertTrue(all(Path(name).is_absolute() for name in manifest['sources']))
+            seen.append(folder)
+            return 'diagnostic.elemod', None
+        with tempfile.TemporaryDirectory() as tmp, patch('elekloader.sdk.build.build', side_effect=build), redirect_stdout(StringIO()):
+            build_diagnostic(Path('stock.syx'), Path(tmp))
+            self.assertFalse(Path(seen[0]).exists())
+        self.assertEqual(source.read_bytes(), original)
 
     def test_list_does_not_open_device(self):
         with patch.object(sys, 'argv', ['scenario', 'capture', '--list']), \
