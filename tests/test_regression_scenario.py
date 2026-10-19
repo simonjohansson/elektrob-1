@@ -175,6 +175,9 @@ class ScenarioTest(unittest.TestCase):
             write_json(path / 'run.json', metadata)
             loaded, _ = load(path)
             self.assertEqual(loaded['start_frame'], RATE+17)
+            metadata['scenario'] = scenario()
+            pending, _ = load(path, detect_start=True, report=metadata)
+            self.assertEqual(pending['status'], 'captured')
             report = compare(path, path, root / 'self')
             self.assertEqual(report['max_abs_lsb'], [0, 0])
             with self.assertRaisesRegex(ValueError, 'clock mismatch'):

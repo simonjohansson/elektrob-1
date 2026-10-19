@@ -155,7 +155,7 @@ def capture(args):
 
 
 def load(folder, detect_start=False, report=None):
-    report = dict(report) if report is not None else read_json(folder / 'run.json')
+    report = json.loads(json.dumps(report)) if report is not None else read_json(folder / 'run.json')
     clock = report.get('clock', 'host-midi')
     if clock not in ('host-midi', 'firmware-blocks'):
         raise ValueError('Unknown scenario clock')
