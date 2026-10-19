@@ -112,16 +112,15 @@ uint32_t ob1_dsp_xmod_scale(uint32_t v, int32_t x, int32_t sh, uint32_t max);
 #define DSP_MIX_NOISE_LOW   1363            /* Q12: -3 dB relative to noise ON */
 
 /* Raw white noise from the high 16 bits of a full-period 32-bit linear congruential generator.
- * n samples, -32768 to 32767; output coloration is applied only in the voice mixer. */
+ * n samples, -32768 to 32767; output coloration comes from the shared voice smoothing. */
 void ob1_dsp_noise(uint32_t *state, int32_t *out, int n);
 
-/* Q12 source scale: colored noise at ON is 20.41 dB below full-saw RMS in the measured 200-8000 Hz band.
- * This calibrates the reference output path, not a physical transistor noise amplitude. */
+/* Q12 noise source scale, calibrated against the reference output relative to a full saw.
+ * This does not identify a physical transistor noise amplitude. */
 #define DSP_NOISE_LEVEL     1591
 
 struct dsp_hpf {
     int32_t lp;             /* the low-pass the high-pass takes off, Q8 */
-    int32_t noise_lp;       /* reference white-noise output coloration */
 };
 
 /* A voice's output, in one pass: src[0-3] (VCO1, VCO1 OCT, VCO2, VCO2 OCT) at gain[0-3] (Q12: a source at

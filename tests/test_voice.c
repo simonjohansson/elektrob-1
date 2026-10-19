@@ -15,6 +15,37 @@ static uint32_t step(double hz)
     return (uint32_t)(hz * 4294967296.0 / RATE);
 }
 
+/* Freeze the approved rendered model, including signed phase, morph levels and pitch attenuation. */
+static void test_waveform_golden(void)
+{
+    static const double hz[] = {55, 220, 880};
+    static const int waves[] = {0, 16, 32, 48, 63, 64, 80, 96, 112, 127};
+    static const uint32_t expected[3][10] = {
+        {0xbfd1fa41u, 0x06032e15u, 0x9f622005u, 0x573ec3cfu, 0xa019e57du, 0x17f35800u, 0xa53f0dafu, 0x917ab749u, 0x6b4a66d2u, 0x2e713ea8u},
+        {0x4bee26cfu, 0x5daedeedu, 0x97e4694cu, 0xe9b9e5afu, 0x4fb97e2du, 0x5e5cccd6u, 0x0acad70au, 0x45ddb8acu, 0x56a9463fu, 0x0171c910u},
+        {0xbebafa19u, 0x557e12e5u, 0x987d0d49u, 0x2486e3aau, 0xdf100628u, 0xbd063103u, 0x50d787c1u, 0x8b208a17u, 0x423760aeu, 0xaa07ee5fu},
+    };
+    for (int oscillator = 0; oscillator < 2; oscillator++)
+        for (int pitch = 0; pitch < 3; pitch++)
+            for (int wave = 0; wave < 10; wave++) {
+                struct ob1_voice v;
+                struct ob1_knobs k = {waves[wave], waves[wave], oscillator ? 0 : 6, oscillator ? 6 : 0, 0, 0};
+                uint32_t hash = 2166136261u, inc = step(hz[pitch]);
+                int32_t output[32];
+                ob1_voice_init(&v, 1);
+                for (int block = 0; block < 256; block++) {
+                    ob1_voice_render(&v, &k, inc, inc, output);
+                    for (int i = 0; i < 32; i++)
+                        for (int shift = 0; shift < 32; shift += 8)
+                            hash = (hash ^ (((uint32_t)output[i] >> shift) & 255u)) * 16777619u;
+                }
+                if (hash != expected[pitch][wave])
+                    fprintf(stderr, "waveform VCO%d %.0f Hz W%d: %08x, expected %08x\n",
+                            oscillator + 1, hz[pitch], waves[wave], (unsigned)hash, (unsigned)expected[pitch][wave]);
+                assert(hash == expected[pitch][wave]);
+            }
+}
+
 /* Middle source levels remain approximately -3 dB across shapes and pitches. */
 static void test_mix_levels(void)
 {
@@ -155,7 +186,7 @@ static void test_output_smoothing(void)
                 ob1_dsp_voice_out(&raw.hpf, src, gain, &raw.noise, ng, input + 2 + 32 * block, 32);
                 assert(!memcmp(&v.vco1, &raw.vco1, sizeof v.vco1));
                 assert(!memcmp(&v.vco2, &raw.vco2, sizeof v.vco2));
-                assert(v.noise == raw.noise && v.hpf.lp == raw.hpf.lp && v.hpf.noise_lp == raw.hpf.noise_lp);
+                assert(v.noise == raw.noise && v.hpf.lp == raw.hpf.lp);
             }
             for (int i = 0; i < 96; i++) {
                 double sum = input[i] / 65536.0 + 2 * (input[i + 1] / 65536.0) + input[i + 2] / 65536.0;
@@ -172,12 +203,15 @@ static void test_output_smoothing(void)
 static void test_noise_output(void)
 {
     struct ob1_voice v, split;
+    struct dsp_hpf reference_hpf = {0};
     struct ob1_knobs k = {0};
-    int32_t out[32], twice[32], zero[32] = {0};
+    int32_t out[32], twice[32], raw[32], expected[32], zero[32] = {0};
     const int32_t *src[4] = {zero, zero, zero, zero};
+    const int32_t *reference_src[4] = {raw, zero, zero, zero};
     const int32_t gain[4] = {0};
-    double energy = 0, lag = 0, previous = 0;
-    int block, i;
+    const int32_t reference_gain[4] = {512, 0, 0, 0};
+    uint32_t reference_noise = 12345, muted_noise = 1;
+    int block;
     k.nois = 2;
     ob1_voice_init(&v, 12345);
     ob1_voice_init(&split, 12345);
@@ -185,22 +219,20 @@ static void test_noise_output(void)
         ob1_dsp_voice_out(&v.hpf, src, gain, &v.noise, 512, out, 32);
         ob1_dsp_voice_out(&split.hpf, src, gain, &split.noise, 512, twice, 16);
         ob1_dsp_voice_out(&split.hpf, src, gain, &split.noise, 512, twice + 16, 16);
-        for (i = 0; i < 32; i++) {
-            double x = out[i] / 65536.0;
-            assert(out[i] == twice[i]);
-            energy += x*x;
-            lag += x*previous;
-            previous = x;
-        }
+        ob1_dsp_noise(&reference_noise, raw, 32);
+        ob1_dsp_voice_out(&reference_hpf, reference_src, reference_gain, &muted_noise, 0, expected, 32);
+        assert(!memcmp(out, twice, sizeof out));
+        /* Noise enters the same mixer unfiltered; shared output smoothing is checked separately. */
+        assert(!memcmp(out, expected, sizeof out));
+        assert(v.noise == reference_noise && split.noise == reference_noise);
     }
-    /* The reference's gentle high-frequency rolloff requires correlated white output. */
-    assert(lag / energy > 0.28 && lag / energy < 0.34);
-    i = v.hpf.noise_lp;
+    assert(muted_noise == 1);
     ob1_dsp_voice_out(&v.hpf, src, gain, &v.noise, 0, out, 32);
-    assert(v.hpf.noise_lp == i);
+    assert(v.noise == reference_noise);
     ob1_voice_render(&v, &k, 0, 0, out);
-    assert(v.hpf.noise_lp != i);
-    printf("Noise: block continuity, spectral coloration and disabled state passed (lag %.4f)\n", lag/energy);
+    ob1_dsp_noise(&reference_noise, raw, 32);
+    assert(v.noise == reference_noise);
+    printf("Noise: block continuity, unfiltered mixer routing and disabled state passed\n");
 }
 
 static void test_headroom_and_additivity(void)
@@ -397,6 +429,7 @@ static void test_mixer_phase_continuity(void)
 
 int main(void)
 {
+    test_waveform_golden();
     test_mix_levels();
     test_pitch_gain();
     test_output_smoothing();

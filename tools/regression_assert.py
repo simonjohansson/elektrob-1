@@ -298,8 +298,8 @@ def compare_reference(actual, expected, reference):
             checks.append(dict(property=name, status=status,
                                actual=value.tolist(), expected=dict(min=lower.tolist(), max=upper.tolist())))
 
-        def near(name, value, center, tolerance):
-            bound(name, value, center - tolerance, center + tolerance)
+        def near(name, value, center, tolerance, diagnostic=False):
+            bound(name, value, center - tolerance, center + tolerance, diagnostic)
 
         def band_bounds(name, value, lower, upper, first=0):
             # The reference's filter and resampling color bands from 4 kHz upward.
@@ -318,22 +318,43 @@ def compare_reference(actual, expected, reference):
         if key.startswith('wave-'):
             tuned_hz = 440 * 2 ** ((case['note'] - 69) / 12)
             near('pitch_error_cents', 1200 * np.log2(metric(entry, 'pitch_hz') / tuned_hz), 0, limits['pitch_cents'])
-            near('rms_dbfs', level, ref(key, 'rms_dbfs') + gain, limits['wave_level_db'])
+            wave = case['wav1'] if case['mix1'] else case['wav2']
+            intermediate_saw = 0 < wave < 63
+            # One calibrated pitch does not calibrate the reference path's frequency response.
+            near('rms_dbfs', level, ref(key, 'rms_dbfs') + gain, limits['wave_level_db'],
+                 diagnostic=intermediate_saw or case['note'] != reference['cases'][anchor]['settings']['note'])
             saw = f'wave-vco1-n{case["note"]}-w63'
             near('relative_wave_level_db', level - observed(saw, 'rms_dbfs'),
-                 ref(key, 'rms_dbfs') - ref(saw, 'rms_dbfs'), limits['wave_level_db'])
+                 ref(key, 'rms_dbfs') - ref(saw, 'rms_dbfs'), limits['wave_level_db'],
+                 diagnostic=intermediate_saw)
             cycle = metric(entry, 'cycle')
             if polarity == -1:
                 # Restore the fundamental phase origin after the fixed polarity inversion.
                 cycle = -np.roll(cycle, CYCLE_POINTS // 2, axis=1)
             error = np.sqrt(np.mean((cycle - ref(key, 'cycle')) ** 2, axis=1))
-            bound('signed_cycle_rmse', error, 0, limits['cycle_rmse'])
+            bound('signed_cycle_rmse', error, 0, limits['cycle_rmse'], diagnostic=True)
+            # Compare unit-RMS harmonic magnitudes below 4 kHz without fitting phase or gain.
+            hz = max(metric(entry, 'pitch_hz').max(), ref(key, 'pitch_hz').max())
+            count = int(np.sum(np.arange(1, 65) * hz < 4000))
+            magnitudes = []
+            for values in (cycle, ref(key, 'cycle')):
+                magnitude = abs(np.fft.rfft(values, axis=1))[:, 1:count + 1]
+                norm = np.linalg.norm(magnitude, axis=1, keepdims=True)
+                if not count or np.any(norm == 0):
+                    raise ValueError(f'{key}: no harmonic energy below 4000 Hz')
+                magnitudes.append(magnitude / norm)
+            error = np.linalg.norm(magnitudes[0] - magnitudes[1], axis=1)
+            bound('harmonic_balance_rmse', error, 0, limits['cycle_rmse'])
         elif key.startswith('mod-'):
             near('modulation_rms_dbfs', level, ref(key, 'rms_dbfs') + gain, limits['modulation_db'])
             bands = np.maximum(metric(entry, 'band_rms_dbfs') - gain - reference_anchor[:, None], floor)
             centers = np.maximum(ref(key, 'band_rms_dbfs') - reference_anchor[:, None], floor)
+            if case['mod'] == 1:
+                # Reset-event sync must not acquire the reference's quiet folded bass component.
+                bound('sync_20_80_relative_saw_db', bands[:, 0], -240, floor)
             band_bounds('modulation_bands_relative_saw_db', bands,
-                        centers - limits['spectrum_db'], centers + limits['spectrum_db'])
+                        centers - limits['spectrum_db'], centers + limits['spectrum_db'],
+                        first=1 if case['mod'] == 1 else 0)
         elif key.startswith('mix-'):
             sources = []
             for vco in (1, 2):
@@ -448,12 +469,8 @@ def main():
         failed = sum(case['status'] == 'failed' for case in report['cases'])
         print(f'{len(report["cases"])} cases checked: {len(report["cases"]) - failed} passed, {failed} failed')
         diagnostics = [check for case in report['cases'] for check in case['checks'] if check['status'] == 'diagnostic']
-        high = sum(check['property'].endswith('_4000_24000_hz_diagnostic') for check in diagnostics)
-        low = len(diagnostics) - high
-        if high:
-            print(f'{high} high-frequency comparisons retained as diagnostics (4000–24000 Hz); excluded from pass/fail')
-        if low:
-            print(f'{low} narrow low-frequency noise comparisons retained as diagnostics; excluded from pass/fail')
+        if diagnostics:
+            print(f'{len(diagnostics)} reference-path, waveform-model or spectral comparisons retained as diagnostics; excluded from pass/fail')
     for case in report.get('cases', []):
         for check in case['checks']:
             if check['status'] == 'failed':

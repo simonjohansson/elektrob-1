@@ -85,7 +85,6 @@ void ob1_voice_init(struct ob1_voice *v, uint32_t seed)
     osc_init(&v->vco1);
     osc_init(&v->vco2);
     v->hpf.lp = 0;
-    v->hpf.noise_lp = 0;
     v->noise = seed ? seed : 1;
     v->smooth[0] = v->smooth[1] = 0;
 }

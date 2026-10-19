@@ -35,7 +35,7 @@ feedback, waveform/mixer independence, free slave phase evolution between master
 fractional-sample forced resets across pitches and intervals. See the
 [circuit rationale](references.md#circuit-constraints-on-sync-and-cross-modulation).
 The full 315-case `all` suite and explicit `--case` selections remain available for investigation;
-an explicit assertion run on those recordings still performs the original reference comparisons.
+an explicit assertion run on those recordings still performs the combined-mode reference comparisons.
 
 The host captures the shared voice after its mixer, DC removal and output trim. There is no device
 filter, AMP, key scanner or note-off envelope at this boundary. It uses the existing renderer with a
@@ -150,12 +150,12 @@ mise run regression:assert out/regression/candidate --expectations tests/referen
 
 The recorded-reference expectations retain all 315 cases; routine CI selects the 311-case
 `reference` suite. The policy checks waveform pitch against standard
-tuning (twelve-tone equal temperament, A4 = 440 Hz), independently of reference detuning, plus signed
-shape and levels, isolated sources and middle-position ratios, noise, phase-aware mixtures and
+tuning (twelve-tone equal temperament, A4 = 440 Hz), independently of reference detuning, plus supported
+harmonic balance and levels, isolated sources and middle-position ratios, noise, phase-aware mixtures and
 modulation spectra below 4000 Hz. Direct reference band comparisons from 4000–24000 Hz
 are retained as diagnostics because the reference filter and sample-rate-dependent processing
 color them. They do not affect pass/fail. All seven raw spectral bands remain measured;
-standard pitch, full-band levels, signed cycles and independent engine checks remain strict.
+standard pitch, comparable levels, harmonic balance and independent signed-engine checks remain strict.
 Noise uses strict 200–4000 Hz level/ratio checks and a strict isolated 20–200 Hz aggregate.
 Its individual low bands remain diagnostic: 20–80 and 80–200 Hz for isolated noise,
 20–80 Hz for noise-bearing mixtures. Remaining mixture bands propagate the existing
@@ -230,8 +230,9 @@ never automatically accept candidates, widen limits, or absorb an unexplained po
 Assertion reports go into a new `out/assertions/` directory, or a new directory supplied by `--out`.
 They retain actual measurements and each checked property's bounds/result. Failed checks and invalid
 inputs return nonzero. Reference high-frequency comparisons have `status: "diagnostic"`, actual values
-and reference bounds; the console summarizes their count. Narrow low-frequency noise
-diagnostics are counted separately. These entries do not fail a case or run.
+and reference bounds; the console summarizes the diagnostic count. The same reporting retains
+reference signed-cycle errors, uncalibrated absolute wave levels, intermediate saw-family level
+differences and unsupported low-band reference targets. These entries do not fail a case or run.
 Neither checking nor measuring rewrites captures or fixtures; existing outputs
 are refused. CI retains generated regression audio and JSON reports on failure as temporary artifacts,
 excluding firmware images. No baseline-generation step runs in CI.
@@ -250,8 +251,18 @@ falling-saw orientation, opposite to DSP/USB. The stock SSI output applies a neg
 gain; the USB handoff retains the main mix polarity. The fixed convention appears in each report.
 It is never selected by trying both signs. For −1, a half-cycle shift follows inversion to restore
 the canonical cycle's fundamental phase origin. Raw measurements and recordings remain unchanged,
-and a new inversion or time reversal still fails. Other properties and generic absolute fixtures
-retain their checks. The separate stock 5 Hz high-pass response is not compensated.
+and a new inversion or time reversal remains visible in the diagnostic. Reference harmonic balance
+uses unit-energy magnitudes below 4000 Hz and the existing 0.25 error budget; it does not demand
+the unresolved path phase. Independent engine snapshots reject signed waveform/phase changes.
+Generic absolute fixtures retain their strict cycle checks. The separate stock 5 Hz high-pass
+response is not compensated.
+
+Reference absolute waveform levels gate only at the calibrated A3 pitch, excluding intermediate
+saw positions. Comparable same-note levels relative to the full saw remain strict at every register;
+intermediate saw reference levels are diagnostic because their construction differs. Their pitch
+and harmonic balance still gate. Pure SYNC replaces its quiet 20–80 Hz reference target with a strict
+ceiling at the existing −60 dB floor relative to the fixed reference saw; 80–4000 Hz and full-band
+levels remain strict. XMOD reference bands and levels are unchanged.
 
 The control assignments and AMP behavior follow Elektron's *Digitakt User Manual*, OS 1.51,
 chromatic mode section 8.5.1, AMP/filter sections 11.4–11.6 and MIDI Appendix B. The source-control mapping follows this project's

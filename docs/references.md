@@ -116,8 +116,10 @@ from the measured reference calibration used by the current sound model.
 
 The calibration recordings use reference version 1.0 in REAPER 7.82 at 48 kHz, with dry mono
 settings and fixed output gain. Dense saw-family controls were fitted at A3, then checked at six
-other pitches and both VCOs without fitting again. Cycle comparison allows phase and polarity,
-but not time reversal; magnitude-only harmonic agreement cannot establish waveform equivalence.
+other pitches and both VCOs without fitting again. Signed-cycle diagnostics retain a fixed polarity
+and fundamental phase origin, without time reversal. Reference acceptance compares supported
+harmonic balance; magnitude-only agreement does not establish waveform equivalence. Independent
+signed-engine regressions preserve the chosen construction and its phase.
 Relative waveform RMS uses the full saw as an anchor. Mixer measurements explicitly select −3 dB;
 normalized 0.5 is a different setting. Cross-modulation uses mean reset-rate ratios and spectral
 checks, not an ordinary fundamental estimator. Noise uses three pure-white repeats at each of

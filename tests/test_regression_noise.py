@@ -21,6 +21,7 @@ class NoiseSpectrumTest(unittest.TestCase):
         baseline = np.asarray(reference['cases']['mix-0-0-2']['metrics']['band_rms_dbfs'][0])
         baseline += profile['targets']['dsp']['gain_db']
         budget = profile['tolerances']['spectrum_db']
+        level = reference['cases']['mix-0-0-2']['metrics']['rms_dbfs'][0] + profile['targets']['dsp']['gain_db']
         case = next(c for c in cases() if c['id'] == 'mix-0-0-2')
         with tempfile.TemporaryDirectory() as tmp:
             folder = Path(tmp)
@@ -32,9 +33,12 @@ class NoiseSpectrumTest(unittest.TestCase):
                     raw = np.frombuffer(wav.readframes(16*48000), dtype=np.uint8).reshape(-1,3).astype(np.int32)
                     value = raw[:,0] | raw[:,1]<<8 | raw[:,2]<<16
                     signal = ((value ^ 8388608)-8388608)/8388608
-                    bands = np.asarray(measurements(signal[:,None], False)['band_rms_dbfs'][0])
+                    measured = measurements(signal[:,None], False)
+                    bands = np.asarray(measured['band_rms_dbfs'][0])
                     with self.subTest(history=history):
                         np.testing.assert_array_less(abs(bands[:4]-baseline[:4]), budget)
+                        self.assertLessEqual(abs(measured['rms_dbfs'][0]-level),
+                                             profile['tolerances']['source_level_db'])
                     if history == 0:
                         spectrum = np.fft.rfft(signal)
                         frequency = np.fft.rfftfreq(len(signal), 1/48000)

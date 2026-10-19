@@ -258,13 +258,13 @@ class ReferenceAssertionTest(unittest.TestCase):
         self.signals[key] = signal
         wave_case = key.startswith('wave-')
         self.reference['cases'][key] = dict(settings=self.catalogue[key], channels=2, frames=96000,
-                                           metrics=measurements(np.column_stack([signal, signal]), wave_case, 57))
+                                           metrics=measurements(np.column_stack([signal, signal]), wave_case, self.catalogue[key]['note']))
         self.set_actual(key, signal)
 
     def set_actual(self, key, signal):
         self.actual['cases'][key] = dict(settings=self.catalogue[key], channels=1, frames=96000,
                                         observation='synthetic reference boundary',
-                                        metrics=measurements((signal*10**(-.7/20))[:,None], key.startswith('wave-'), 57))
+                                        metrics=measurements((signal*10**(-.7/20))[:,None], key.startswith('wave-'), self.catalogue[key]['note']))
 
     def result(self):
         return compare_reference(self.actual, self.profile, self.reference)
@@ -277,14 +277,12 @@ class ReferenceAssertionTest(unittest.TestCase):
         row = next(r for r in self.result()['cases'] if r['id'] == key)
         self.assertEqual(next(c for c in row['checks'] if c['property'] == 'pitch_error_cents')['status'], 'failed')
 
-    def test_reference_gain_pitch_signed_shape_and_modulation_failures(self):
+    def test_reference_gain_pitch_harmonic_balance_and_modulation_failures(self):
         self.assertEqual(self.result()['status'], 'passed')
         original = copy.deepcopy(self.actual)
         for kind, key, samples, property in [
             ('pitch', 'wave-vco1-n57-w96', np.tile(tone(hz=221),2), 'pitch_error_cents'),
             ('gain', 'wave-vco1-n57-w96', self.signals['wave-vco1-n57-w96']*1.1, 'relative_wave_level_db'),
-            ('polarity', 'wave-vco1-n57-w96', -self.signals['wave-vco1-n57-w96'], 'signed_cycle_rmse'),
-            ('reversal', 'wave-vco1-n57-w96', self.signals['wave-vco1-n57-w96'][::-1], 'signed_cycle_rmse'),
             ('middle', 'mix-3-0-0', self.signals['mix-3-0-0']*1.03, 'middle_minus_on_db'),
             ('modulation', 'mod-3-frq2-32', np.tile(tone(hz=2200),2), 'modulation_bands_relative_saw_db')]:
             with self.subTest(kind=kind):
@@ -302,7 +300,30 @@ class ReferenceAssertionTest(unittest.TestCase):
         anchor = next(r for r in self.result()['cases'] if r['id']=='wave-vco1-n57-w63')
         self.assertEqual(next(c for c in anchor['checks'] if c['property']=='absolute_anchor_dbfs')['status'], 'failed')
 
-    def test_fixed_cycle_polarity_preserves_checks_and_rejects_audio_changes(self):
+    def test_reference_harmonic_balance_accepts_phase_but_rejects_shape_changes(self):
+        key = 'wave-vco1-n57-w96'
+        original = self.signals[key]
+        t = np.arange(len(original)) / RATE
+        for second, phase, status in ((.3, 2.7, 'passed'), (.95, .4, 'failed')):
+            with self.subTest(second=second, phase=phase):
+                signal = np.sin(2*np.pi*220*t) + second*np.sin(4*np.pi*220*t + phase)
+                signal *= np.linalg.norm(original) / np.linalg.norm(signal)
+                self.set_actual(key, signal)
+                row = next(r for r in self.result()['cases'] if r['id'] == key)
+                self.assertEqual(next(c['status'] for c in row['checks']
+                                      if c['property'] == 'harmonic_balance_rmse'), status)
+                self.assertEqual(next(c['status'] for c in row['checks']
+                                      if c['property'] == 'relative_wave_level_db'), 'passed')
+                cycle = next(c for c in row['checks'] if c['property'] == 'signed_cycle_rmse')
+                self.assertEqual(cycle['status'], 'diagnostic')
+                self.assertGreater(cycle['actual'][0], cycle['expected']['max'][0])
+
+    def test_reference_harmonic_balance_requires_measurable_supported_energy(self):
+        self.actual['cases']['wave-vco1-n57-w96']['metrics']['cycle'] = [[0]*256]
+        with self.assertRaisesRegex(ValueError, 'no harmonic energy'):
+            self.result()
+
+    def test_fixed_cycle_polarity_is_preserved_in_diagnostics(self):
         original = copy.deepcopy(self.actual)
         key = 'wave-vco1-n57-w96'
         for channels in (1, 2):
@@ -327,7 +348,7 @@ class ReferenceAssertionTest(unittest.TestCase):
                     self.assertEqual(result['status'], 'passed')
                     self.assertEqual(result['cycle_polarity'], polarity)
                     self.assertEqual(self.actual, unchanged)
-                    other_checks = [[c for c in row['checks'] if c['property'] != 'signed_cycle_rmse']
+                    other_checks = [[c for c in row['checks'] if c['property'] not in ('signed_cycle_rmse', 'harmonic_balance_rmse')]
                                     for row in result['cases']]
                     if baseline is None:
                         baseline = other_checks
@@ -337,8 +358,11 @@ class ReferenceAssertionTest(unittest.TestCase):
                                            (polarity*self.signals[key][::-1], 'failed')]:
                         set_wave(key, signal)
                         row = next(r for r in self.result()['cases'] if r['id'] == key)
+                        cycle = next(c for c in row['checks'] if c['property'] == 'signed_cycle_rmse')
+                        self.assertEqual(cycle['status'], 'diagnostic')
+                        self.assertEqual(cycle['actual'][0] <= cycle['expected']['max'][0], status == 'passed')
                         self.assertEqual(next(c['status'] for c in row['checks']
-                                              if c['property'] == 'signed_cycle_rmse'), status)
+                                              if c['property'] == 'harmonic_balance_rmse'), 'passed')
 
     def test_fixed_cycle_polarity_requires_an_explicit_integer_convention(self):
         profile = read_json(Path(__file__).parent/'reference/recorded/assertions.json')
@@ -352,6 +376,58 @@ class ReferenceAssertionTest(unittest.TestCase):
         del self.profile['targets']['dsp']['cycle_polarity']
         with self.assertRaisesRegex(ValueError, 'target calibration fields'):
             self.result()
+
+    def test_model_dependent_levels_are_diagnostic_but_pitch_and_shape_still_gate(self):
+        for key, hz in (('wave-vco1-n57-w32', 220), ('wave-vco1-n81-w63', 880)):
+            with self.subTest(key=key):
+                self.add(key, tone(hz=hz))
+                self.set_actual(key, self.signals[key]*1.3)
+                row = next(r for r in self.result()['cases'] if r['id'] == key)
+                self.assertEqual(row['status'], 'passed')
+                self.assertEqual(next(c['status'] for c in row['checks'] if c['property'] == 'rms_dbfs'), 'diagnostic')
+                self.set_actual(key, np.tile(tone(hz=hz+1), 2))
+                row = next(r for r in self.result()['cases'] if r['id'] == key)
+                self.assertEqual(next(c['status'] for c in row['checks'] if c['property'] == 'pitch_error_cents'), 'failed')
+                t = np.arange(RATE*2) / RATE
+                signal = np.sin(2*np.pi*hz*t) + .95*np.sin(4*np.pi*hz*t + .4)
+                signal *= np.linalg.norm(self.signals[key]) / np.linalg.norm(signal)
+                self.set_actual(key, signal)
+                row = next(r for r in self.result()['cases'] if r['id'] == key)
+                self.assertEqual(next(c['status'] for c in row['checks'] if c['property'] == 'harmonic_balance_rmse'), 'failed')
+                self.set_actual(key, self.signals[key])
+        key = 'wave-vco1-n81-w64'
+        self.add(key, tone(hz=880))
+        self.set_actual(key, self.signals[key]*1.3)
+        row = next(r for r in self.result()['cases'] if r['id'] == key)
+        self.assertEqual(next(c['status'] for c in row['checks'] if c['property'] == 'relative_wave_level_db'), 'failed')
+
+    def test_xmod_bass_and_level_checks_remain_strict(self):
+        key = 'mod-2-frq2-32'
+        self.add(key, tone())
+        for signal, property in ((self.signals[key] + .01*np.sin(2*np.pi*40*np.arange(RATE*2)/RATE),
+                                  'modulation_bands_relative_saw_db'),
+                                 (self.signals[key]*1.2, 'modulation_rms_dbfs')):
+            self.set_actual(key, signal)
+            row = next(r for r in self.result()['cases'] if r['id'] == key)
+            self.assertEqual(next(c['status'] for c in row['checks'] if c['property'] == property), 'failed')
+
+    def test_sync_rejects_unwanted_bass_instead_of_requiring_reference_foldback(self):
+        key = 'mod-1-frq2-32'
+        self.add(key, tone())
+        bass = np.sin(2*np.pi*40*np.arange(RATE*2)/RATE)
+        reference = self.signals[key] + .0003*bass
+        self.reference['cases'][key]['metrics'] = measurements(np.column_stack([reference, reference]), False)
+        row = next(r for r in self.result()['cases'] if r['id'] == key)
+        self.assertEqual(row['status'], 'passed')
+        diagnostic = next(c for c in row['checks'] if c['property'] == 'modulation_bands_relative_saw_db_20_80_hz_diagnostic')
+        self.assertEqual(diagnostic['status'], 'diagnostic')
+        self.assertLess(diagnostic['actual'][0][0], diagnostic['expected']['min'][0][0])
+        for signal, property in ((self.signals[key] + .01*bass, 'sync_20_80_relative_saw_db'),
+                                 (self.signals[key] + .01*np.sin(2*np.pi*3000*np.arange(RATE*2)/RATE),
+                                  'modulation_bands_relative_saw_db_80_4000_hz')):
+            self.set_actual(key, signal)
+            row = next(r for r in self.result()['cases'] if r['id'] == key)
+            self.assertEqual(next(c['status'] for c in row['checks'] if c['property'] == property), 'failed')
 
     def test_mixture_bounds_allow_cancellation_but_detect_excess_gain(self):
         self.add('mix-0-0-0', np.zeros(RATE))
@@ -479,12 +555,12 @@ class ReferenceAssertionTest(unittest.TestCase):
             def check(label):
                 with patch.object(sys,'argv',['assert','check',str(run),'--expectations',str(profile),'--out',str(root/label)]):return main()
             self.assertEqual(check('pass'),0)
-            capture(run, -self.signals[key]*10**(-.7/20), case=self.catalogue[key])
-            self.assertEqual(check('polarity-failure'),1)
-            report = read_json(root/'polarity-failure/assertions.json')
+            capture(run, self.signals[key]*1.2*10**(-.7/20), case=self.catalogue[key])
+            self.assertEqual(check('gain-failure'),1)
+            report = read_json(root/'gain-failure/assertions.json')
             self.assertEqual(report['status'],'failed')
             self.assertEqual(report['cycle_polarity'], 1)
-            self.assertTrue((root/'polarity-failure/measurements.json').exists())
+            self.assertTrue((root/'gain-failure/measurements.json').exists())
             key = 'mod-3-frq2-32'
             high = .005*np.sin(2*np.pi*12000*np.arange(RATE*2)/RATE)
             capture(run, (self.signals[key]+high)*10**(-.7/20), case=self.catalogue[key])

@@ -2,7 +2,7 @@
   "format": 2,
   "role": "expectations",
   "source": {
-    "description": "Recorded reference with explicit engineering error budgets. Spectral bands from 4 kHz upward are diagnostics because the reference filter and sample-rate-dependent processing affect them. Signed cycles use a fixed output-path polarity calibration, never per-case sign fitting. Other known mismatches are failures. Limits and path calibration are documented beside the measurements."
+    "description": "Recorded reference with explicit engineering error budgets. Supported harmonic balance, standard tuning, calibrated A3 levels, comparable same-note wave levels, mixer/noise and XMOD checks remain strict. Reference signed cycles, intermediate saw-family levels, waveform absolute levels outside the calibrated pitch and spectral bands from 4 kHz upward are diagnostics. Pure SYNC rejects unwanted 20-80 Hz energy instead of requiring reference foldback. Independent engine tests protect the preserved signed waveform model. No per-case path fitting; numeric reference, budgets and fixed calibration are unchanged. Exact policy is documented beside the measurements."
   },
   "reference": {
     "path": "measurements.json",

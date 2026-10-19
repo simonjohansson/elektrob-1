@@ -28,8 +28,8 @@ the provenance of a regression expectation, not a separate class of test.
 | Boundary | Responsibility |
 |---|---|
 | DSP mechanics | Oscillator events, edge correction, harmonic structure, sync/XMOD and optimized-path equivalence. Historical sample hashes preserve implementation behavior; they do not establish reference accuracy. |
-| Rendered shared voice | Mixer ratio invariance across shapes/pitches, source routing, noise continuity/coloration, additivity and maximum-output policy. |
-| Captured reference agreement | Recorded waveform, pitch, level and spectral expectations through one shared assertion path; fixed output-path gains and explicit phase-aware mixture bounds. |
+| Rendered shared voice | Signed waveform snapshots for both oscillators across shapes/pitches, mixer ratio invariance, source routing, noise continuity/coloration, additivity and maximum-output policy. |
+| Captured reference agreement | Standard tuning, supported harmonic balance, comparable levels and spectral expectations through one shared assertion path; fixed output-path gains and explicit phase-aware mixture bounds. Uncalibrated phase/model differences remain visible diagnostics. |
 | Digitakt logic on the host | Pitch conversion, held-note priority, control decoding/defaults, wrapper-to-engine parity and UI composition, independently of stock firmware execution. |
 | Capture/assertion plumbing on the host | Case coverage, control mappings, note cleanup, recording integrity, numeric extraction and rejection of known synthetic audio changes. Fake transports and synthetic signals do not qualify firmware or hardware. |
 | Firmware emulator | Real panel/key and MIDI paths, stored and live setup, active AMP and complete audio acquisition through the compiled firmware. |
@@ -40,9 +40,12 @@ the provenance of a regression expectation, not a separate class of test.
 requires separate firmware installation and manual project/receive-channel preparation. These tasks
 perform acquisition only; a separate `regression:assert` task checks reviewed numeric expectations.
 `mise run test:reference` captures the 311-case DSP reference suite and checks the committed numeric
-reference policy; CI runs it after the host checks. Four combined SYNC+XMOD comparisons use
-circuit-based host checks instead of reference agreement; the full acquisition catalogue remains
-available manually. Remaining differences fail normally and can keep CI red.
+reference policy; CI runs it after the host checks. Reference waveform-cycle errors and incompatible
+level targets are diagnostics; independent signed-engine snapshots preserve the chosen waveform model.
+Pure SYNC rejects unwanted bass instead of requiring the reference's quiet foldback component.
+Four combined SYNC+XMOD comparisons use circuit-based host checks instead of reference agreement;
+the full acquisition catalogue remains available manually. XMOD reference checks remain strict and
+their unresolved differences can keep CI red.
 The old embedded waveform table and calibrated broadband-noise-level test have been replaced by this
 shared path. The broader mixer mechanics matrix and output policy remain independent of reference
 agreement. Reusing cases across target boundaries is intentional; avoid copying expected values into
@@ -66,7 +69,7 @@ from merely avoiding full-scale clipping. It is a bounded matrix, not a guarante
 | `mise run test:emulator` | Runs the pinned emulator's self-tests; checks for unrelated firmware or optional platforms may skip. |
 | `mise run test:reference` | Captures 311 DSP reference cases; remaining reference mismatches return nonzero. |
 | `mise run regression:measure RUN --out NEW.json` | Exports compact numeric measurements from a completed capture; does not approve a baseline. |
-| `mise run regression:assert RUN --expectations FILE.json` | Checks reviewed numeric limits and signed cycles; reports failures without reference WAVs. |
+| `mise run regression:assert RUN --expectations FILE.json` | Checks reviewed numeric expectations, retaining unsupported reference comparisons as diagnostics; no reference WAVs required. |
 | `mise run test:firmware:midi --firmware IMAGE --os OS --out NEW_DIR` | Builds firmware, then verifies native MIDI setup and routing in an isolated emulator. |
 | `mise run render OUT.wav [key=value...]` | Produces 48 kHz mono, 24-bit PCM audio. |
 | `mise run analyze FILE.wav` | Estimates fundamental frequency, harmonic levels and the strongest non-harmonic spectral bin. |

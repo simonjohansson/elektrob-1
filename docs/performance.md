@@ -140,10 +140,10 @@ The XMOD depth is ±3.921875 octaves; 16 held-out cases have median normalized s
 At that calibration, waveform gain and output trim were folded into constant mixer coefficients. Full saws omit half
 scaling and nonexistent middle-corner corrections; the paired optimization matches 4,096,000
 frozen generic outputs and oscillator states exactly, with 12 persisted golden checks. A full-period
-32-bit generator supplies the high 16 noise bits, followed by the fitted noise-only filter. Eight
+32-bit generator supplied the high 16 noise bits, followed by the fitted noise-only filter. Eight
 track seeds were checked for distribution, spectral flatness, lag and cross-track correlation.
-The noise-off paths omit that filter work. These choices keep the measured calibration within the
-original instruction budget.
+Those historical measurements predate the shared output smoother. The current engine retains the
+generator and gain but applies only shared smoothing, avoiding duplicate noise attenuation.
 
 | Eight-voice DSP workload | Original baseline | Initial correction | Reference calibration |
 |---|---:|---:|---:|

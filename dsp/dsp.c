@@ -320,7 +320,6 @@ HOT void voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t
     const int32_t *a = src[0], *b = src[1], *c = src[2], *d = src[3];
     int32_t ga = gain[0], gb = gain[1], gc = gain[2], gd = gain[3], lp = h->lp, x, i;
     uint32_t z = *noise;
-    int32_t nl = h->noise_lp;
     for (i = 0; i < n; i++) {
         x = a[i] * ga + b[i] * gb;                              /* |src| < 2^16, gain <= 2^12: < 2^30 */
         if (four)
@@ -328,8 +327,7 @@ HOT void voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t
         if (with_noise) {
             z = noise_next(z);
             int32_t raw = (int32_t)z >> 16;
-            nl = raw + ((nl - raw) * 5 >> 4);
-            x += nl * ng;
+            x += raw * ng;
         }
         x >>= 14;                               /* Q12 to Q15, and a quarter */
         lp += (((x * 256) - lp) * 47) >> 15;     /* the low-pass the high-pass takes off: 2 pi 11 / 48000 */
@@ -337,8 +335,6 @@ HOT void voice_out(struct dsp_hpf *h, const int32_t *const src[4], const int32_t
         out[i] = x > 32767 ? 0x7fffffff : x < -32768 ? (int32_t)0x80000000 : x * 65536;
     }
     h->lp = lp;
-    if (with_noise)
-        h->noise_lp = nl;
     *noise = z;
 }
 

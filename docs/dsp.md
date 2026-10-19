@@ -32,7 +32,9 @@ below 0.6 cents through the 12 kHz ceiling.
 Both VCOs start from a rising ramp. For a ramp `s` in approximately [−1, +1], the saw-type family is
 `min(s, 0) + g × max(s, 0)`. The fixed half follows the reset; the other half scales from inverted
 triangle to saw. The mean is removed. A measured 64-position control curve selects shaping gain
-and fundamental level, matching the reference's intermediate cycles and relative loudness. The
+and fundamental level, approximating the reference's harmonic balance and relative loudness. The
+reference blends phase-offset endpoints instead of scaling a shared ramp, so its intermediate
+saw cycles and levels are not exact acceptance targets for this preserved construction. The
 triangle's raw half swing is compensated at mixing; sub-octave gain is independent of waveshape.
 Waveform-level coefficients include the output trim and are computed as constants, with no
 per-sample waveform normalization. The full saw uses an equivalent path that omits half scaling
@@ -97,11 +99,11 @@ ratio. Normalized knob position 0.5 is a different level. Integer coefficients a
 ratios. The original physical switch truth table remains a separate hardware question.
 
 Noise uses the high 16 bits of a full-period 32-bit linear congruential sequence with distinct
-seeds per track. A noise-only one-pole filter uses coefficient 11/16 to match the measured white
-output's gentle high-frequency rolloff. Its state is held when noise is OFF; oscillator-only paths
-omit the filter work. Noise at ON is about 20.41 dB below a full saw in the 200–8000 Hz comparison
-band. This is a match to the reference output path, which includes its filter/amplifier, rather than
-identification of physical noise-source coloration. There is no added pink-noise control.
+seeds per track. It enters the mixer unfiltered and receives the same output smoothing as the other
+sources; an additional noise-only low-pass would double the output coloration and reduce its level.
+The generator state is held when noise is OFF. Noise gain is calibrated against the reference output
+relative to a full saw. The reference includes its filter/amplifier, so this does not identify physical
+noise-source coloration. There is no added pink-noise control.
 
 After summing, a one-pole high-pass removes DC at about 11 Hz. Its low-pass coefficient is
 `47/32768 ≈ 2π × 11/48000`. A single filter after the sum approximates separate coupling networks;

@@ -64,21 +64,48 @@ the measured output conventions, not internal reference-oscillator or physical O
 For −1, inversion of an already canonicalized cycle includes a half-cycle shift to restore its
 fundamental phase origin. Only the signed-cycle comparison uses this transform; raw recordings,
 exported measurements and all other checks retain their original values. Reports record the fixed
-convention. A new inversion or time reversal still fails. The separate stock 5 Hz high-pass response
-is not compensated.
+convention. These signed reference-cycle comparisons are diagnostic: their phase response includes
+unresolved reference and output-path processing. A changed polarity or time reversal remains visible
+there and fails the independent deterministic engine checks. The separate stock 5 Hz high-pass
+response is not compensated.
 
 Routine DSP and emulator CI selects the 311-case `reference` suite. The four combined SYNC+XMOD
 comparisons are omitted because the reference coupling differs from the
 [supported circuit paths](../../../docs/references.md#circuit-constraints-on-sync-and-cross-modulation).
 Strict shared-engine tests protect feedback sign, raw-source routing and reset-event timing instead.
 All 315 numeric reference entries remain available for explicit investigation; checking a full
-capture still applies their original limits.
+capture still applies the combined-mode reference limits.
 
 Supported reference differences are ordinary failures. There is no automatic sign selection,
-time reversal, pitch correction, expected-failure list or threshold widening. Register-dependent levels,
-noise levels and low-frequency waveform/modulation differences can fail. Passing acquisition does not
-mean passing reference assertions, and passing levels does not establish matching
-modulation spectra.
+time reversal, pitch correction, expected-failure list or threshold widening. Passing acquisition
+does not mean passing reference assertions, and passing levels does not establish matching
+modulation spectra. XMOD remains strict; unresolved feedback differences are not accepted baselines.
+
+Reference waveform shape checks compare harmonic magnitudes below 4000 Hz. The supported harmonics
+of each measured cycle are normalized to unit energy, and their Euclidean distance equals the
+unit-RMS cycle error after removing individual harmonic phases. The existing 0.25 cycle-error budget
+is used; no phases are fitted or applied to the engine. Raw signed cycles and their original error
+bounds remain in diagnostics. This comparison protects harmonic balance without demanding that the
+oscillator reproduce the reference path's phase response.
+
+The fixed absolute path calibration is established at A3. Waveform absolute RMS outside that pitch
+is therefore diagnostic. At the calibrated pitch, absolute levels remain strict for triangle, full
+saw and pulse shapes; their same-note levels relative to a full saw remain strict across registers.
+Intermediate saw positions (W1–W62) use a preserved shared-ramp construction, while the reference
+blends phase-offset endpoints, so their absolute and relative reference levels are diagnostic at
+every pitch. Their standard tuning and harmonic-balance checks still gate the run.
+
+Independent shared-voice tests freeze the approved signed output for both oscillators, ten waveform
+positions and three pitches using compact deterministic hashes. These protect shape, phase, level
+and pitch attenuation without reference-path compensation or stored WAVs. They preserve the chosen
+engine behavior, not a claim of original analog fidelity; the analytic oscillator, mixer, gain,
+continuity and headroom checks remain independent.
+
+For pure SYNC, the 20–80 Hz reference comparison is diagnostic because of a quiet component consistent
+with reference foldback. A strict replacement requires this band to stay at or below the existing
+−60 dB floor relative to the fixed reference saw, rather than injecting that component. Reference
+80–4000 Hz bands, full-band RMS, reset timing and raw-source independence remain strict. This rule
+applies to every pure-SYNC case; XMOD and manual combined-mode comparisons retain all existing bands.
 
 The limits are engineering comparison budgets, not statistical confidence intervals:
 
@@ -86,13 +113,13 @@ The limits are engineering comparison budgets, not statistical confidence interv
 |---|---|
 | Absolute A3 saw anchor | ±0.1 dB around the frozen output-path calibration. |
 | Isolated-wave pitch | ±1 cent from twelve-tone equal temperament, A4 = 440 Hz. Reference detuning is not a tuning target. |
-| Wave absolute/relative RMS | ±0.2 dB; retains the previous relative-level budget. |
-| Signed unit-RMS cycle | RMSE ≤0.25 after fixed output-path polarity calibration. |
+| Comparable waveform RMS | ±0.2 dB: absolute at calibrated A3, same-note relative levels across registers; intermediate saw levels diagnostic. |
+| Supported harmonic balance | Unit-energy magnitude-vector error ≤0.25 below 4000 Hz. Signed reference-cycle error is diagnostic. |
 | Isolated FUND/sub/noise RMS | ±0.2 dB, both absolute and relative to the isolated VCO1 saw. |
 | Source middle/ON ratio | ±0.05 dB around the measured ratio. Broader shape/pitch mixer mechanics remain independently tested. |
 | Noise 200–4000 Hz level and middle/ON ratio | ±0.25 dB, allowing finite noise-window variation. |
 | Isolated noise 20–200 Hz aggregate and 200–1000 / 1000–4000 Hz bands | ±1 dB, using the existing spectral budget. |
-| Modulation spectral bands below 4000 Hz | ±1 dB, after the fixed path calibration. |
+| Modulation spectral bands below 4000 Hz | ±1 dB; pure SYNC replaces its 20–80 Hz reference target with a strict −60 dB ceiling relative to the fixed reference saw. |
 | Modulation RMS | ±0.5 dB. Spectral checks remain independent. |
 | Mixed-source bounds | ±0.5 dB around phase-aware energy bounds, allowing finite-window variation. |
 | All sources OFF | No more than 6 dB above the calibrated reference background RMS. |
@@ -115,10 +142,11 @@ Two-second narrow-band noise measurements vary with noise history. Isolated nois
 therefore checks combined 20–200 Hz power, rather than gating its 20–80 and 80–200 Hz
 bands separately. Both individual bands remain diagnostics. Noise-bearing mixtures
 retain 20–80 Hz as diagnostics and check 80–4000 Hz using the propagated bounds.
-Tone-only mixture and modulation band checks remain strict below 4000 Hz.
+Tone-only mixture and XMOD band checks remain strict below 4000 Hz; pure SYNC uses the bass rule above.
 
 The host also renders eight disjoint sixteen-second noise windows and checks all four
-bands below 4000 Hz against the same reference and ±1 dB budget. A deliberate 3 dB cut
+bands below 4000 Hz against the same reference and ±1 dB budget, plus full-band RMS
+against the existing ±0.2 dB source-level budget. A deliberate 3 dB cut
 below 80 Hz must fail this detailed check. This catches narrow bass coloration without
 lengthening simulator captures. The two-second checks also reject deliberate ±0.5 dB
 noise gain changes, an 80 Hz high-pass and a 4 kHz low-pass in the measured study. A
@@ -134,16 +162,16 @@ those entries do not affect case/run status. All seven raw bands remain in measu
 exports for every case. No recorded values, fixed gains or budgets are refitted.
 
 Supported band assertions below 4000 Hz remain strict as described above. The dedicated noise band-level check uses
-200–4000 Hz so it does not gate an excluded band indirectly. Full-band RMS, signed cycles,
-standard pitch, mixer ratios and silence remain checked; levels and cycles are not tests
-of isolated frequency regions. Independent engine aliasing, band-limiting and headroom
+200–4000 Hz so it does not gate an excluded band indirectly. Supported full-band levels,
+harmonic balance, standard pitch, mixer ratios and silence remain checked. Independent signed-engine
+waveform, aliasing, band-limiting and headroom
 checks, and separate absolute spectral fixtures, retain their existing behavior.
 
 The gains are measured once from the unchanged engine's A3 full-saw recordings and
 recorded with capture hashes. They compensate the declared output paths, including
 the chosen reference master gain. Filter/coupling or modulation differences are
-not calibrated away. Absolute waveform levels and independent spectral checks can
-therefore expose those differences even when some relative levels agree.
+not calibrated away. Diagnostic waveform levels/cycles expose path and model differences without
+making them oscillator acceptance targets. Supported level and spectral checks still fail normally.
 
 `repeatability.json` records per-channel minima, maxima and spans across the
 catalogue capture and three additional captures of ten selected cases. These
