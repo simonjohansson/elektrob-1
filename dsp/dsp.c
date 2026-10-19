@@ -286,6 +286,8 @@ void ob1_dsp_pair(struct dsp_osc *o1, struct dsp_osc *o2, uint32_t inc1, uint32_
     if (!sh1->pulse && sh1->g == 32768) {
         if (sh2->pulse)
             pair(o1, o2, sh1, sh2, 2, 1, mod, f1, s1, f2, s2, n);
+        else if (sh2->g == 32768)
+            pair(o1, o2, sh1, sh2, 2, 2, mod, f1, s1, f2, s2, n);
         else
             pair(o1, o2, sh1, sh2, 2, 0, mod, f1, s1, f2, s2, n);
     } else if (sh1->pulse && sh2->pulse)

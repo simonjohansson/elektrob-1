@@ -514,8 +514,52 @@ static void test_full_saw_pair_golden(void)
         }
 }
 
+/* Fixed full-saw slave captures include changing pitch, routing and retained oscillator history. */
+static void test_full_saw_slave_golden(void)
+{
+    static const uint32_t increments[] = {0, 1, 32768, 65535, 65536, 19685266,
+                                         29494959, 157482134, DSP_INC_MAX, DSP_INC_MAX + 1};
+    static const uint32_t expected[4][4] = {
+        {0xcb3101feu, 0x52b6fa2au, 0x6c34f853u, 0xbc0f76e5u},
+        {0x0f732f97u, 0x59ead8a7u, 0x3f6f9e86u, 0x1b881d5cu},
+        {0x0802baa1u, 0x7e79e16eu, 0xe04768a9u, 0x84407f4bu},
+        {0xe21b22d4u, 0x456e7e8cu, 0x1d4ccfafu, 0x5ad591c7u},
+    };
+    struct dsp_shape carrier, source;
+    int mod, shape, block, i, j;
+    ob1_dsp_shape_saw(&source, 32768);
+    for (mod = 0; mod < 4; mod++)
+        for (shape = 0; shape < 4; shape++) {
+            struct dsp_osc a = {{0}, 0, 32767, 32767}, b = a;
+            int32_t output[4][32];
+            uint32_t hash = 2166136261u;
+            a.vco.phase = 0x12345678u; b.vco.phase = 0x98765432u;
+            if (shape < 2) ob1_dsp_shape_saw(&carrier, shape ? -12343 : 32768);
+            else ob1_dsp_shape_pulse(&carrier, shape == 2 ? 0x80000000u : 287762809u);
+            for (block = 0; block < 400; block++) {
+                uint32_t inc1 = increments[(block / 7) % 10];
+                uint32_t inc2 = block % 3 ? inc1 : increments[(block / 11 + 3) % 10];
+                ob1_dsp_pair(&a, &b, inc1, inc2, &carrier, &source, mod,
+                             output[0], output[1], output[2], output[3], 32);
+                for (i = 0; i < 32; i++)
+                    for (j = 0; j < 4; j++)
+                        hash = (hash ^ (uint32_t)output[j][i]) * 16777619u;
+                const struct dsp_osc *osc[2] = {&a, &b};
+                for (j = 0; j < 2; j++) {
+                    const struct dsp_osc *o = osc[j];
+                    uint32_t state[] = {o->vco.phase, o->vco.inc, o->vco.rinc, o->vco.shift,
+                                        (uint32_t)o->prev, (uint32_t)o->sub, (uint32_t)o->sub_prev};
+                    for (i = 0; i < 7; i++)
+                        hash = (hash ^ state[i]) * 16777619u;
+                }
+            }
+            assert(hash == expected[mod][shape]);
+        }
+}
+
 int main(void)
 {
+    test_full_saw_slave_golden();
     test_full_saw_fast_path();
     test_full_saw_pair_golden();
     test_blep_full_jump();
