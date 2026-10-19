@@ -22,6 +22,11 @@ enum {
 static const struct cm_ui32 ob1_page;
 static struct ob1_voice voice[8];            /* set up on its first block */
 static volatile uint8_t ready[8];
+static struct {
+    int32_t controls[K_COUNT], note;
+    struct ob1_knobs knobs;
+    uint32_t inc1, inc2;
+} control_cache[8];
 #ifdef OB1_DIAGNOSTIC_SCENARIO
 static struct ob1_scenario scenario[8];
 static volatile uint8_t scenario_command[8];
@@ -94,9 +99,9 @@ void ob1_render(int32_t *blocks)
 {
     int t;
     for (t = 0; t < 8; t++) {
-        int32_t p[K_COUNT];
-        struct ob1_knobs k;
-        int32_t pitch1, pitch2, i, note;
+        int32_t *p = control_cache[t].controls;
+        int32_t pitch1, pitch2, i, note, value;
+        int changed;
         if (fw_render_machine[t] != OB1_ID) {
 #ifdef OB1_DIAGNOSTIC_SCENARIO
             scenario[t].block = scenario_command[t] = 0;
@@ -121,35 +126,58 @@ void ob1_render(int32_t *blocks)
                 blocks[32 * t + i] = 0;
             continue;
         }
+        changed = !ready[t];
         if (!ready[t]) {
             ob1_voice_init(&voice[t], t + 1);
             ready[t] = 1;
         }
 #ifdef OB1_DIAGNOSTIC_SCENARIO
         if (scripted) {
-            for (i = 0; i < K_COUNT; i++)
-                p[i] = scenario[t].controls[i] * 256;
+            for (i = 0; i < K_COUNT; i++) {
+                value = scenario[t].controls[i] * 256;
+                if (p[i] != value) {
+                    p[i] = value;
+                    changed = 1;
+                }
+            }
             note = (int32_t)scenario[t].note << 16;
         } else
 #endif
         {
-            for (i = 0; i < 8; i++)
-                p[i] = fw_voice_params[53 * t + i];
-            for (i = 8; i < K_COUNT; i++)
-                p[i] = cm_src_value(t, i);
+            for (i = 0; i < 8; i++) {
+                value = fw_voice_params[53 * t + i];
+                if (p[i] != value) {
+                    p[i] = value;
+                    changed = 1;
+                }
+            }
+            for (i = 8; i < K_COUNT; i++) {
+                value = cm_src_value(t, i);
+                if (p[i] != value) {
+                    p[i] = value;
+                    changed = 1;
+                }
+            }
             note = fw_voice_note[t];
         }
-        k.wav1 = wave(p[K_TYP1], p[K_WAV1]);
-        k.wav2 = wave(p[K_TYP2], p[K_WAV2]);
-        k.mix1 = zone(p[K_FND1], 3) * 3 + zone(p[K_OCT1], 3);
-        k.mix2 = zone(p[K_FND2], 3) * 3 + zone(p[K_OCT2], 3);
-        k.mod = zone(p[K_SYNC], 2) * DSP_SYNC | zone(p[K_XMOD], 2) * DSP_XMOD;
-        k.nois = zone(p[K_NOIS], 3);
-        /* Each oscillator offsets the played note; the firmware pitch table's unity is at 63. */
-        pitch1 = note + (3 << 16) + (knob(p[K_FRQ1], 63) - 32) * 65536 + fine(p[K_FIN1]);
-        pitch2 = note + (3 << 16) + (knob(p[K_FRQ2], 63) - 32) * 65536 + fine(p[K_FIN2]);
-        ob1_voice_render(&voice[t], &k, ob1_pitch_inc(pitch1, fw_pitch_tab),
-                         ob1_pitch_inc(pitch2, fw_pitch_tab), &blocks[32 * t]);
+        if (note != control_cache[t].note)
+            changed = 1;
+        if (changed) {
+            control_cache[t].note = note;
+            control_cache[t].knobs.wav1 = wave(p[K_TYP1], p[K_WAV1]);
+            control_cache[t].knobs.wav2 = wave(p[K_TYP2], p[K_WAV2]);
+            control_cache[t].knobs.mix1 = zone(p[K_FND1], 3) * 3 + zone(p[K_OCT1], 3);
+            control_cache[t].knobs.mix2 = zone(p[K_FND2], 3) * 3 + zone(p[K_OCT2], 3);
+            control_cache[t].knobs.mod = zone(p[K_SYNC], 2) * DSP_SYNC | zone(p[K_XMOD], 2) * DSP_XMOD;
+            control_cache[t].knobs.nois = zone(p[K_NOIS], 3);
+            /* Each oscillator offsets the played note; the firmware pitch table's unity is at 63. */
+            pitch1 = note + (3 << 16) + (knob(p[K_FRQ1], 63) - 32) * 65536 + fine(p[K_FIN1]);
+            pitch2 = note + (3 << 16) + (knob(p[K_FRQ2], 63) - 32) * 65536 + fine(p[K_FIN2]);
+            control_cache[t].inc1 = ob1_pitch_inc(pitch1, fw_pitch_tab);
+            control_cache[t].inc2 = ob1_pitch_inc(pitch2, fw_pitch_tab);
+        }
+        ob1_voice_render(&voice[t], &control_cache[t].knobs, control_cache[t].inc1,
+                         control_cache[t].inc2, &blocks[32 * t]);
     }
 }
 
