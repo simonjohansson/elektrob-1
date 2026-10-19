@@ -14,7 +14,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
 from regression import Device, RATE, wav_info, write_json, write_wav
-from regression_scenario import DURATION, INITIAL, capture, compare, load, main, scenario
+from regression_scenario import DURATION, INITIAL, capture, compare, load, main, scenario, firmware_start, play_scenario
 
 
 class ScenarioTest(unittest.TestCase):
@@ -80,6 +80,25 @@ class ScenarioTest(unittest.TestCase):
                     with self.assertRaises(FileExistsError):
                         capture(args)
 
+    def test_firmware_clock_sends_only_trigger_and_finds_complete_quiet_onset(self):
+        calls = []
+        device = SimpleNamespace(setup=lambda c: calls.append(c),
+                                 send=lambda m: calls.append(m), note_on=lambda n: calls.append(n),
+                                 wait=lambda d: None, mark=lambda m: 12000, input_latency=.01)
+        self.assertEqual(play_scenario(device, True), 12000)
+        self.assertEqual(calls, [INITIAL | dict(mix1=0, mix2=0, nois=0), [0xb0, 123, 0], 57, [0xb0, 12, 127]])
+        pcm = np.zeros((DURATION * RATE + RATE, 2), dtype=np.int64)
+        pcm[13000:13010] = 65
+        self.assertEqual(firmware_start(pcm, 12000), 13000)
+        with self.assertRaisesRegex(ValueError, 'Incomplete'):
+            firmware_start(pcm[:DURATION * RATE], 12000)
+        pcm[13000:13010] = 0
+        with self.assertRaisesRegex(ValueError, 'No firmware'):
+            firmware_start(pcm, 12000)
+        pcm[11999] = 65
+        with self.assertRaisesRegex(ValueError, 'silent pre-trigger'):
+            firmware_start(pcm, 12000)
+
     def recording(self, folder, pcm):
         folder.mkdir()
         raw = np.stack([((pcm >> shift) & 255).astype(np.uint8) for shift in (0, 8, 16)], axis=2).tobytes()
@@ -139,6 +158,31 @@ class ScenarioTest(unittest.TestCase):
             write_json(path, metadata)
             with self.assertRaisesRegex(ValueError, 'MIDI preparation differs'):
                 compare(root / 'baseline', root / 'changed', root / 'different-setup')
+
+    def test_firmware_capture_validation_and_clock_isolation(self):
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(StringIO()):
+            root = Path(tmp)
+            pcm = np.random.default_rng(2).integers(-500000, 500000, ((DURATION + 2) * RATE, 2), dtype=np.int64)
+            pcm[:RATE + 17] = 0
+            self.recording(root / 'firmware', pcm)
+            self.recording(root / 'host', pcm)
+            events = [dict(mark='scenario start', frame=RATE), dict(mark='firmware scenario trigger', frame=RATE)]
+            path = root / 'firmware'
+            write_json(path / 'events.json', events)
+            metadata = json.loads((path / 'run.json').read_text())
+            metadata.update(clock='firmware-blocks', trigger_frame=RATE, start_frame=RATE+17,
+                            events_sha256=hashlib.sha256((path / 'events.json').read_bytes()).hexdigest())
+            write_json(path / 'run.json', metadata)
+            loaded, _ = load(path)
+            self.assertEqual(loaded['start_frame'], RATE+17)
+            report = compare(path, path, root / 'self')
+            self.assertEqual(report['max_abs_lsb'], [0, 0])
+            with self.assertRaisesRegex(ValueError, 'clock mismatch'):
+                compare(path, root / 'host', root / 'mixed')
+            metadata['start_frame'] += 1
+            write_json(path / 'run.json', metadata)
+            with self.assertRaisesRegex(ValueError, 'start mismatch'):
+                load(path)
 
     def test_list_does_not_open_device(self):
         with patch.object(sys, 'argv', ['scenario', 'capture', '--list']), \

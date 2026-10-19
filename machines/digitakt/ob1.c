@@ -7,6 +7,7 @@
 #include "knobs.h"
 #include "pitch.h"
 #include "notes.h"
+#include "scenario.h"
 
 #define OB1_ID 69
 #define ID_BR 134
@@ -19,14 +20,20 @@ enum {
 static const struct cm_ui32 ob1_page;
 static struct ob1_voice voice[8];            /* set up on its first block */
 static volatile uint8_t ready[8];
+static struct ob1_scenario scenario[8];
+static volatile uint8_t scenario_command[8];
 
 int32_t ob1_midi_cc_parameter(int32_t track, int32_t machine, int32_t cc)
 {
     if (track < 0 || track >= 8 || machine != OB1_ID)
         return 0;
     /* Defer the full reset to the audio callback; CC 9 has no stock assignment. */
-    if (cc == 9)
+    if (cc == 9) {
         ready[track] = 0;
+        scenario_command[track] = 2;
+    }
+    if (cc == 12)
+        scenario_command[track] = 1;
     return cc >= 24 && cc <= 30 ? 164 + cc - 24 : 0;
 }
 
@@ -81,10 +88,21 @@ void ob1_render(int32_t *blocks)
     for (t = 0; t < 8; t++) {
         int32_t p[K_COUNT];
         struct ob1_knobs k;
-        int32_t pitch1, pitch2, i;
-        if (fw_render_machine[t] != OB1_ID)
+        int32_t pitch1, pitch2, i, note;
+        if (fw_render_machine[t] != OB1_ID) {
+            scenario[t].block = scenario_command[t] = 0;
             continue;
-        if (silent(t)) {
+        }
+        uint8_t command = scenario_command[t];
+        scenario_command[t] = 0;
+        if (command == 2)
+            scenario[t].block = 0;
+        if (command == 1) {
+            scenario[t].block = 1;
+            ready[t] = 0;
+        }
+        int scripted = ob1_scenario_step(&scenario[t]);
+        if ((scripted && !scenario[t].gate) || (!scripted && silent(t))) {
             for (i = 0; i < 32; i++)
                 blocks[32 * t + i] = 0;
             continue;
@@ -93,10 +111,17 @@ void ob1_render(int32_t *blocks)
             ob1_voice_init(&voice[t], t + 1);
             ready[t] = 1;
         }
-        for (i = 0; i < 8; i++)
-            p[i] = fw_voice_params[53 * t + i];
-        for (i = 8; i < K_COUNT; i++)
-            p[i] = cm_src_value(t, i);
+        if (scripted) {
+            for (i = 0; i < K_COUNT; i++)
+                p[i] = scenario[t].controls[i] * 256;
+            note = (int32_t)scenario[t].note << 16;
+        } else {
+            for (i = 0; i < 8; i++)
+                p[i] = fw_voice_params[53 * t + i];
+            for (i = 8; i < K_COUNT; i++)
+                p[i] = cm_src_value(t, i);
+            note = fw_voice_note[t];
+        }
         k.wav1 = wave(p[K_TYP1], p[K_WAV1]);
         k.wav2 = wave(p[K_TYP2], p[K_WAV2]);
         k.mix1 = zone(p[K_FND1], 3) * 3 + zone(p[K_OCT1], 3);
@@ -104,8 +129,8 @@ void ob1_render(int32_t *blocks)
         k.mod = zone(p[K_SYNC], 2) * DSP_SYNC | zone(p[K_XMOD], 2) * DSP_XMOD;
         k.nois = zone(p[K_NOIS], 3);
         /* Each oscillator offsets the played note; the firmware pitch table's unity is at 63. */
-        pitch1 = fw_voice_note[t] + (3 << 16) + (knob(p[K_FRQ1], 63) - 32) * 65536 + fine(p[K_FIN1]);
-        pitch2 = fw_voice_note[t] + (3 << 16) + (knob(p[K_FRQ2], 63) - 32) * 65536 + fine(p[K_FIN2]);
+        pitch1 = note + (3 << 16) + (knob(p[K_FRQ1], 63) - 32) * 65536 + fine(p[K_FIN1]);
+        pitch2 = note + (3 << 16) + (knob(p[K_FRQ2], 63) - 32) * 65536 + fine(p[K_FIN2]);
         ob1_voice_render(&voice[t], &k, ob1_pitch_inc(pitch1, fw_pitch_tab),
                          ob1_pitch_inc(pitch2, fw_pitch_tab), &blocks[32 * t]);
     }

@@ -343,3 +343,23 @@ levels remain strict. XMOD reference bands and levels are unchanged.
 The control assignments and AMP behavior follow Elektron's *Digitakt User Manual*, OS 1.51,
 chromatic mode section 8.5.1, AMP/filter sections 11.4–11.6 and MIDI Appendix B. The source-control mapping follows this project's
 [architecture](architecture.md); the pinned firmware is the authority for setup readbacks.
+
+## Firmware block-clock scenario
+
+For sample comparisons across DSP refactors, add `--firmware-scenario` to the existing
+`regression:device:scenario` task. The installed image must support OB-1 CC 12. The capture prepares
+a held stock AMP with muted sources, sends one CC 12, and records the complete 23-second scenario.
+The device schedules pitch, source switches and gates at 1500 audio blocks per second; later host
+MIDI timing cannot move its events. One full DSP reset starts each run. The capture cancels the
+scenario with CC 9 and releases the held note on completion or failure.
+
+This mode exercises the same parameter decoder, firmware pitch conversion and shared DSP while
+keeping stock AMP/filter/FX processing fixed. Its note releases are DSP gates; stock envelope
+retriggering and live MIDI dispatch are separate tests. It does not update saved controls.
+
+The capture identifies the start from the first stereo sample above 64 native 24-bit sample steps
+after the trigger, requiring a quiet preceding 250 ms and a full subsequent recording. A missing
+onset or incomplete run fails acquisition. This is an alignment marker, not an audio acceptance
+tolerance. Comparison still uses one global integer alignment and retains all subsequent differences.
+Captures record their clock mode; comparing a firmware-clock run against a host-MIDI run is rejected.
+No repeatability or regression pass threshold is automatically approved.

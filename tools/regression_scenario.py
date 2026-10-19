@@ -42,12 +42,30 @@ def scenario():
     ]
 
 
-def play_scenario(device):
-    device.setup(INITIAL)
+def firmware_start(pcm, trigger):
+    threshold = 64
+    if trigger < RATE // 4 or np.max(np.abs(pcm[trigger - RATE // 4:trigger])) > threshold:
+        raise ValueError('Firmware scenario requires a silent pre-trigger source and a held stock AMP')
+    onset = np.flatnonzero(np.max(np.abs(pcm[trigger:trigger + RATE // 2]), axis=1) > threshold)
+    if not len(onset):
+        raise ValueError('No firmware scenario audio within 500 ms of CC 12')
+    start = trigger + int(onset[0])
+    if start + DURATION * RATE > len(pcm):
+        raise ValueError('Incomplete firmware scenario recording')
+    return start
+
+
+def play_scenario(device, firmware=False):
+    device.setup(INITIAL | dict(mix1=0, mix2=0, nois=0) if firmware else INITIAL)
     device.send([0xb0, 123, 0])
     device.note_on(INITIAL['note'])
     device.wait(1.5)
     start = device.mark('scenario start')
+    if firmware:
+        device.mark('firmware scenario trigger')
+        device.send([0xb0, 12, 127])
+        device.wait(DURATION + device.input_latency + .5)
+        return start
     for second, label, messages in scenario():
         target = start + second * RATE
         device.wait(max(0, (target - len(device.pcm) // 6) / RATE))
@@ -63,7 +81,8 @@ def play_scenario(device):
 def capture(args):
     firmware_hash = hashlib.sha256(args.firmware.read_bytes()).hexdigest()
     args.out.mkdir(parents=True, exist_ok=False)
-    report = dict(kind='device-scenario', status='running', scenario=scenario(), initial=INITIAL,
+    firmware_clock = getattr(args, 'firmware_scenario', False)
+    report = dict(clock='firmware-blocks' if firmware_clock else 'host-midi', kind='device-scenario', status='running', scenario=scenario(), initial=INITIAL,
                   duration=DURATION, stock_os=args.os, channel=args.channel, fx_channel=args.fx_channel,
                   firmware_sha256=firmware_hash, midi_port=args.midi_port,
                   revision=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
@@ -83,7 +102,7 @@ def capture(args):
         with device.sd.RawInputStream(device=args.audio_device, channels=2, samplerate=RATE,
                                       dtype='int24', blocksize=USB_BLOCK_FRAMES, callback=record) as stream:
             device.input_latency = stream.latency
-            report['start_frame'] = play_scenario(device)
+            report['start_frame'] = play_scenario(device, firmware_clock)
         if errors:
             raise RuntimeError('USB audio capture errors: ' + '; '.join(errors))
         if len(device.pcm) // 6 < report['start_frame'] + DURATION * RATE:
@@ -95,6 +114,11 @@ def capture(args):
     finally:
         if device is not None:
             cleanup = []
+            if firmware_clock:
+                try:
+                    device.send([0xb0, 9, 0])
+                except Exception as exc:
+                    cleanup.append(str(exc))
             for note in sorted({INITIAL['note']} | {m[1] for _, _, messages in scenario()
                                                    for m in messages if m[0] == 0x90}):
                 try:
@@ -115,14 +139,25 @@ def capture(args):
             report['events_sha256'] = hashlib.sha256((args.out / 'events.json').read_bytes()).hexdigest()
             if cleanup:
                 report.update(status='acquisition error', cleanup_errors=cleanup)
+        if firmware_clock and report['status'] == 'captured':
+            try:
+                _, pcm = load(args.out, detect_start=True, report=report)
+                report['trigger_frame'] = report['start_frame']
+                report['start_frame'] = firmware_start(pcm, report['trigger_frame'])
+                report['start_detection'] = 'first stereo sample above 64 PCM24 LSB after trigger; preceding 250 ms quiet'
+            except (ValueError, OSError, RuntimeError) as exc:
+                report.update(status='acquisition error', error=str(exc))
         write_json(args.out / 'run.json', report)
     if report['status'] != 'captured':
         raise RuntimeError('Scenario acquisition failed; see run.json')
     print(f"Recorded: {args.out / 'audio.wav'}")
 
 
-def load(folder):
-    report = read_json(folder / 'run.json')
+def load(folder, detect_start=False, report=None):
+    report = dict(report) if report is not None else read_json(folder / 'run.json')
+    clock = report.get('clock', 'host-midi')
+    if clock not in ('host-midi', 'firmware-blocks'):
+        raise ValueError('Unknown scenario clock')
     expected_scenario = json.loads(json.dumps(scenario()))
     if (report.get('kind') != 'device-scenario' or report.get('status') != 'captured'
             or report.get('scenario') != expected_scenario or report.get('initial') != INITIAL
@@ -139,7 +174,8 @@ def load(folder):
         raise ValueError('Scenario event digest mismatch')
     recorded = read_json(events_path)
     events = [e for e in recorded if e.get('mark') not in (None, 'sent')]
-    if ([e.get('mark') for e in events] != ['scenario start'] + [s[1] for s in scenario()]
+    expected_marks = ['scenario start'] + (['firmware scenario trigger'] if clock == 'firmware-blocks' else [s[1] for s in scenario()])
+    if ([e.get('mark') for e in events] != expected_marks
             or any(type(e.get('frame')) is not int or not 0 <= e['frame'] <= info['frames'] for e in events)
             or any(a['frame'] > b['frame'] for a, b in zip(events, events[1:]))):
         raise ValueError('Scenario event markers mismatch')
@@ -152,6 +188,11 @@ def load(folder):
         raw = np.frombuffer(wav.readframes(info['frames']), np.uint8).reshape(-1, 2, 3).astype(np.int32)
     value = raw[:, :, 0] | raw[:, :, 1] << 8 | raw[:, :, 2] << 16
     pcm = ((value ^ 8388608) - 8388608).astype(np.int64)
+    if clock == 'firmware-blocks' and not detect_start:
+        trigger = report.get('trigger_frame')
+        if (type(trigger) is not int or trigger != events[0]['frame']
+                or report['start_frame'] != firmware_start(pcm, trigger)):
+            raise ValueError('Firmware scenario start mismatch')
     return report, pcm
 
 
@@ -181,6 +222,8 @@ def difference(reference, candidate):
 def compare(baseline, candidate, out):
     before, a = load(baseline)
     after, b = load(candidate)
+    if before.get('clock', 'host-midi') != after.get('clock', 'host-midi'):
+        raise ValueError('Scenario clock mismatch')
     for field in ('stock_os', 'channel', 'fx_channel', 'midi_port'):
         if before[field] != after[field]:
             raise ValueError(f'Scenario setup mismatch: {field}')
@@ -216,12 +259,14 @@ def compare(baseline, candidate, out):
                   difference_wav_clipped_samples=int(np.count_nonzero(delta != clipped)),
                   host_event_timing=[dict(label=a['mark'], delta_frames=(b['frame'] - origin_b) - (a['frame'] - origin_a))
                                      for a, b in zip(before['events'], after['events'])],
-                  timing='One global alignment only. Later MIDI arrival timing and phase differences remain in the diff.')
+                  timing=('One global alignment only. Firmware DSP events use fixed 32-sample blocks; stock AMP is held.'
+                          if before.get('clock') == 'firmware-blocks' else
+                          'One global alignment only. Later MIDI arrival timing and phase differences remain in the diff.'))
     out.mkdir(parents=True, exist_ok=False)
     write_wav(out / 'difference.wav', raw, 3)
     write_json(out / 'comparison.json', report)
     print(f"Manual comparison: {out / 'comparison.json'}")
-    print('MIDI timing and free-running phase can produce large differences even with unchanged firmware.')
+    print('Firmware block clock.' if before.get('clock') == 'firmware-blocks' else 'MIDI timing and free-running phase can produce large differences even with unchanged firmware.')
     print(f"Global alignment: {shift} samples; correlation {correlation:.9f}")
     for section in sections:
         print(f"{section['label']}: error RMS {section['rms_error_dbfs']} dBFS; level change {section['level_change_db']} dB")
@@ -232,6 +277,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     commands = ap.add_subparsers(dest='command', required=True)
     record = commands.add_parser('capture')
+    record.add_argument('--firmware-scenario', action='store_true', help='Trigger the fixed DSP block scenario with CC 12; hold stock AMP and prepare a silent source')
     record.add_argument('--list', action='store_true', help='Print the scenario without opening MIDI or audio')
     record.add_argument('--firmware', type=Path)
     record.add_argument('--os', choices=('1.53', '1.54'))
@@ -248,7 +294,10 @@ def main():
     if args.command == 'compare':
         compare(args.baseline, args.candidate, args.out)
     elif args.list:
-        print(json.dumps(scenario(), indent=2))
+        listing = (dict(clock='firmware-blocks', trigger_cc=12,
+                        events=[dict(block=second * 1500, label=label) for second, label, _ in scenario()])
+                   if args.firmware_scenario else scenario())
+        print(json.dumps(listing, indent=2))
     else:
         if any(getattr(args, field) is None for field in ('firmware', 'os', 'midi_port', 'audio_device', 'out')):
             ap.error('Capture requires --firmware, --os, --midi-port, --audio-device and --out')

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "../machines/digitakt/ob1.c"
 
@@ -10,6 +11,7 @@ volatile int32_t fw_voice_note[8], fw_amp_env[8 * 3];
 volatile uint32_t fw_voice_start;
 /* Sparse pitch-table entries exercise unison, octaves and fractional tuning. */
 const uint32_t fw_pitch_tab[14849] = {
+    [8192] = 225726412, [10240] = 451452825, [11434] = 676262358, [14336] = 1805811301,
     [10750] = 536507626, [10752] = 1u << 29, [10753] = 537052647, [12800] = 1u << 30
 };
 const char fw_bitmap_vt[1], cm_ui_v32[1];
@@ -196,6 +198,8 @@ static void reset(void)
         param(k, p->def);
     }
     memset((void *)ready, 0, sizeof(ready));
+    memset(scenario, 0, sizeof scenario);
+    memset((void *)scenario_command, 0, sizeof scenario_command);
     memset((void *)fw_render_machine, 0, sizeof(fw_render_machine));
     fw_render_machine[0] = OB1_ID;
     fw_voice_note[0] = 60 << 16;
@@ -370,6 +374,56 @@ static void test_midi_voice_reset(void)
     assert(ready[1] && !memcmp(&other, &voice[1], sizeof other));
 }
 
+static void test_block_scenario(void)
+{
+    int32_t blocks[8 * 32];
+    int32_t *recording = malloc(34500 * 32 * sizeof *recording);
+    assert(recording);
+    reset();
+    assert(ob1_midi_cc_parameter(0, 3, 12) == 0 && !scenario_command[0]);
+    assert(ob1_midi_cc_parameter(8, 69, 12) == 0 && !scenario_command[0]);
+    for (int repeat = 0; repeat < 2; repeat++) {
+        if (repeat) {
+            fw_voice_note[0] = 90 << 16;
+            param(K_WAV1, 0);
+            param(K_NOIS, 0);
+        }
+        int16_t saved[53];
+        memcpy(saved, (const void *)fw_voice_params, sizeof saved);
+        ob1_midi_cc_parameter(0, 69, 12);
+        for (int block = 0; block < 34500; block++) {
+            memset(blocks, 0x5a, sizeof blocks);
+            struct ob1_voice before = voice[0];
+            ob1_render(blocks);
+            if (!repeat) memcpy(recording + block * 32, blocks, 32 * sizeof *blocks);
+            else assert(!memcmp(recording + block * 32, blocks, 32 * sizeof *blocks));
+            for (int i = 32; i < 256; i++) assert(blocks[i] == 0x5a5a5a5a);
+            assert(!memcmp(saved, (const void *)fw_voice_params, sizeof saved));
+            assert(scenario[0].block == (uint32_t)block + 2);
+            assert(!scenario[1].block);
+            if (block < 10500) assert(scenario[0].note == 57);
+            if (block >= 10500 && block < 16500) assert(scenario[0].note == 64);
+            if (block == 4499) assert(scenario[0].controls[K_OCT1] == 21);
+            if (block == 4500) assert(scenario[0].controls[K_OCT1] == 106);
+            if (block == 18000) assert(scenario[0].controls[K_SYNC] == 127);
+            if (block == 19500) assert(scenario[0].controls[K_XMOD] == 127 && !scenario[0].controls[K_SYNC]);
+            if ((block >= 27000 && block < 30000) || block >= 31500) {
+                assert(!memcmp(&before, &voice[0], sizeof before));
+                for (int i = 0; i < 32; i++) assert(!blocks[i]);
+            }
+        }
+        ob1_render(blocks);
+        assert(!scenario[0].block);
+    }
+    ob1_midi_cc_parameter(0, 69, 12);
+    ob1_render(blocks);
+    assert(scenario[0].block == 2);
+    ob1_midi_cc_parameter(0, 69, 9);
+    ob1_render(blocks);
+    assert(!scenario[0].block && ready[0]);
+    free(recording);
+}
+
 static void test_midi_lookup(void)
 {
     assert(ob1_midi_cc_parameter(0, 69, 24) == 164);
@@ -389,6 +443,7 @@ int main(void)
     test_mixer_translation();
     test_midi_lookup();
     test_midi_voice_reset();
+    test_block_scenario();
     test_waveform_graphics();
     test_level_graphics();
     test_silent_voice();
