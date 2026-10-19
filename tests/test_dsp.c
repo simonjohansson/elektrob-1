@@ -64,6 +64,28 @@ static double render(int32_t g, int32_t *x)
     return mean / N / 32768;
 }
 
+/* Frozen shift-loop normalization, including stale reciprocal state after a paired block. */
+static void check_vco_setup(uint32_t inc)
+{
+    struct dsp_vco v = {0x12345678u, inc, 123u, 99u};
+    uint32_t i = inc, shift = 0;
+    while (i >= 1u << 16) { i >>= 1; shift++; }
+    ob1_dsp_vco_set(&v, inc);
+    assert(v.phase == 0x12345678u && v.inc == inc);
+    assert(v.shift == shift && v.rinc == (i ? (1u << 30) / i : 0));
+}
+
+static void test_vco_setup(void)
+{
+    uint32_t shift, mantissa;
+    /* Every normalized divisor and both ends of each discarded-bit range, through UINT32_MAX. */
+    for (shift = 0; shift <= 16; shift++)
+        for (mantissa = shift ? 32768 : 0; mantissa < 65536; mantissa++) {
+            check_vco_setup(mantissa << shift);
+            if (shift) check_vco_setup((mantissa << shift) | ((1u << shift) - 1));
+        }
+}
+
 static void test_vco_resets(void)
 {
     struct dsp_vco v = {0};
@@ -519,6 +541,7 @@ int main(void)
     test_full_saw_fast_path();
     test_full_saw_pair_golden();
     test_blep_full_jump();
+    test_vco_setup();
     test_vco_resets();
     test_vco_crossing_position();
     test_saw();

@@ -8,9 +8,9 @@
 void ob1_dsp_vco_set(struct dsp_vco *v, uint32_t inc)
 {
     uint32_t i = inc, k = 0;
-    while (i >= 1u << 16) {                     /* at most 16 shifts, once a block */
-        i >>= 1;
-        k++;
+    if (i >= 1u << 16) {
+        k = 16 - __builtin_clz(i);
+        i >>= k;
     }
     v->inc = inc;
     v->shift = k;
