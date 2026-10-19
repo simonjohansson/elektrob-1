@@ -82,10 +82,12 @@ the native MIDI receive path through the emulator's DIN UART:
 mise run test:firmware:midi --firmware out/Digitakt_custom.syx --os 1.54 --out out/midi-check
 ```
 
-This checks native lookup and its calling convention, all fifteen stored/live source values at range
+The check reads the linker symbol map beside the firmware image to observe reset initialization.
+It checks native lookup and its calling convention, all fifteen stored/live source values at range
 and zone boundaries, track isolation, stock/FX fallback, the device adapter's setup messages and
 note-on/off. It enables the fresh project's FX receive channel through panel events, then checks
-that compressor control reaches the native kit. It records firmware provenance and setup observations.
+that compressor control reaches the native kit. CC 9 resets are checked at render entry, including
+channel isolation and unchanged saved controls. It records firmware provenance and setup observations.
 This is firmware-dispatch evidence; USB transport and physical acquisition require a device run.
 
 ## Physical Digitakt
@@ -118,6 +120,21 @@ Settings are sent without device readback; manual preparation and installed firm
 operator-declared. A successful capture establishes acquisition, not correct audio or hardware fidelity.
 Device waits follow recorded sample counts and fail if input stalls. The reported input latency is
 allowed to pass after note-on before counting the settling window; it is retained in capture metadata.
+
+## Repeating a held sound on a device
+
+CC 9 requests full engine initialization at the next active audio block. For a repeatability
+study, configure a sound once, hold its note until the stock AMP has settled, and record each
+reset while the note remains held. Keep other tracks and inputs silent and stock processing
+neutral. The reset repeats the engine's noise seed and all oscillator/output history; it does
+not reset stock processing or synchronize later MIDI events to audio samples.
+
+Compare repeated USB recordings after one common integer-sample offset per recording, retaining
+relative oscillator phase and polarity. Keep the reset onset separate from the settled window,
+report exact equality and residual error, and measure repeatability before choosing tolerances.
+MIDI send times and host input-buffer positions do not establish the reset's exact audio sample.
+Neither a phase fit per oscillator nor a candidate-derived gain correction establishes unchanged
+output. This experiment qualifies only the tested sound, setup and capture route.
 
 ## Evidence and failures
 

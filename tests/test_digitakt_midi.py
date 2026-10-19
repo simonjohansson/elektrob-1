@@ -2,6 +2,7 @@
 """Compiled-firmware MIDI integration, using the emulator's DIN UART input."""
 import argparse
 import hashlib
+import json
 import struct
 import sys
 from pathlib import Path
@@ -29,6 +30,22 @@ def main():
         from unicorn.m68k_const import UC_M68K_REG_PC, UC_M68K_REG_D2, UC_M68K_REG_A2
 
         session, midi = firmware.session, MidiIn()
+
+        # Observe initialization through actual DIN input without writing guest voice state.
+        from unicorn import UC_HOOK_CODE
+        from unicorn.m68k_const import UC_M68K_REG_A7
+        symbols = json.loads(Path(str(args.firmware) + '.map.json').read_text())
+        render = int(symbols['ob1:ob1_voice_render'], 0)
+        initial = struct.pack('>18I', *([0, 0, 0, 0, 0, 32767, 32767] * 2 + [0, 1, 0, 0]))
+        starts = []
+
+        def observe(uc, _address, _size, _data):
+            stack = uc.reg_read(UC_M68K_REG_A7)
+            pointer = int.from_bytes(uc.mem_read(stack + 4, 4), 'big')
+            if bytes(uc.mem_read(pointer, len(initial))) == initial:
+                starts.append(session.ms)
+
+        hook = session.m.uc.hook_add(UC_HOOK_CODE, observe, begin=render, end=render)
 
         # Fresh project: enable FX reception on channel 9 through the native menu.
         firmware.tap('GLOBAL')
@@ -70,7 +87,7 @@ def main():
 
         # Exercise the trampoline's ABI and delegation separately from MIDI routing.
         for track, machine, cc, expected in ((0, 69, 24, 164), (7, 69, 30, 170),
-                                             (0, 69, 16, 132), (0, 3, 24, 0),
+                                             (0, 69, 16, 132), (0, 69, 9, 0), (0, 3, 9, 0), (0, 3, 24, 0),
                                              (8, 69, 24, 0), (16, 0, 24, 78), (16, 0, 30, 85)):
             uc = session.m.uc
             context = uc.context_save()
@@ -149,6 +166,22 @@ def main():
         firmware.wait(1)
         # Native release has an exponential tail; check the gate state, not exact silence.
         assert int.from_bytes(firmware.read('FW_AMP_ENV', 12)[:4], 'big') == 0
+        send([0x90, 57, 100])
+        firmware.wait(1)
+        before_sound = firmware.sound()
+        try:
+            for value in (0, 127, 64):
+                count = len(starts)
+                send([0xb1, 9, value])
+                assert len(starts) == count, 'Other MIDI channel reset track 1'
+                send([0xb0, 9, value])
+                assert len(starts) == count + 1, ('CC reset count', starts)
+                assert firmware.sound() == before_sound, 'Reset changed saved controls'
+        finally:
+            session.m.uc.hook_del(hook)
+            send([0x80, 57, 0])
+        report['checks'].append('CC 9 values 0/127/64: full initialized voice at render entry, channel isolation and unchanged saved controls')
+        report['reset_render_starts_ms'] = starts
         before = session.frames[-1][1]
         firmware.tap('GLOBAL')
         assert session.frames[-1][1] != before, 'Panel stopped responding after MIDI reception'

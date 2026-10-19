@@ -195,7 +195,7 @@ static void reset(void)
         /* Translation checks use neutral defaults; firmware checks cover the fresh patch. */
         param(k, p->def);
     }
-    memset(ready, 0, sizeof(ready));
+    memset((void *)ready, 0, sizeof(ready));
     memset((void *)fw_render_machine, 0, sizeof(fw_render_machine));
     fw_render_machine[0] = OB1_ID;
     fw_voice_note[0] = 60 << 16;
@@ -207,7 +207,7 @@ static void parity(const struct ob1_knobs *knobs, int semitones1, int semitones2
     struct ob1_voice reference;
     int32_t blocks[8 * 32], expected[32];
     memset(blocks, 0x5a, sizeof(blocks));
-    memset(ready, 0, sizeof(ready));
+    memset((void *)ready, 0, sizeof(ready));
     ob1_voice_init(&reference, 1);
     ob1_voice_render(&reference, knobs,
                      ob1_pitch_inc((63 + semitones1) * 65536 + fine1, fw_pitch_tab),
@@ -328,6 +328,48 @@ static void test_mixer_translation(void)
         }
 }
 
+static void test_midi_voice_reset(void)
+{
+    int32_t blocks[8 * 32], expected[8][32];
+    struct ob1_voice other;
+    reset();
+    param(K_NOIS, 127 << 8);
+    param(K_OCT1, 127 << 8);
+    param(K_SYNC, 127 << 8);
+    param(K_XMOD, 127 << 8);
+    for (int b = 0; b < 8; b++) {
+        ob1_render(blocks);
+        memcpy(expected[b], blocks, sizeof expected[b]);
+    }
+    ob1_voice_init(&voice[1], 2);
+    ready[1] = 1;
+    other = voice[1];
+    struct ob1_voice before = voice[0];
+    for (int track = -1; track <= 16; track++)
+        if (track != 0 && track != 1)
+            assert(ob1_midi_cc_parameter(track, 69, 9) == 0);
+    assert(ob1_midi_cc_parameter(0, 3, 9) == 0);
+    assert(ready[0] && ready[1]);
+    assert(ob1_midi_cc_parameter(0, 69, 9) == 0);
+    assert(!ready[0] && ready[1]);
+    assert(!memcmp(&before, &voice[0], sizeof before));
+    fw_voice_start = 0;
+    fw_amp_env[1] = 0;
+    ob1_render(blocks);
+    assert(!ready[0]);
+    assert(!memcmp(&before, &voice[0], sizeof before));
+    fw_voice_start = 1;
+    for (int repeat = 0; repeat < 3; repeat++) {
+        assert(ob1_midi_cc_parameter(0, 69, 9) == 0);
+        for (int b = 0; b < 8; b++) {
+            ob1_render(blocks);
+            assert(ready[0]);
+            assert(!memcmp(expected[b], blocks, sizeof expected[b]));
+        }
+    }
+    assert(ready[1] && !memcmp(&other, &voice[1], sizeof other));
+}
+
 static void test_midi_lookup(void)
 {
     assert(ob1_midi_cc_parameter(0, 69, 24) == 164);
@@ -346,6 +388,7 @@ int main(void)
     test_pitch_and_wave_translation();
     test_mixer_translation();
     test_midi_lookup();
+    test_midi_voice_reset();
     test_waveform_graphics();
     test_level_graphics();
     test_silent_voice();

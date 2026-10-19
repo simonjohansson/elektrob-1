@@ -99,6 +99,13 @@ On an OB-1 audio track, CC 16–30 address the fifteen source controls in logica
 | 26 / 29 | XMOD / SYNC | 0–63 OFF, 64–127 ON |
 | 30 | NOIS | 0–42 OFF, 43–85 −3 dB, 86–127 ON |
 
+CC **9**, with any value, requests a full sound-engine voice reset on the addressed OB-1 audio
+track. The next active audio block restarts both VCOs, sub-octaves, edge-correction history,
+DC-removal and smoothing history, and the track's fixed noise seed. A silent track keeps the
+request until it renders again. Repeated requests before that block coalesce. The command does
+not change saved controls or restart the stock AMP envelope, filters or effects. Resetting a
+sounding voice can produce a click; use it explicitly when preparing repeatable captures.
+
 Send raw integers; values above a control's maximum clamp to that maximum. MIDI uses the native
 track receive channel, or the auto channel for the selected track, with RECEIVE CC/NRPN enabled.
 The additional assignments apply only to audio tracks running machine 69. Other audio machines,

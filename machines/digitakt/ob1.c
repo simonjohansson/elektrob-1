@@ -17,18 +17,20 @@ enum {
 };
 
 static const struct cm_ui32 ob1_page;
+static struct ob1_voice voice[8];            /* set up on its first block */
+static volatile uint8_t ready[8];
 
 int32_t ob1_midi_cc_parameter(int32_t track, int32_t machine, int32_t cc)
 {
-    if (track < 0 || track >= 8 || machine != OB1_ID || cc < 24 || cc > 30)
+    if (track < 0 || track >= 8 || machine != OB1_ID)
         return 0;
-    return 164 + cc - 24;
+    /* Defer the full reset to the audio callback; CC 9 has no stock assignment. */
+    if (cc == 9)
+        ready[track] = 0;
+    return cc >= 24 && cc <= 30 ? 164 + cc - 24 : 0;
 }
 
 /* ---- the sound (ev_render_voices: the render, interrupt level) ----------------------------------- */
-
-static struct ob1_voice voice[8];            /* set up on its first block */
-static uint8_t ready[8];
 
 /* A knob's value, 8.8, as 0-max. */
 static int32_t knob(int32_t value, int32_t max)
