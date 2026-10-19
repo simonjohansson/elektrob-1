@@ -74,8 +74,14 @@ run = [
   "out/test_digitakt_notes",
   "cc -std=c99 -O2 -Wall -Wextra -Werror -Ivendor/elekloader/elekloader/sdk/include -Idsp dsp/dsp.c dsp/voice.c machines/digitakt/knobs.c tests/test_digitakt_controls.c -o out/test_digitakt_controls",
   "out/test_digitakt_controls",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror -DOB1_DIAGNOSTIC_SCENARIO -Ivendor/elekloader/elekloader/sdk/include -Idsp dsp/dsp.c dsp/voice.c machines/digitakt/knobs.c tests/test_digitakt_controls.c -o out/test_digitakt_scenario",
+  "out/test_digitakt_scenario",
   'uv run --python "$(mise which python)" --with numpy python -m unittest discover -s tests -p "test_regression*.py"',
 ]
+
+[tasks."build:digitakt:scenario"]
+description = "Build the diagnostic OB-1 mod with the CC 12 audio-block scenario; normal builds exclude it"
+run = 'uv run --python "$(mise which python)" --with numpy python tools/regression_scenario.py build --stock "$ELEKLOADER_STOCK" --out out/scenario'
 
 [tasks."regression:dsp"]
 description = "Set up and capture host DSP cases, without audio comparisons"
@@ -121,6 +127,14 @@ run = 'uv run --python "$(mise which python)" --project vendor/digiemu python to
 [tasks."regression:device"]
 description = "Set up and capture a prepared Digitakt over USB MIDI and USB audio"
 run = 'uv run --python "$(mise which python)" --with python-rtmidi --with sounddevice python tools/regression.py device "$@"'
+
+[tasks."regression:device:scenario"]
+description = "Record a fixed note/control sequence on a prepared Digitakt"
+run = 'uv run --python "$(mise which python)" --with numpy --with python-rtmidi --with sounddevice python tools/regression_scenario.py capture "$@"'
+
+[tasks."regression:device:diff"]
+description = "Compare two device scenario recordings for manual review"
+run = 'uv run --python "$(mise which python)" --with numpy python tools/regression_scenario.py compare "$@"'
 
 [tasks.render]
 description = "Render the machine's voice to a WAV (tools/render.c: note, seconds, the knobs, sweep)"

@@ -99,6 +99,25 @@ On an OB-1 audio track, CC 16–30 address the fifteen source controls in logica
 | 26 / 29 | XMOD / SYNC | 0–63 OFF, 64–127 ON |
 | 30 | NOIS | 0–42 OFF, 43–85 −3 dB, 86–127 ON |
 
+CC **9**, with any value, requests a full sound-engine voice reset on the addressed OB-1 audio
+track. The next active audio block restarts both VCOs, sub-octaves, edge-correction history,
+DC-removal and smoothing history, and the track's fixed noise seed. A silent track keeps the
+request until it renders again. Repeated requests before that block coalesce. The command does
+not change saved controls or restart the stock AMP envelope, filters or effects. Resetting a
+sounding voice can produce a click; use it explicitly when preparing repeatable captures.
+
+Diagnostic builds optionally include CC **12**, which with any value starts the fixed 23-second diagnostic DSP scenario on the addressed
+OB-1 audio track at the next render block. It initializes the voice once, then schedules the pitch,
+source controls and DSP gates on exact 32-sample boundaries. Repeating CC 12 restarts the scenario;
+CC 9 cancels it and resets the voice. Switching to another machine also cancels it. The scenario
+returns to the normal live controls after 23 seconds and never writes saved parameters. Normal
+firmware builds exclude the scenario code and leave CC 12 unassigned.
+
+Prepare a held stock AMP and a silent source before triggering. During the scenario, local source
+controls and pitch override the live values; rests gate the DSP and hold its state. The stock note,
+AMP envelope, filters and effects remain fixed. This diagnostic therefore measures repeatability of
+the shared DSP through the device output, separately from MIDI dispatch and stock envelope retriggers.
+
 Send raw integers; values above a control's maximum clamp to that maximum. MIDI uses the native
 track receive channel, or the auto channel for the selected track, with RECEIVE CC/NRPN enabled.
 The additional assignments apply only to audio tracks running machine 69. Other audio machines,

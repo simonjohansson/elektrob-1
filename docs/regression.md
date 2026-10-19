@@ -82,10 +82,12 @@ the native MIDI receive path through the emulator's DIN UART:
 mise run test:firmware:midi --firmware out/Digitakt_custom.syx --os 1.54 --out out/midi-check
 ```
 
-This checks native lookup and its calling convention, all fifteen stored/live source values at range
+The check reads the linker symbol map beside the firmware image to observe reset initialization.
+It checks native lookup and its calling convention, all fifteen stored/live source values at range
 and zone boundaries, track isolation, stock/FX fallback, the device adapter's setup messages and
 note-on/off. It enables the fresh project's FX receive channel through panel events, then checks
-that compressor control reaches the native kit. It records firmware provenance and setup observations.
+that compressor control reaches the native kit. CC 9 resets are checked at render entry, including
+channel isolation and unchanged saved controls. It records firmware provenance and setup observations.
 This is firmware-dispatch evidence; USB transport and physical acquisition require a device run.
 
 ## Physical Digitakt
@@ -118,6 +120,80 @@ Settings are sent without device readback; manual preparation and installed firm
 operator-declared. A successful capture establishes acquisition, not correct audio or hardware fidelity.
 Device waits follow recorded sample counts and fail if input stalls. The reported input latency is
 allowed to pass after note-on before counting the settling window; it is retained in capture metadata.
+
+## Repeating a held sound on a device
+
+CC 9 requests full engine initialization at the next active audio block. For a repeatability
+study, configure a sound once, hold its note until the stock AMP has settled, and record each
+reset while the note remains held. Keep other tracks and inputs silent and stock processing
+neutral. The reset repeats the engine's noise seed and all oscillator/output history; it does
+not reset stock processing or synchronize later MIDI events to audio samples.
+
+Compare repeated USB recordings after one common integer-sample offset per recording, retaining
+relative oscillator phase and polarity. Keep the reset onset separate from the settled window,
+report exact equality and residual error, and measure repeatability before choosing tolerances.
+MIDI send times and host input-buffer positions do not establish the reset's exact audio sample.
+Neither a phase fit per oscillator nor a candidate-derived gain correction establishes unchanged
+output. This experiment qualifies only the tested sound, setup and capture route.
+
+## Scripted device comparison
+
+Use a prepared device running firmware with the CC 9 reset command. The same physical-device
+prerequisites above apply: OB-1 selected on the chosen track, transport stopped, other tracks and
+inputs silent, receive settings enabled and distinct track/FX channels. The task sends the neutral
+stock setup and all source settings; it does not read them back, build firmware or flash the device.
+The supplied image identifies the operator-declared installed build.
+
+Inspect the predefined sequence without opening MIDI or audio:
+
+```sh
+mise run regression:device:scenario --list
+```
+
+Record a baseline before the refactor, then record the candidate after installing its firmware:
+
+```sh
+mise run regression:device:scenario --firmware out/Digitakt_custom.syx --os 1.54 \
+  --midi-port 'Elektron Digitakt' --audio-device 0 --out out/regression/baseline
+
+# Build and install the candidate, retaining the baseline recording.
+mise run regression:device:scenario --firmware out/Digitakt_custom.syx --os 1.54 \
+  --midi-port 'Elektron Digitakt' --audio-device 0 --out out/regression/candidate
+
+mise run regression:device:diff out/regression/baseline out/regression/candidate \
+  --out out/regression/comparison
+```
+
+Discover the current device index with `mise run regression:device --ports`; do not assume the
+example index stays valid. `--channel` and `--fx-channel` default to 1 and 9. Use a disposable sound;
+the task changes its live controls and leaves the last scenario settings in place without saving.
+
+The 23-second scenario starts with a held A3 and one full reset. It adds/removes each sub, mutes
+and restores a fundamental, changes notes and waveform families, exercises sync and cross modulation,
+changes noise level, and releases/retriggers across a rest. Oscillator state is retained after the
+initial reset. Event deadlines use absolute captured-frame targets; the log records host event
+positions and send times. Cleanup releases every scenario note, including after acquisition failures.
+
+Each new output directory contains `audio.wav`, `events.json` and `run.json`, including the exact
+scenario, source revision/working-tree state, declared firmware hash, device and audio format.
+Failed runs retain available audio and errors. Existing output directories are refused.
+
+The diff verifies capture integrity and compatible setup, then finds one integer-sample offset
+from the initial noise-bearing held sound. It never aligns later sections independently, fits gain,
+resamples, or changes the recordings. `comparison.json` reports per-channel sample errors, exact
+sample percentages, section RMS/peak/spectral measurements and host event-timing differences.
+`difference.wav` contains candidate minus baseline, with any clipping counted in the report.
+Listen alongside both originals; the diff recording can be much quieter than either input.
+
+This is a manual review task: successful comparison returns zero even when the recordings differ.
+Invalid/incomplete captures or unavailable alignment are errors. No tolerance is approved and no
+baseline is updated automatically. A changed predefined scenario requires a new baseline.
+Run the unchanged firmware twice first: MIDI arrival timing can change later oscillator phase,
+even with the same host script. Relative phase can also change mixture levels and spectra
+substantially; a numerical difference alone does not establish a DSP regression. Level/spectral
+measurements complement the sample diff; event
+logs describe host timing, not the device's exact processing sample. Keep the deterministic host
+tests as the strict sample-equivalence check for DSP refactors.
 
 ## Evidence and failures
 
@@ -267,3 +343,27 @@ levels remain strict. XMOD reference bands and levels are unchanged.
 The control assignments and AMP behavior follow Elektron's *Digitakt User Manual*, OS 1.51,
 chromatic mode section 8.5.1, AMP/filter sections 11.4–11.6 and MIDI Appendix B. The source-control mapping follows this project's
 [architecture](architecture.md); the pinned firmware is the authority for setup readbacks.
+
+## Firmware block-clock scenario
+
+Build the diagnostic OB-1 mod with `mise run build:digitakt:scenario`, then include that mod
+in place of the ordinary OB-1 mod when assembling the test firmware. Normal builds exclude the
+scenario entirely; the shared sound engine has no scenario code.
+
+For sample comparisons across DSP refactors, add `--firmware-scenario` to the existing
+`regression:device:scenario` task. The installed image must support OB-1 CC 12. The capture prepares
+a held stock AMP with muted sources, sends one CC 12, and records the complete 23-second scenario.
+The device schedules pitch, source switches and gates at 1500 audio blocks per second; later host
+MIDI timing cannot move its events. One full DSP reset starts each run. The capture cancels the
+scenario with CC 9 and releases the held note on completion or failure.
+
+This mode exercises the same parameter decoder, firmware pitch conversion and shared DSP while
+keeping stock AMP/filter/FX processing fixed. Its note releases are DSP gates; stock envelope
+retriggering and live MIDI dispatch are separate tests. It does not update saved controls.
+
+The capture identifies the start from the first stereo sample above 64 native 24-bit sample steps
+after the trigger, requiring a quiet preceding 250 ms and a full subsequent recording. A missing
+onset or incomplete run fails acquisition. This is an alignment marker, not an audio acceptance
+tolerance. Comparison still uses one global integer alignment and retains all subsequent differences.
+Captures record their clock mode; comparing a firmware-clock run against a host-MIDI run is rejected.
+No repeatability or regression pass threshold is automatically approved.
