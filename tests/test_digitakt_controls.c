@@ -334,6 +334,80 @@ static void test_mixer_translation(void)
         }
 }
 
+/* The uncached block translation is the reference for changing and retained live values. */
+static void reference_block(struct ob1_voice *v, const int32_t *p, int32_t note, int32_t *out)
+{
+    struct ob1_knobs k;
+    k.wav1 = wave(p[K_TYP1], p[K_WAV1]);
+    k.wav2 = wave(p[K_TYP2], p[K_WAV2]);
+    k.mix1 = zone(p[K_FND1], 3) * 3 + zone(p[K_OCT1], 3);
+    k.mix2 = zone(p[K_FND2], 3) * 3 + zone(p[K_OCT2], 3);
+    k.mod = zone(p[K_SYNC], 2) * DSP_SYNC | zone(p[K_XMOD], 2) * DSP_XMOD;
+    k.nois = zone(p[K_NOIS], 3);
+    int32_t pitch1 = note + (3 << 16) + (knob(p[K_FRQ1], 63) - 32) * 65536 + fine(p[K_FIN1]);
+    int32_t pitch2 = note + (3 << 16) + (knob(p[K_FRQ2], 63) - 32) * 65536 + fine(p[K_FIN2]);
+    ob1_voice_render(v, &k, ob1_pitch_inc(pitch1, fw_pitch_tab),
+                     ob1_pitch_inc(pitch2, fw_pitch_tab), out);
+}
+
+static void test_live_control_cache(void)
+{
+    struct ob1_voice reference[8];
+    int initialized[8] = {0};
+    int32_t blocks[256], expected[32];
+    reset();
+    for (int t = 0; t < 8; t++) {
+        for (int k = 0; k < K_COUNT; k++) {
+            const struct cm_knob *p = k < 8 ? &ob1_page.base.knob[k] : &ob1_page.extra[k - 8];
+            fw_set_param(p->def, t, k < 8 ? 17 + k : 46 + k - 8);
+        }
+        fw_voice_note[t] = 60 << 16;
+    }
+    for (int b = 0; b < 768; b++) {
+        fw_voice_start = 0xff;
+        for (int t = 0; t < 8; t++) {
+            fw_render_machine[t] = b % 41 == t ? 3 : OB1_ID;
+            if (b % 37 == t)
+                fw_voice_start &= ~(1u << t);
+            fw_amp_env[3 * t + 1] = 0;
+            if (b >= 32) {
+                int k = (b / 2 + t) % K_COUNT;
+                const struct cm_knob *p = k < 8 ? &ob1_page.base.knob[k] : &ob1_page.extra[k - 8];
+                int value = b < 256 ? p->def + (b & 1) : (b * 127 + t * 797) % (p->max + 1);
+                fw_set_param(value, t, k < 8 ? 17 + k : 46 + k - 8);
+                fw_voice_note[t] = (60 << 16) + (b % 3) * 384;
+            }
+            if (b % 73 == t) {
+                ob1_midi_cc_parameter(t, OB1_ID, 9);
+                initialized[t] = 0;
+            }
+        }
+        memset(blocks, 0x5a, sizeof blocks);
+        ob1_render(blocks);
+        for (int t = 0; t < 8; t++) {
+            if (fw_render_machine[t] != OB1_ID) {
+                for (int i = 0; i < 32; i++)
+                    assert(blocks[32 * t + i] == 0x5a5a5a5a);
+            } else if (silent(t)) {
+                for (int i = 0; i < 32; i++)
+                    assert(blocks[32 * t + i] == 0);
+            } else {
+                if (!initialized[t]) {
+                    ob1_voice_init(&reference[t], t + 1);
+                    initialized[t] = 1;
+                }
+                int32_t p[K_COUNT];
+                for (int k = 0; k < K_COUNT; k++)
+                    p[k] = cm_src_value(t, k);
+                reference_block(&reference[t], p, fw_voice_note[t], expected);
+                assert(!memcmp(expected, blocks + 32 * t, sizeof expected));
+            }
+            if (initialized[t])
+                assert(!memcmp(&reference[t], &voice[t], sizeof reference[t]));
+        }
+    }
+}
+
 static void test_midi_voice_reset(void)
 {
     int32_t blocks[8 * 32], expected[8][32];
@@ -379,7 +453,8 @@ static void test_midi_voice_reset(void)
 #ifdef OB1_DIAGNOSTIC_SCENARIO
 static void test_block_scenario(void)
 {
-    int32_t blocks[8 * 32];
+    int32_t blocks[8 * 32], expected[32];
+    struct ob1_voice reference;
     int32_t *recording = malloc(34500 * 32 * sizeof *recording);
     assert(recording);
     reset();
@@ -394,6 +469,7 @@ static void test_block_scenario(void)
         int16_t saved[53];
         memcpy(saved, (const void *)fw_voice_params, sizeof saved);
         ob1_midi_cc_parameter(0, 69, 12);
+        ob1_voice_init(&reference, 1);
         for (int block = 0; block < 34500; block++) {
             memset(blocks, 0x5a, sizeof blocks);
             struct ob1_voice before = voice[0];
@@ -402,6 +478,14 @@ static void test_block_scenario(void)
             else assert(!memcmp(recording + block * 32, blocks, 32 * sizeof *blocks));
             for (int i = 32; i < 256; i++) assert(blocks[i] == 0x5a5a5a5a);
             assert(!memcmp(saved, (const void *)fw_voice_params, sizeof saved));
+            if (scenario[0].gate) {
+                int32_t p[K_COUNT];
+                for (int k = 0; k < K_COUNT; k++)
+                    p[k] = scenario[0].controls[k] * 256;
+                reference_block(&reference, p, (int32_t)scenario[0].note << 16, expected);
+                assert(!memcmp(expected, blocks, sizeof expected));
+            }
+            assert(!memcmp(&reference, &voice[0], sizeof reference));
             assert(scenario[0].block == (uint32_t)block + 2);
             assert(!scenario[1].block);
             if (block < 10500) assert(scenario[0].note == 57);
@@ -417,6 +501,12 @@ static void test_block_scenario(void)
         }
         ob1_render(blocks);
         assert(!scenario[0].block);
+        int32_t p[K_COUNT];
+        for (int k = 0; k < K_COUNT; k++)
+            p[k] = cm_src_value(0, k);
+        reference_block(&reference, p, fw_voice_note[0], expected);
+        assert(!memcmp(expected, blocks, sizeof expected));
+        assert(!memcmp(&reference, &voice[0], sizeof reference));
     }
     ob1_midi_cc_parameter(0, 69, 12);
     ob1_render(blocks);
@@ -448,6 +538,7 @@ int main(void)
     test_mixer_translation();
     test_midi_lookup();
     test_midi_voice_reset();
+    test_live_control_cache();
 #ifdef OB1_DIAGNOSTIC_SCENARIO
     test_block_scenario();
 #else
