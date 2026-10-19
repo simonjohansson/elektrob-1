@@ -70,6 +70,8 @@ from merely avoiding full-scale clipping. It is a bounded matrix, not a guarante
 | `mise run test:reference` | Captures 311 DSP reference cases; remaining reference mismatches return nonzero. |
 | `mise run regression:measure RUN --out NEW.json` | Exports compact numeric measurements from a completed capture; does not approve a baseline. |
 | `mise run regression:assert RUN --expectations FILE.json` | Checks reviewed numeric expectations, retaining unsupported reference comparisons as diagnostics; no reference WAVs required. |
+| `mise run regression:device:scenario --list` | Shows the fixed manual device sequence; supply firmware, MIDI/audio selection and a new output directory to record it. |
+| `mise run regression:device:diff BASELINE CANDIDATE --out NEW_DIR` | Produces a manual comparison report and difference WAV, preserving later MIDI timing and phase differences. |
 | `mise run test:firmware:midi --firmware IMAGE --os OS --out NEW_DIR` | Builds firmware, then verifies native MIDI setup and routing in an isolated emulator. |
 | `mise run render OUT.wav [key=value...]` | Produces 48 kHz mono, 24-bit PCM audio. |
 | `mise run analyze FILE.wav` | Estimates fundamental frequency, harmonic levels and the strongest non-harmonic spectral bin. |

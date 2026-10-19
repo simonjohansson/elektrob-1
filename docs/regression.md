@@ -136,6 +136,65 @@ MIDI send times and host input-buffer positions do not establish the reset's exa
 Neither a phase fit per oscillator nor a candidate-derived gain correction establishes unchanged
 output. This experiment qualifies only the tested sound, setup and capture route.
 
+## Scripted device comparison
+
+Use a prepared device running firmware with the CC 9 reset command. The same physical-device
+prerequisites above apply: OB-1 selected on the chosen track, transport stopped, other tracks and
+inputs silent, receive settings enabled and distinct track/FX channels. The task sends the neutral
+stock setup and all source settings; it does not read them back, build firmware or flash the device.
+The supplied image identifies the operator-declared installed build.
+
+Inspect the predefined sequence without opening MIDI or audio:
+
+```sh
+mise run regression:device:scenario --list
+```
+
+Record a baseline before the refactor, then record the candidate after installing its firmware:
+
+```sh
+mise run regression:device:scenario --firmware out/Digitakt_custom.syx --os 1.54 \
+  --midi-port 'Elektron Digitakt' --audio-device 0 --out out/regression/baseline
+
+# Build and install the candidate, retaining the baseline recording.
+mise run regression:device:scenario --firmware out/Digitakt_custom.syx --os 1.54 \
+  --midi-port 'Elektron Digitakt' --audio-device 0 --out out/regression/candidate
+
+mise run regression:device:diff out/regression/baseline out/regression/candidate \
+  --out out/regression/comparison
+```
+
+Discover the current device index with `mise run regression:device --ports`; do not assume the
+example index stays valid. `--channel` and `--fx-channel` default to 1 and 9. Use a disposable sound;
+the task changes its live controls and leaves the last scenario settings in place without saving.
+
+The 23-second scenario starts with a held A3 and one full reset. It adds/removes each sub, mutes
+and restores a fundamental, changes notes and waveform families, exercises sync and cross modulation,
+changes noise level, and releases/retriggers across a rest. Oscillator state is retained after the
+initial reset. Event deadlines use absolute captured-frame targets; the log records host event
+positions and send times. Cleanup releases every scenario note, including after acquisition failures.
+
+Each new output directory contains `audio.wav`, `events.json` and `run.json`, including the exact
+scenario, source revision/working-tree state, declared firmware hash, device and audio format.
+Failed runs retain available audio and errors. Existing output directories are refused.
+
+The diff verifies capture integrity and compatible setup, then finds one integer-sample offset
+from the initial noise-bearing held sound. It never aligns later sections independently, fits gain,
+resamples, or changes the recordings. `comparison.json` reports per-channel sample errors, exact
+sample percentages, section RMS/peak/spectral measurements and host event-timing differences.
+`difference.wav` contains candidate minus baseline, with any clipping counted in the report.
+Listen alongside both originals; the diff recording can be much quieter than either input.
+
+This is a manual review task: successful comparison returns zero even when the recordings differ.
+Invalid/incomplete captures or unavailable alignment are errors. No tolerance is approved and no
+baseline is updated automatically. A changed predefined scenario requires a new baseline.
+Run the unchanged firmware twice first: MIDI arrival timing can change later oscillator phase,
+even with the same host script. Relative phase can also change mixture levels and spectra
+substantially; a numerical difference alone does not establish a DSP regression. Level/spectral
+measurements complement the sample diff; event
+logs describe host timing, not the device's exact processing sample. Keep the deterministic host
+tests as the strict sample-equivalence check for DSP refactors.
+
 ## Evidence and failures
 
 Runs go under ignored `out/regression/`, or a new directory supplied with `--out`. Existing output
