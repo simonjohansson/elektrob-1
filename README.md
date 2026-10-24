@@ -207,6 +207,10 @@ model choices. [The DSP reference](docs/dsp.md) explains the sound and its appro
 
 For host-only work, start with `mise run test`; stock firmware and the cross-toolchain are not needed.
 
+## Contributors
+
+- [x2k77m1](https://github.com/x2k77m1) added Digitone support.
+
 ## License
 
 GPL-2.0-or-later.
