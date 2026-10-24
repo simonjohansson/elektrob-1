@@ -66,8 +66,9 @@ uint32_t dnm_phase_inc(int32_t pitch) {
 
 extern const struct dnm_machine ob1_machine;
 extern uint32_t ob1_ticks;
-extern uint8_t ob1_sounding[8];
 void ob1_reap(void);
+void ob1_voice_on(int32_t voice, int32_t track, void *event);
+void ob1_block(int32_t *voices);
 
 static const int slot_of[16] = {
     17, 18, 19, 20, 21, 22, 23, 24, 27, 28, 29, 30, 31, 32, 33, 34,
@@ -106,8 +107,14 @@ static void defaults(int v) {
 static void run(int v, struct dnm_voice *dv, int32_t *out, int nblocks) {
     int b;
     for (b = 0; b < nblocks; b++) {
-        dv->fresh = (b == 0);
+        if (b == 0) {
+            dv->fresh = 1;
+            ob1_voice_on(v, dv->track, 0);
+        }
+        fw_gate_off = 0;
+        ob1_block(0);
         ob1_machine.render(v, out + 32 * b, dv);
+        dv->fresh = 0;
     }
 }
 static int32_t peak32(const int32_t *x, int n) {
@@ -243,59 +250,307 @@ int main(void) {
         CHECK("loudness", pk > DNM_PEAK && pk <= (int32_t)(DNM_PEAK * 2));
     }
 
-    /* 8. Fuse: per-track newest-wins (2 each). A third fresh voice on
-     * the same track silences the oldest; releasing the newest frees. */
+    /* 8. Mono per track: the newest note owns the track, releasing it
+     * returns to the still-held note, and a chord leaves one sounding. */
     {
         struct dnm_voice d0, d1, d2;
-        static int32_t m0[32], m1[32], m2[32];
+        static int32_t m0[32], m1[32];
+        int b;
+
+        ob1_ticks += 200;
+        ob1_reap();
+        fw_gate_off = 0;
+        defaults(1); defaults(2); defaults(3);
         memset(&d0, 0, sizeof d0);
         memset(&d1, 0, sizeof d1);
         memset(&d2, 0, sizeof d2);
-        defaults(1); defaults(2); defaults(3);
         d0.velocity = d1.velocity = d2.velocity = 100;
         d0.track = d1.track = d2.track = 0;
         d0.gate = d1.gate = d2.gate = 1;
-        d0.pitch = d1.pitch = d2.pitch = 69 << 16;
-        d0.fresh = 1; ob1_machine.render(1, m0, &d0); d0.fresh = 0;
-        d1.fresh = 1; ob1_machine.render(2, m1, &d1); d1.fresh = 0;
-        d2.fresh = 1; ob1_machine.render(3, m2, &d2); d2.fresh = 0;
+        d0.pitch = 57 << 16;
+        d1.pitch = 69 << 16;
+        d2.pitch = 69 << 16;
+
+        d0.fresh = 1;
+        ob1_voice_on(1, 0, 0);
+        for (b = 0; b < 4; b++) {
+            fw_gate_off = 0;
+            ob1_block(0);
+            ob1_machine.render(1, m0, &d0);
+            d0.fresh = 0;
+        }
+
+        d1.fresh = 1;
+        ob1_voice_on(2, 0, 0);
+        for (b = 0; b < 4; b++) {
+            fw_gate_off = 0;
+            ob1_block(0);
+            ob1_machine.render(1, m0, &d0);
+            ob1_machine.render(2, m1, &d1);
+            d0.fresh = d1.fresh = 0;
+        }
+        CHECK("mono-old-silent", peak32(m0, 32) == 0);
+        CHECK("mono-new-live", peak32(m1, 32) > 1000);
+
+        d1.gate = 0;
+        for (b = 0; b < 4; b++) {
+            fw_gate_off = b == 0 ? (1u << 2) : 0;
+            ob1_block(0);
+            ob1_machine.render(1, m0, &d0);
+            ob1_machine.render(2, m1, &d1);
+        }
+        CHECK("last-note-returns", peak32(m0, 32) > 1000);
+        CHECK("released-new-silent", peak32(m1, 32) == 0);
+
+        /* A chord: both fresh in one block; only the newest sounds. */
+        ob1_ticks += 200;
+        ob1_reap();
+        fw_gate_off = 0;
+        memset(&d0, 0, sizeof d0);
+        memset(&d2, 0, sizeof d2);
+        d0.velocity = d2.velocity = 100;
+        d0.track = d2.track = 0;
+        d0.gate = d2.gate = 1;
+        d0.pitch = 57 << 16;
+        d2.pitch = 69 << 16;
+        d0.fresh = d2.fresh = 1;
+        ob1_voice_on(1, 0, 0);
+        ob1_voice_on(3, 0, 0);
+        fw_gate_off = 0;
+        ob1_block(0);
         ob1_machine.render(1, m0, &d0);
-        ob1_machine.render(2, m1, &d1);
-        ob1_machine.render(3, m2, &d2);
-        CHECK("fuse-oldest-silent", peak32(m0, 32) == 0);
-        CHECK("fuse-mid-live", peak32(m1, 32) > 1000);
-        CHECK("fuse-newest-live", peak32(m2, 32) > 1000);
-        d2.gate = 0;
-        ob1_machine.render(3, m2, &d2);
-        ob1_machine.render(1, m0, &d0);
-        CHECK("release-frees", peak32(m0, 32) > 0);
+        ob1_machine.render(3, m1, &d2);
+        d0.fresh = d2.fresh = 0;
+        CHECK("mono-chord-one-live", peak32(m0, 32) == 0 && peak32(m1, 32) > 1000);
     }
 
-    /* 9. Cross-track coexistence: voices on other tracks keep going
-     * (reap first: the fuse test's voices would otherwise outrank). */
+    /* 8a. Last-note priority through a stack: C takes over from B, then
+     * B from A; releasing C returns to B, releasing B returns to A. */
+    {
+        struct dnm_voice da, db, dc;
+        static int32_t ma[32 * 17], mb[32 * 17], mc[32 * 17];
+        int b;
+
+        ob1_ticks += 200;
+        ob1_reap();
+        fw_gate_off = 0;
+        defaults(1); defaults(2); defaults(3);
+        memset(&da, 0, sizeof da);
+        memset(&db, 0, sizeof db);
+        memset(&dc, 0, sizeof dc);
+        da.velocity = db.velocity = dc.velocity = 100;
+        da.track = db.track = dc.track = 0;
+        da.gate = db.gate = dc.gate = 1;
+        da.pitch = 57 << 16;
+        db.pitch = 60 << 16;
+        dc.pitch = 64 << 16;
+
+        da.fresh = 1;
+        ob1_voice_on(1, 0, 0);
+        for (b = 0; b < 3; b++) {
+            fw_gate_off = 0;
+            ob1_block(0);
+            ob1_machine.render(1, ma + 32 * b, &da);
+            da.fresh = 0;
+        }
+        db.fresh = 1;
+        ob1_voice_on(2, 0, 0);
+        for (b = 3; b < 6; b++) {
+            fw_gate_off = 0;
+            ob1_block(0);
+            ob1_machine.render(1, ma + 32 * b, &da);
+            ob1_machine.render(2, mb + 32 * b, &db);
+            da.fresh = db.fresh = 0;
+        }
+        dc.fresh = 1;
+        ob1_voice_on(3, 0, 0);
+        for (b = 6; b < 9; b++) {
+            fw_gate_off = 0;
+            ob1_block(0);
+            ob1_machine.render(1, ma + 32 * b, &da);
+            ob1_machine.render(2, mb + 32 * b, &db);
+            ob1_machine.render(3, mc + 32 * b, &dc);
+            da.fresh = db.fresh = dc.fresh = 0;
+        }
+        dc.gate = 0;
+        for (b = 9; b < 13; b++) {
+            fw_gate_off = b == 9 ? (1u << 3) : 0;
+            ob1_block(0);
+            ob1_machine.render(1, ma + 32 * b, &da);
+            ob1_machine.render(2, mb + 32 * b, &db);
+            ob1_machine.render(3, mc + 32 * b, &dc);
+        }
+        CHECK("stack-c-to-b", peak32(mb + 32 * 12, 32) > 1000 &&
+                              peak32(ma + 32 * 12, 32) == 0 &&
+                              peak32(mc + 32 * 12, 32) == 0);
+        db.gate = 0;
+        for (b = 13; b < 17; b++) {
+            fw_gate_off = b == 13 ? (1u << 2) : 0;
+            ob1_block(0);
+            ob1_machine.render(1, ma + 32 * b, &da);
+            ob1_machine.render(2, mb + 32 * b, &db);
+            ob1_machine.render(3, mc + 32 * b, &dc);
+        }
+        CHECK("stack-b-to-a", peak32(ma + 32 * 16, 32) > 1000 &&
+                              peak32(mb + 32 * 16, 32) == 0 &&
+                              peak32(mc + 32 * 16, 32) == 0);
+    }
+
+    /* 8b. Phase continuity: a note on another voice continues the track's
+     * two VCOs. Compare against one oscillator state given the same pitch
+     * history; after the crossfade the blocks are bit-identical. */
+    {
+        struct dnm_voice a, b;
+        struct ob1_voice ref;
+        const struct ob1_knobs k = {63, 63, 6, 3, 0, 0};
+        static int32_t ma[32 * 8], mb[32 * 8], mr[32 * 8], tmp[32];
+        int blk, i, diff = 0;
+
+        ob1_ticks += 200;
+        ob1_reap();
+        fw_gate_off = 0;
+        defaults(6); defaults(7);
+        memset(&a, 0, sizeof a);
+        memset(&b, 0, sizeof b);
+        a.velocity = b.velocity = 100;
+        a.track = b.track = 3;
+        a.gate = b.gate = 1;
+        a.pitch = 57 << 16;
+        b.pitch = 69 << 16;
+        a.fresh = 1;
+        ob1_voice_on(6, 3, 0);
+        for (blk = 0; blk < 6; blk++) {
+            fw_gate_off = 0;
+            ob1_block(0);
+            ob1_machine.render(6, ma + 32 * blk, &a);
+            a.fresh = 0;
+        }
+        b.fresh = 1;
+        ob1_voice_on(7, 3, 0);
+        for (blk = 0; blk < 6; blk++) {
+            fw_gate_off = 0;
+            ob1_block(0);
+            ob1_machine.render(6, ma + 32 * blk, &a);
+            ob1_machine.render(7, mb + 32 * blk, &b);
+            a.fresh = b.fresh = 0;
+        }
+        ob1_voice_init(&ref, 4);
+        for (blk = 0; blk < 6; blk++)
+            ob1_voice_render(&ref, &k, dnm_phase_inc(57 << 16),
+                             dnm_phase_inc(57 << 16), tmp);
+        for (blk = 0; blk < 6; blk++)
+            ob1_voice_render(&ref, &k, dnm_phase_inc(69 << 16),
+                             dnm_phase_inc(69 << 16), mr + 32 * blk);
+        for (i = 0; i < 32; i++) {
+            int32_t d = mb[32 * 5 + i] - mr[32 * 5 + i];
+            diff += d < 0 ? -d : d;
+        }
+        printf("info phase diff %d\n", diff);
+        CHECK("phase-continuous", diff == 0);
+    }
+
+    /* 8c. Handover continuity: a triangle has no wraparound edge, so a
+     * hard cut or a phase jump at the note change would show as a large
+     * sample-to-sample step. The crossfade should stay near the steady
+     * waveform's own slope. */
+    {
+        struct dnm_voice a, b;
+        static int32_t ma[32 * 12], mb[32 * 12], mix[32 * 12];
+        int blk, i, step, steady = 0, handover = 0;
+
+        ob1_ticks += 200;
+        ob1_reap();
+        fw_gate_off = 0;
+        defaults(2); defaults(3);
+        set_knob(2, 4, 0);          /* VCO1 alone */
+        set_knob(3, 4, 0);
+        set_knob(2, 11, 0);         /* triangle */
+        set_knob(3, 11, 0);
+        memset(&a, 0, sizeof a);
+        memset(&b, 0, sizeof b);
+        a.velocity = b.velocity = 100;
+        a.track = b.track = 2;
+        a.gate = b.gate = 1;
+        a.pitch = 57 << 16;
+        b.pitch = 60 << 16;
+        a.fresh = 1;
+        ob1_voice_on(2, 2, 0);
+        for (blk = 0; blk < 6; blk++) {
+            fw_gate_off = 0;
+            ob1_block(0);
+            ob1_machine.render(2, ma + 32 * blk, &a);
+            memset(mb + 32 * blk, 0, 32 * sizeof(int32_t));
+            a.fresh = 0;
+        }
+        b.fresh = 1;
+        ob1_voice_on(3, 2, 0);
+        for (blk = 6; blk < 12; blk++) {
+            fw_gate_off = 0;
+            ob1_block(0);
+            ob1_machine.render(2, ma + 32 * blk, &a);
+            ob1_machine.render(3, mb + 32 * blk, &b);
+            a.fresh = b.fresh = 0;
+        }
+        for (i = 0; i < 32 * 12; i++)
+            mix[i] = ma[i] + mb[i];
+        for (i = 32 * 2; i < 32 * 6; i++) {
+            step = mix[i] - mix[i - 1];
+            if (step < 0) step = -step;
+            if (step > steady) steady = step;
+        }
+        for (i = 32 * 6; i < 32 * 12; i++) {
+            step = mix[i] - mix[i - 1];
+            if (step < 0) step = -step;
+            if (step > handover) handover = step;
+        }
+        printf("info handover steps steady %d handover %d\n", steady, handover);
+        CHECK("handover-continuous", handover <= steady * 2 + 1000000);
+    }
+
+    /* 9. Cross-track coexistence: one held note each, both live. */
     {
         struct dnm_voice d4;
         ob1_ticks += 200;
         ob1_reap();
+        fw_gate_off = 0;
         memset(&d4, 0, sizeof d4);
         defaults(4);
         d4.velocity = 100; d4.track = 1; d4.gate = 1; d4.pitch = 69 << 16;
         d4.fresh = 1;
+        ob1_voice_on(4, 1, 0);
+        fw_gate_off = 0;
+        ob1_block(0);
         ob1_machine.render(4, buf2, &d4);
         d4.fresh = 0;
-        dv.gate = 1; dv.fresh = 0;
+        dv.gate = 1; dv.fresh = 1;
+        ob1_voice_on(0, 0, 0);
+        fw_gate_off = 0;
+        ob1_block(0);
+        ob1_machine.render(0, buf, &dv);
+        dv.fresh = 0;
+        fw_gate_off = 0;
+        ob1_block(0);
         ob1_machine.render(0, buf, &dv);
         ob1_machine.render(4, buf2, &d4);
         CHECK("xtrack-both-live", peak32(buf, 32) > 0 && peak32(buf2, 32) > 0);
     }
 
-    /* 10. Reap: unobserved voice ages out on UI tick. */
-    dv.fresh = 1;
-    ob1_machine.render(0, buf, &dv);
-    dv.fresh = 0;
-    ob1_ticks += 200;
-    ob1_reap();
-    CHECK("reap-clears", ob1_sounding[0] == 0);
+    /* 10. Reap: a track the render stopped observing ages out on UI tick. */
+    {
+        ob1_ticks += 200;
+        ob1_reap();
+        fw_gate_off = 0;
+        ob1_block(0);
+        ob1_machine.render(0, buf, &dv);
+        CHECK("reap-clears", peak32(buf, 32) == 0);
+        dv.fresh = 1;
+        ob1_voice_on(0, 0, 0);
+        fw_gate_off = 0;
+        ob1_block(0);
+        ob1_machine.render(0, buf, &dv);
+        dv.fresh = 0;
+        CHECK("reap-restarts", peak32(buf, 32) > 0);
+    }
 
     /* 11. Bounds: every knob at its stock maximum stays live and clipped. */
     {
@@ -396,9 +651,13 @@ int main(int argc, char **argv) {
     fw_lfo_state[0 + 17] = (int32_t)v[18];
     fw_lfo_state[10 + 16] = 127;
     fw_lfo_state[10 + 17] = 0;
+    dv.fresh = 1;
+    ob1_voice_on(0, 0, 0);
     for (b = 0; b < nblocks; b++) {
-        dv.fresh = (b == 0);
+        fw_gate_off = 0;
+        ob1_block(0);
         ob1_machine.render(0, out + 32 * b, &dv);
+        dv.fresh = 0;
     }
     fwrite(out, 4, (size_t)(32 * nblocks), stdout);
     return 0;

@@ -21,9 +21,11 @@ flowchart LR
 | Elekloader Core and machine-pages | Machine registration, firmware exports, render dispatch and the custom SRC/LFO page behavior. |
 | Stock firmware | Sequencing, parameter locks, LFO updates and the track processing surrounding the oscillator source. |
 
-Digitakt mk1 is the implemented target. Digitone is a scaffold: its successful placeholder tasks do
-not establish a working port. A new target must establish its own parameter, pitch, envelope, timing
-and output contracts rather than inheriting Digitakt firmware assumptions.
+Digitakt mk1 and Digitone mk1 / Keys are implemented targets. Digitakt owns one retained OB-1 voice
+state per track. Digitone runs as a machine over the companion's stock-allocated voices: it keeps the
+track's last-note stack, silences all but the current voice, and leaves voice ownership, AMP and
+velocity to the companion. A new target must still establish its own parameter, pitch, envelope,
+timing and output contracts.
 
 ## Timing and state
 

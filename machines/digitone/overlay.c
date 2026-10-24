@@ -33,8 +33,8 @@
 
 #define OB1_ID  69
 
-/* UI-tick counter, shared with engine.c's fuse (last-seen stamps and
- * ob1_reap's horizon). Defined in engine.c; render only reads it. */
+/* UI-tick counter, shared with engine.c's voice bookkeeping (last-seen
+ * stamps and ob1_reap's horizon). Defined in engine.c; render only reads it. */
 extern uint32_t ob1_ticks;
 void ob1_reap(void);
 

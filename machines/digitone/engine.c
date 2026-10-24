@@ -23,14 +23,17 @@
  * exactly as the Digitakt machine writes it, so the two devices' blocks
  * match for the same knobs; a single oscillator at ON peaks about at
  * DNM_PEAK, as loud as FM at the stock defaults. Flags stay 0: the
- * companion owns the AMP envelope and velocity. Zero sounding voices cost
- * ~zero (the companion skips silent voices; the render writes zeros for
- * fused ones).
+ * companion owns the AMP envelope and velocity. Silent voices cost ~zero
+ * (the companion skips them; the render writes zeros for the rest).
  *
- * Polyphony: newest-wins per track (OB1_TRACK_VOICES each, so tracks
- * never choke each other); releases free immediately; ob1_reap() on the
- * UI tick clears unobserved ends (a render-side clock freezes with zero
- * callers). The cap is pending fwcheck/hardware measurement: see README.
+ * Voice policy: one note per track, as the OB-1 and the Digitakt machine.
+ * The newest held note owns the track; releasing it returns to the newest
+ * note still held. Each track keeps the same two VCOs across notes: the
+ * oscillator state is the track's, not the Digitone voice's, so a note on
+ * another voice only changes its pitch. A short crossfade on handover and
+ * on a return keeps the change click-free. The note-on and block events
+ * run before the companion's render; ob1_reap() on the UI tick clears
+ * unobserved ends (a render-side clock freezes with zero callers).
  */
 #include "digitone-mk1/machines.h"
 #include "../../dsp/voice.h"
@@ -60,32 +63,210 @@ static int32_t ob1_add_lfo(int32_t slot, int32_t val, int32_t mn, int32_t mx,
     return val;
 }
 
-/* Voice cap: newest-wins per track. Bookkeeping: birth order from a
- * render-side clock; releases free immediately; ob1_reap() on the UI tick
- * clears ends the render stopped observing. */
-#define OB1_TRACK_VOICES  2
-#define OB1_TICK_REAP     120u
-uint8_t ob1_sounding[8];
-uint32_t ob1_birth[8];
-uint32_t ob1_seen[8];
-static int32_t ob1_track[8];
-static uint32_t ob1_clock;
+/* One voice a track: the newest held note owns it; releasing that note
+ * returns to the newest note still held. The state below is by track, so
+ * a note on a different Digitone voice continues the same two VCOs. */
+#define OB1_TRACKS       4
+#define OB1_FADE         65         /* samples: the handover crossfade */
+#define OB1_TICK_REAP    120u
+
 uint32_t ob1_ticks;
+static uint32_t ob1_block_no;
+static uint8_t ob1_stack[OB1_TRACKS][8];    /* held voices, oldest first */
+static uint8_t ob1_depth[OB1_TRACKS];
+static uint8_t ob1_held[8];
+static uint8_t ob1_voice_track[8];          /* track + 1; 0 idle */
+static int8_t ob1_current[OB1_TRACKS] = {-1, -1, -1, -1};
+static uint8_t ob1_fade_in[8], ob1_fade_out[8];
+static uint8_t ob1_sounded[8];              /* it was the sounding voice last block */
+static uint32_t ob1_seen[8];                /* block number last rendered */
+static uint32_t ob1_track_tick[OB1_TRACKS];
+static struct ob1_voice ob1_osc[OB1_TRACKS]; /* the same two VCOs across notes */
+static struct ob1_voice ob1_tail[8];         /* a handover's fading-out state */
+static uint8_t ob1_osc_ready[OB1_TRACKS];
 
 void ob1_reap(void)
 {
-    int32_t w;
-    for (w = 0; w < 8; w++) {
-        if (ob1_sounding[w] &&
-            (int32_t)(ob1_ticks - ob1_seen[w]) > (int32_t)OB1_TICK_REAP) {
-            ob1_sounding[w] = 0;
-            ob1_birth[w] = 0;
+    int32_t t, v;
+    for (t = 0; t < OB1_TRACKS; t++) {
+        if (ob1_current[t] >= 0 &&
+            (int32_t)(ob1_ticks - ob1_track_tick[t]) > (int32_t)OB1_TICK_REAP) {
+            ob1_current[t] = -1;
+            ob1_depth[t] = 0;
+            for (v = 0; v < 8; v++) {
+                if (ob1_voice_track[v] == t + 1) {
+                    ob1_held[v] = 0;
+                    ob1_voice_track[v] = 0;
+                    ob1_sounded[v] = 0;
+                    ob1_fade_in[v] = ob1_fade_out[v] = 0;
+                }
+            }
         }
     }
 }
 
-static struct ob1_voice ob1_voices[8];
-static uint8_t ob1_ready[8];
+/* Field by field: a struct copy would call memcpy, which a mod does not have. */
+static void ob1_osc_copy(struct dsp_osc *d, const struct dsp_osc *s)
+{
+    d->vco.phase = s->vco.phase;
+    d->vco.inc = s->vco.inc;
+    d->vco.rinc = s->vco.rinc;
+    d->vco.shift = s->vco.shift;
+    d->prev = s->prev;
+    d->sub = s->sub;
+    d->sub_prev = s->sub_prev;
+}
+
+static void ob1_voice_copy(struct ob1_voice *d, const struct ob1_voice *s)
+{
+    ob1_osc_copy(&d->vco1, &s->vco1);
+    ob1_osc_copy(&d->vco2, &s->vco2);
+    d->hpf.lp = s->hpf.lp;
+    d->noise = s->noise;
+    d->smooth[0] = s->smooth[0];
+    d->smooth[1] = s->smooth[1];
+}
+
+static void ob1_stack_remove(int32_t t, int32_t voice)
+{
+    int32_t i;
+    for (i = 0; i < ob1_depth[t]; i++) {
+        if (ob1_stack[t][i] == voice) {
+            for (; i + 1 < ob1_depth[t]; i++)
+                ob1_stack[t][i] = ob1_stack[t][i + 1];
+            ob1_depth[t]--;
+            return;
+        }
+    }
+}
+
+static void ob1_stack_push(int32_t t, int32_t voice)
+{
+    ob1_stack_remove(t, voice);
+    if (ob1_depth[t] < 8)
+        ob1_stack[t][ob1_depth[t]++] = (uint8_t)voice;
+}
+
+static int32_t ob1_newest_held(int32_t t)
+{
+    return ob1_depth[t] ? ob1_stack[t][ob1_depth[t] - 1] : -1;
+}
+
+/* Make v the track's sounding voice. If the old voice was rendered in the
+ * block just gone, keep a copy of the track's VCOs for it to fade out; the
+ * new voice fades in from that same phase. */
+static void ob1_switch(int32_t t, int32_t voice, int32_t tail)
+{
+    int32_t old = ob1_current[t];
+    if (old == voice)
+        return;
+    if (old >= 0 && tail) {
+        ob1_voice_copy(&ob1_tail[old], &ob1_osc[t]);
+        ob1_fade_in[old] = 0;
+        ob1_fade_out[old] = OB1_FADE;
+    }
+    ob1_fade_out[voice] = 0;
+    ob1_fade_in[voice] = OB1_FADE;  /* a stolen voice may hold a level */
+    ob1_current[t] = (int8_t)voice;
+}
+
+static void ob1_release(int32_t voice)
+{
+    int32_t t, next;
+    if (!ob1_voice_track[voice] || !ob1_held[voice])
+        return;
+    t = ob1_voice_track[voice] - 1;
+    ob1_held[voice] = 0;
+    ob1_stack_remove(t, voice);
+    if (ob1_current[t] != voice)
+        return;
+    next = ob1_newest_held(t);
+    if (next >= 0)
+        ob1_switch(t, next, ob1_sounded[voice]);
+    else if (!ob1_sounded[voice])
+        ob1_current[t] = -1;        /* an FM voice, or one never rendered */
+    /* With no older held note, a sounding voice keeps its AMP release. */
+}
+
+/* A voice reused on another track: it cannot fade there, so the old track
+ * hands over to its newest held note or falls silent. */
+static void ob1_detach(int32_t voice, int32_t old_track)
+{
+    int32_t next;
+    ob1_held[voice] = 0;
+    ob1_stack_remove(old_track, voice);
+    ob1_voice_track[voice] = 0;
+    ob1_sounded[voice] = 0;
+    ob1_fade_in[voice] = ob1_fade_out[voice] = 0;
+    if (ob1_current[old_track] != voice)
+        return;
+    next = ob1_newest_held(old_track);
+    ob1_current[old_track] = -1;
+    if (next >= 0) {
+        ob1_switch(old_track, next, 0);
+        ob1_fade_in[next] = OB1_FADE;
+    }
+}
+
+/* ev_voice_on, before the companion starts the voice's AMP envelope. */
+void ob1_voice_on(int32_t voice, int32_t track, void *event)
+{
+    int32_t old_track;
+    (void)event;
+    voice &= 7;
+    if (track < 0 || track >= OB1_TRACKS)
+        return;
+    old_track = ob1_voice_track[voice] ? ob1_voice_track[voice] - 1 : -1;
+    if (old_track >= 0 && old_track != track)
+        ob1_detach(voice, old_track);
+    ob1_voice_track[voice] = (uint8_t)(track + 1);
+    if (!ob1_osc_ready[track]) {
+        ob1_voice_init(&ob1_osc[track], (uint32_t)track + 1u);
+        ob1_osc_ready[track] = 1;
+    }
+    if (ob1_current[track] == voice) {
+        ob1_fade_in[voice] = ob1_fade_out[voice] = 0;
+    } else {
+        int32_t old = ob1_current[track];
+        ob1_switch(track, voice, old >= 0 && ob1_sounded[old]);
+    }
+    ob1_held[voice] = 1;
+    ob1_stack_push(track, voice);
+    ob1_track_tick[track] = ob1_ticks;
+}
+
+/* ev_render_voices, before the companion's per-voice render: settle last
+ * block's releases, then return to a held key when the sounding one is
+ * released. */
+void ob1_block(int32_t *voices)
+{
+    uint32_t released = fw_gate_off;
+    int32_t t, v;
+    (void)voices;
+    ob1_block_no++;
+    for (v = 0; v < 8; v++) {
+        if (released & (1u << v))
+            ob1_release(v);
+    }
+    for (t = 0; t < OB1_TRACKS; t++) {
+        v = ob1_current[t];
+        if (v < 0)
+            continue;
+        if (ob1_sounded[v] && ob1_seen[v] != ob1_block_no - 1) {
+            int32_t next = ob1_newest_held(t);
+            ob1_current[t] = -1;
+            ob1_sounded[v] = 0;
+            if (next >= 0) {
+                ob1_switch(t, next, 0);
+                ob1_fade_in[next] = OB1_FADE;
+            } else {
+                ob1_fade_out[v] = 0;
+            }
+        }
+        if (ob1_current[t] >= 0)
+            ob1_track_tick[t] = ob1_ticks;
+    }
+}
 
 static char *put_int(char *buf, int32_t v)
 {
@@ -205,52 +386,16 @@ static int32_t ob1_raw(int32_t voice, int32_t i, int32_t d0, int32_t m0,
                        ob1_rmin[i] << 8, ob1_rmax[i] << 8, d0, m0, d1, m1) >> 8;
 }
 
-static void ob1_render(int32_t voice, int32_t *block, const struct dnm_voice *v)
+/* Knob decode and one block from one oscillator state. */
+static void ob1_render_state(int32_t voice, int32_t *block, const struct dnm_voice *v,
+                             struct ob1_voice *state)
 {
     int32_t lfo0_dest, lfo0_mod, lfo1_dest, lfo1_mod;
     int32_t raw[OB1_KNOBS];
-    int32_t i, w, rank;
+    int32_t i;
     uint32_t inc1, inc2;
     struct ob1_knobs k;
-    voice &= 7;
 
-    ob1_seen[voice] = ob1_ticks;
-    if (v->fresh) {
-        ob1_sounding[voice] = 1;
-        ob1_birth[voice] = ++ob1_clock;
-        ob1_track[voice] = v->track;
-    } else if (!v->gate) {
-        ob1_sounding[voice] = 0;
-    } else if (!ob1_sounding[voice]) {
-        ob1_sounding[voice] = 1;
-        ob1_birth[voice] = ++ob1_clock;
-        ob1_track[voice] = v->track;
-    }
-    /* Per-track newest-wins: only same-track voices outrank. Stale
-     * entries (awaiting reap) hold older births, so they never silence
-     * a newer voice. */
-    rank = 0;
-    for (w = 0; w < 8; w++) {
-        if (ob1_sounding[w] && ob1_track[w] == v->track &&
-            (int32_t)(ob1_birth[w] - ob1_birth[voice]) > 0)
-            rank++;
-    }
-    if (rank >= OB1_TRACK_VOICES) {
-        for (i = 0; i < 32; i++)
-            block[i] = 0;
-        return;
-    }
-
-    /* The VCOs run freely between notes, as the OB-1's do: voices are
-     * set up once and never reset, so each note starts at a different
-     * phase. Seed (not 0) sets each voice's noise apart. */
-    if (!ob1_ready[voice]) {
-        ob1_voice_init(&ob1_voices[voice], (uint32_t)voice + 1u);
-        ob1_ready[voice] = 1;
-    }
-
-    /* Knob values with the LFO modulation folded in, clamped to each
-     * slot's own stock range. */
     lfo0_dest = (int32_t)FW_LFO(voice, 0)[FW_LFO_DEST];
     lfo0_mod = (int32_t)FW_LFO(voice, 0)[FW_LFO_MOD];
     lfo1_dest = (int32_t)FW_LFO(voice, 1)[FW_LFO_DEST];
@@ -270,7 +415,63 @@ static void ob1_render(int32_t voice, int32_t *block, const struct dnm_voice *v)
                          ob1_fine_of(raw[K_FIN1]));
     inc2 = dnm_phase_inc(v->pitch + (ob1_frq_of(raw[K_FRQ2]) << 16) +
                          ob1_fine_of(raw[K_FIN2]));
-    ob1_voice_render(&ob1_voices[voice], &k, inc1, inc2, block);
+    ob1_voice_render(state, &k, inc1, inc2, block);
+}
+
+/* A linear Q15 ramp across a block, complementing the other end of a
+ * crossfade. left counts down from OB1_FADE; up ramps in, else out. */
+#define OB1_FADE_STEP 512
+static void ob1_fade(int32_t *block, uint8_t *left, int32_t up)
+{
+    int32_t i, g;
+    for (i = 0; i < 32; i++) {
+        if (*left) {
+            g = up ? (OB1_FADE - *left) * OB1_FADE_STEP
+                   : (*left - 1) * OB1_FADE_STEP;
+            if (g > 32767)
+                g = 32767;
+            (*left)--;
+        } else if (up) {
+            continue;               /* fade-in finished: unity */
+        } else {
+            g = 0;
+        }
+        if (g != 32767)
+            block[i] = ((block[i] >> 16) * g) << 1;
+    }
+}
+
+static void ob1_render(int32_t voice, int32_t *block, const struct dnm_voice *v)
+{
+    int32_t t = v->track;
+    int32_t i;
+    voice &= 7;
+
+    if (t < 0 || t >= OB1_TRACKS) {
+        for (i = 0; i < 32; i++)
+            block[i] = 0;
+        ob1_seen[voice] = ob1_block_no;
+        return;
+    }
+    if (!ob1_osc_ready[t]) {
+        ob1_voice_init(&ob1_osc[t], (uint32_t)t + 1u);
+        ob1_osc_ready[t] = 1;
+    }
+    if (voice == ob1_current[t]) {
+        ob1_render_state(voice, block, v, &ob1_osc[t]);
+        if (ob1_fade_in[voice])
+            ob1_fade(block, &ob1_fade_in[voice], 1);
+        ob1_sounded[voice] = 1;
+    } else if (ob1_fade_out[voice]) {
+        ob1_render_state(voice, block, v, &ob1_tail[voice]);
+        ob1_fade(block, &ob1_fade_out[voice], 0);
+        ob1_sounded[voice] = 0;
+    } else {
+        for (i = 0; i < 32; i++)
+            block[i] = 0;
+        ob1_sounded[voice] = 0;
+    }
+    ob1_seen[voice] = ob1_block_no;
     /* The shared voice writes Q1.31 already at the intended level; the
      * Digitakt machine writes it unscaled too, so the two devices match. */
 }

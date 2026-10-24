@@ -3,7 +3,7 @@
  * machine (machines/digitakt/ob1.c), on the stock SYN parameters of an OB-1
  * sound. The Digitakt mints its own parameters; a Digitone machine cannot,
  * so each control borrows a stock SYN slot and works in that slot's stock
- * range (derived from the 1.44 parameter records in EVIDENCE.md).
+ * range (derived from the OS 1.44 parameter records).
  *
  * Two pages, as the Digitakt's own OSC and MIX pages:
  *   SYN1 A-H (MIX): FND1 OCT1 XMOD  --  FND2 OCT2 SYNC NOIS

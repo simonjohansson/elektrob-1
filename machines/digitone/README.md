@@ -66,26 +66,68 @@ Re-pick the machine after flashing: the knob map changed during
 development, so a sound saved with an earlier build may point at a
 different control now.
 
-Polyphony: newest-wins per track (2 voices each, up to 8 total — tracks
-never choke each other); releases free immediately; the UI-tick reap
-clears unobserved ends. System LFOs reach all fifteen used SYN slots;
-FILTER/AMP destinations apply downstream and are ignored in the render, as
-on FM voices.
+## Voice handling
+
+One note per track, as on the OB-1 and the Digitakt machine. The newest
+held note sounds; releasing it returns to the newest note still held, while
+that note still has a stock voice. Each track keeps one pair of VCOs across
+note changes, and a 65-sample crossfade covers each handover, so phase stays
+continuous and the change is click-free. The tracks keep independent note
+stacks; under normal allocation, notes on one track do not silence another
+track. System LFOs reach all fifteen used SYN slots; FILTER/AMP destinations
+apply downstream and are ignored in the render, as on FM voices.
+
+The adapter runs above the companion's stock-allocated voices.
+`ev_voice_on` and the per-block release mask tell it which stock voice
+started or ended; the render silences every voice on the track except the
+one that should sound, apart from the old voice during the crossfade. The
+companion still owns the voice, the AMP envelope and velocity, so the normal
+AMP page and FM tracks are unchanged.
+
+The adapter can choose which stock voice is audible, but it cannot stop the
+stock allocator from choosing or reusing a voice. With the default dynamic
+allocation, an overlapping note gets another voice and the held-note return
+works. If **LOCKED VOICES** gives the track one voice, the overlapping note
+reuses that voice; the earlier note no longer has a voice, and releasing the
+new note can fall silent instead of returning. The same limit applies once
+the stock allocator has stolen a held note's voice. Leave the track's voices
+dynamic for normal last-note priority.
+
+## Why not one voice at the companion
+
+A true mono policy belongs in `machines-dn1`, with support from `core-dn1`.
+The companion would have to keep the track's held-note stack independently
+of the stock voices, decide the single sounding note before the allocator
+commits, and reserve, retrigger or redirect one voice on note-on and
+note-off. Core exposes `ev_voice_on` only after the allocator has chosen and
+possibly reused a voice, plus a per-block mask of released voices; it has
+no supported pre-allocation or voice-control hook. Retuning
+`fw_voice_pitch` is not enough because the earlier note's gate and AMP
+envelope have already moved to the reused voice. `DNM_OWN_ENV` would not
+fix allocation and would duplicate the companion's AMP envelope and
+velocity, risking the normal AMP-page behaviour.
+
+That work can affect shared elekloader behaviour for every machine and for
+FM allocation, needs its own design, tests and release across the supported
+OS versions, and is not part of this machine's release. The current adapter is
+the reasonable choice for now: one audible note per track, last-note
+priority, phase continuity and the stock AMP path, with the locked-voice
+limitation above.
 
 ## Signal path
 
 Per voice/block: knobs+LFO → `ob1_knobs` (pitch per VCO from
 `dnm_phase_inc` over note+FRQ+FIN) → `ob1_voice_render` (Q1.31) →
-companion AMP envelope + velocity. The engine's block is written unscaled,
-exactly as the Digitakt machine writes it, so the two devices match for
-the same knobs; a single oscillator at ON peaks about at `DNM_PEAK` at
-mid pitches, and the engine attenuates sources as pitch rises, after the
-reference's measured source response. Flags 0: the companion owns AMP and
-velocity. Muted sources only drop their output gain: both VCOs, their
-sub-octaves and the selected modulation paths keep advancing, as the
-OB-1's free-running oscillators do (shared `voice.c`). The fuse constant
-`OB1_TRACK_VOICES` is pending fwcheck/hardware measurement (see
-`EVIDENCE.md`).
+companion AMP envelope + velocity. The sounding voice reads the track's
+retained oscillator state; a handover fades the old voice into the new one,
+and `ob1_reap` clears tracks the render stopped observing. The engine's
+block is written unscaled, exactly as the Digitakt machine writes it, so the
+two devices match for the same knobs; a single oscillator at ON peaks about
+at `DNM_PEAK` at mid pitches, and the engine attenuates sources as pitch
+rises, after the reference's measured source response. Flags 0: the
+companion owns AMP and velocity. Muted sources only drop their output gain:
+both VCOs, their sub-octaves and the selected modulation paths keep
+advancing, as the OB-1's free-running oscillators do (shared `voice.c`).
 
 ## Build and run (developers only)
 
@@ -123,7 +165,7 @@ python3 tools/ob1_digitone_host_test.py
   settings, shared by the engine and the overlay so the display always
   matches the sound.
 * `engine.c` — machine descriptor, the fifteen-control knob table, render,
-  per-track fuse and LFO plumbing.
+  per-track voice state and LFO plumbing.
 * `overlay.c` — full SYN1 (MIX) and SYN2 (OSC) redraws (tick/draw/key/enc)
   with the knob icons over centred labels (value in place of the label
   just after its encoder turns), and the FUNC+turn reset to OB-1's
@@ -136,8 +178,10 @@ python3 tools/ob1_digitone_host_test.py
 
 ## Status and license
 
-Host harness green, builds/lints/patches verified for 1.44, and
-tested on hardware (sound, both pages, turns, locks, transport, menus and
-the FUNC+turn reset; see `EVIDENCE.md`). Emulator screenshots of both
-pages are included above. GPL-2.0-or-later, unofficial, not affiliated
-with Elektron or Oberheim.
+Host harness green (mono voice handling, held-note return, crossfade and
+phase continuity), builds/lints/patches verified for 1.44, and tested on
+hardware (mono chords and overlaps, last-note return, long releases,
+clicks, independent tracks, both pages, turns, locks, transport, menus and
+the FUNC+turn reset). Emulator screenshots of both pages are included
+above. GPL-2.0-or-later, unofficial, not affiliated with Elektron or
+Oberheim.
