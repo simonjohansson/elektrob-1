@@ -13,6 +13,7 @@ cmake = "latest"
 _.path = ["/opt/homebrew/bin", "/home/linuxbrew/.linuxbrew/bin"]   # where mise's brew installs them
 PYTHONPATH = "{{config_root}}/vendor/elekloader"
 ELEKLOADER_STOCK = "{{config_root}}/firmware/Digitakt_OS1.54.syx"   # your unit's OS: what firmware and emu build
+DIGITONE_STOCK = "{{config_root}}/firmware/Digitone_and_Digitone_Keys_OS1.44.syx"   # the Digitone unit's OS: what its firmware and emu build
 ELEKLOADER_CROSS = "m68k-elf-"
 DIGIEMU_HOME = "{{config_root}}/.digiemu"
 FW_VERSION = "OB-1"                     # the OS version the unit shows: 4 characters
@@ -61,7 +62,7 @@ done
 '''
 
 [tasks.test]
-description = "Run host DSP, voice, Digitakt logic and capture-harness checks"
+description = "Run host DSP, voice, Digitakt logic, Digitone adapter and capture-harness checks"
 run = [
   "mkdir -p out",
   "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp dsp/dsp.c tests/test_dsp.c -lm -o out/test_dsp",
@@ -77,6 +78,7 @@ run = [
   "cc -std=c99 -O2 -Wall -Wextra -Werror -DOB1_DIAGNOSTIC_SCENARIO -Ivendor/elekloader/elekloader/sdk/include -Idsp dsp/dsp.c dsp/voice.c machines/digitakt/knobs.c tests/test_digitakt_controls.c -o out/test_digitakt_scenario",
   "out/test_digitakt_scenario",
   'uv run --python "$(mise which python)" --with numpy python -m unittest discover -s tests -p "test_regression*.py"',
+  "python3 tools/ob1_digitone_host_test.py",
 ]
 
 [tasks."build:digitakt:scenario"]
@@ -220,30 +222,69 @@ v=$(python -c "import json; print(json.load(open('machines/digitakt/mod.json'))[
 gh release create "ob1-v$v" out/os*/ob1-$v*.elemod --target "$(git rev-parse HEAD)" --title "OB-1 $v" --generate-notes
 '''
 
-[tasks."build:digitone"]
-description = "Placeholder for the Digitone mod build; produces no artifacts"
-depends = ["build:deps:digitone"]
-run = 'echo "Digitone support is not implemented; no artifacts produced"'
-
 [tasks."build:deps:digitone"]
-description = "Placeholder for Digitone dependencies; produces no artifacts"
-run = 'echo "Digitone support is not implemented; no artifacts produced"'
+description = "Build the core-dn1 and machines mods the Digitone machine requires"
+run = '''
+os=${DIGITONE_STOCK##*_OS}; os=${os%.syx}
+rm -rf out/dn*
+mkdir -p out/dn$os
+python -m elekloader.sdk.build vendor/elekloader/mods/core-dn1 --stock "$DIGITONE_STOCK" --out out/dn$os || exit 1
+python -m elekloader.sdk.build vendor/elekloader/mods/machines-dn1 --stock "$DIGITONE_STOCK" --out out/dn$os || exit 1
+'''
+
+[tasks."build:digitone"]
+description = "Build the Digitone machine's .elemod"
+depends = ["build:deps:digitone"]
+run = '''
+os=${DIGITONE_STOCK##*_OS}
+os=${os%.syx}
+python -m elekloader.sdk.build machines/digitone --stock "$DIGITONE_STOCK" --out out/dn$os
+'''
 
 [tasks."firmware:digitone"]
-description = "Placeholder for the Digitone firmware build; produces no artifacts"
+description = "Patch the stock Digitone OS ($DIGITONE_STOCK) with core-dn1, machines and the OB-1 machine, into out/ob1-dn-<OS>-<version>.syx"
 depends = ["build:digitone"]
-run = 'echo "Digitone support is not implemented; no artifacts produced"'
+run = '''
+os=${DIGITONE_STOCK##*_OS}
+os=${os%.syx}
+v=$(python -c "import json; print(json.load(open('machines/digitone/mod.json'))['version'])")
+set -- out/dn$os/*.elemod
+python -m elekloader.patch --stock $DIGITONE_STOCK $(printf -- '--mod %s ' "$@") --out out/ob1-dn-$os-$v.syx --version $FW_VERSION
+'''
 
 [tasks."emu:digitone"]
-description = "Placeholder for the Digitone emulator; opens no panel"
+description = "Add the custom Digitone firmware (out/ob1-dn-<OS>-<version>.syx) to digiemu and open its panel"
 depends = ["firmware:digitone"]
-run = 'echo "Digitone support is not implemented; no artifacts produced"'
+dir = "vendor/digiemu"
+run = '''
+os=${DIGITONE_STOCK##*_OS}
+os=${os%.syx}
+modv=$(python -c "import json; print(json.load(open('{{config_root}}/machines/digitone/mod.json'))['version'])")
+img={{config_root}}/out/ob1-dn-$os-$modv.syx
+# digiemu names a build's folder dn1-<version, lower-cased, other characters as '-'>-<sha256[:8]>
+v=$(printf %s "$FW_VERSION" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9.' '-')
+fw=$DIGIEMU_HOME/firmware/dn1-$v-$(shasum -a 256 "$img" | cut -c1-8)
+# it keeps each build (~530 MB) in its own folder: drop the older ones
+for d in $DIGIEMU_HOME/firmware/dn1-$v-*; do [ "$d" = "$fw" ] || rm -rf "$d"; done
+[ -d "$fw" ] || uv run python -m emu.portable --add "$img" --yes
+# what the launcher's Play button runs
+uv run python -m emu.portable --worker panel "$fw"
+'''
 
 [tasks."release:digitone"]
-description = "Placeholder for the Digitone release; publishes nothing"
-depends = ["build:digitone"]
-run = 'echo "Digitone support is not implemented; no artifacts produced"'
+description = "Build the Digitone machine and release its .elemod on GitHub as ob1-dn-v<version> (machines/digitone/mod.json's)"
+depends = ["build:digitone", "test"]
+run = '''
+[ -z "$(git status --porcelain)" ] || { echo "release: commit first, so the release is the source it's tagged on"; exit 1; }
+git fetch -q origin && [ -z "$(git log origin/main..HEAD)" ] || { echo "release: push first"; exit 1; }
+v=$(python -c "import json; print(json.load(open('machines/digitone/mod.json'))['version'])")
+gh release create "ob1-dn-v$v" out/dn*/ob1-dn-$v.elemod --target "$(git rev-parse HEAD)" --title "OB-1 Digitone $v" --generate-notes
+'''
 
 [tasks."knobs:digitone"]
-description = "Placeholder for Digitone knob graphics"
-run = 'echo "Digitone support is not implemented; no artifacts produced"'
+description = "Print the Digitone machine's knob graphics as text (the SRC page's art, shared with machines/digitakt/knobs.c)"
+run = [
+  "mkdir -p out",
+  "cc -std=c99 -O2 -Wall -Wextra -Werror -Idsp -Imachines/digitakt dsp/dsp.c dsp/voice.c machines/digitakt/knobs.c tools/knobs.c -o out/knobs-dn",
+  "out/knobs-dn",
+]

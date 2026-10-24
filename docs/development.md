@@ -83,9 +83,9 @@ from merely avoiding full-scale clipping. It is a bounded matrix, not a guarante
 
 Device tasks dispatch to Digitakt and Digitone. Their direct forms are `build:digitakt`,
 `build:deps:digitakt`, `firmware:digitakt`, `emu:digitakt`, `knobs:digitakt` and `release:digitakt`;
-replace `digitakt` with `digitone` for the other target. Every Digitone task currently prints a
-placeholder message and succeeds without producing artifacts, running an emulator or publishing.
-Shared host tasks and bootstrap run once.
+replace `digitakt` with `digitone` for the other target. The Digitone forms build and patch the 1.44
+image, run it in digiemu, print its knob art, and release its `.elemod`. Shared host tasks and
+bootstrap run once.
 
 The [regression capture workflow](regression.md) sets up and records shared cases on the host,
 compiled firmware and a physical Digitakt. Its initial stage checks acquisition only, without
