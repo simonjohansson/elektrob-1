@@ -41,7 +41,7 @@ mise run firmware:digitakt   # builds everything and writes out/Digitakt_custom.
 ```sh
 mkdir -p firmware
 cp ~/Downloads/Digitone_and_Digitone_Keys_OS1.44.syx firmware/
-mise run firmware:digitone   # builds everything and writes out/ob1-dn-1.44-0.1a.syx
+mise run firmware:digitone   # builds everything and writes out/ob1-dn-1.44-0.6.syx
 ```
 
 `mise run firmware` builds both devices and needs both stock files.
@@ -52,7 +52,7 @@ With Elektron Transfer, as for any OS update ([elekloader's steps](https://githu
 
 1. Connect the unit over USB and open Transfer.
 2. Select the unit and **Connect**.
-3. Drag the built file onto **Drop files here** (`out/Digitakt_custom.syx` or `out/ob1-dn-1.44-0.1a.syx`).
+3. Drag the built file onto **Drop files here** (`out/Digitakt_custom.syx` or `out/ob1-dn-1.44-0.6.syx`).
 4. Press **YES** on the unit, and don't power it off until it has written the OS and restarted.
 
 ### If it won't start
@@ -137,7 +137,7 @@ See [benchmark interpretation](docs/development.md#benchmark-interpretation).
 
 ## Digitone mk1 / Keys
 
-The same oscillator section, this time as a Digitone mk1 / Keys machine (`ob1-dn`, version 0.1a, machine id 69), for OS 1.44. Pick OB-1 as a track's machine and its SYN pages show the two VCOs, mixer and routing; the Digitone's filter, envelopes, effects, level and amp work downstream.
+The same oscillator section, this time as a Digitone mk1 / Keys machine (`ob1-dn`, version 0.6, machine id 69), for OS 1.44. Pick OB-1 as a track's machine and its SYN pages show the two VCOs, mixer and routing; the Digitone's filter, envelopes, effects, level and amp work downstream.
 
 ### Init patch
 

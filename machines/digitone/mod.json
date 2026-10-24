@@ -1,5 +1,5 @@
 {
- "id": "ob1-dn", "version": "0.1a", "ele3_version": "0.1a",
+ "id": "ob1-dn", "version": "0.6", "ele3_version": "0.6",
  "license": "GPL-2.0-or-later",
  "title": "OB-1 (Digitone machine)", "category": "Sound", "author": "elektrob-1-dn contributors",
  "description": "OB-1, the Oberheim OB-1's oscillator section (two VCOs with saw/pulse/sub, sync, cross mod, noise and mixer) as a Digitone mk1 / Keys machine. The Digitakt machine's fifteen controls over two pages: SYN2 A-H FRQ1/FIN1/TYP1/WAV1/FRQ2/FIN2/TYP2/WAV2, SYN1 A-H FND1/OCT1/XMOD/blank/FND2/OCT2/SYNC/NOIS, all on borrowed stock SYN ranges (no custom params), through the Digitone filter/mixer/AMP. A thin adapter over the shared dsp/ engine, ported from the Digitakt machine. Needs the machines mod and core-dn1.",
